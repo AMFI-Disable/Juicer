@@ -7,46 +7,46 @@ struct ActivePort: Identifiable, Hashable, Codable {
     let processName: String
     let pid: Int
     var commandLineArgs: String = ""
-    var parentPid: Int? = nil
+    var parentPid: Int?
 }
 
 class PortManager: ObservableObject {
     @Published var activePorts: [ActivePort] = []
     @Published var isLoading = false
-    
+
     // Default development ports filter
     static let devPorts: Set<Int> = [80, 443, 3000, 3001, 4000, 5000, 5001, 8000, 8080, 9000, 9090, 8081]
-    
+
     func loadPorts() {
         self.isLoading = true
         self.activePorts = []
-        
+
         Task.detached(priority: .userInitiated) {
             var portsList: [ActivePort] = []
-            
+
             // Run lsof -nP -i -sTCP:LISTEN (gets both IPv4/IPv6 listening TCP sockets)
             let lsofOutput = Self.runShellCommand("/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN")
             let lines = lsofOutput.components(separatedBy: "\n")
-            
+
             // Expected format: COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
             for line in lines.dropFirst() {
                 let parts = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
                 guard parts.count >= 8 else { continue }
-                
+
                 let processName = parts[0]
                 guard let pid = Int(parts[1]) else { continue }
                 let nodeName = parts[8] // e.g. "*:3000" or "127.0.0.1:8080"
-                
+
                 // Extract port number
                 if let colonIndex = nodeName.lastIndex(of: ":") {
                     let portStr = String(nodeName[nodeName.index(after: colonIndex)...])
                     if let portNumber = Int(portStr.trimmingCharacters(in: .whitespacesAndNewlines)) {
-                        
+
                         // Query command line args and parent PID
                         let args = Self.runShellCommand("/bin/ps -p \(pid) -o args=").trimmingCharacters(in: .whitespacesAndNewlines)
                         let ppidStr = Self.runShellCommand("/bin/ps -p \(pid) -o ppid=").trimmingCharacters(in: .whitespacesAndNewlines)
                         let ppid = Int(ppidStr)
-                        
+
                         let activePort = ActivePort(
                             port: portNumber,
                             protocolName: "TCP",
@@ -59,7 +59,7 @@ class PortManager: ObservableObject {
                     }
                 }
             }
-            
+
             // Deduplicate ports
             var uniquePorts: [ActivePort] = []
             for item in portsList {
@@ -67,9 +67,9 @@ class PortManager: ObservableObject {
                     uniquePorts.append(item)
                 }
             }
-            
+
             let sorted = uniquePorts.sorted(by: { $0.port < $1.port })
-            
+
             await MainActor.run {
                 self.activePorts = sorted
                 self.isLoading = false
@@ -77,19 +77,19 @@ class PortManager: ObservableObject {
             }
         }
     }
-    
+
     func killProcess(pid: Int, completion: @escaping (Bool) -> Void) {
         // Read kill preference setting
         let forceKill = UserDefaults.standard.bool(forKey: "juicer.settings.killForceful")
         let signal = forceKill ? "-9" : "-15"
-        
+
         AppLogger.shared.log("Sending signal \(signal) to process PID \(pid)...")
-        
+
         Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/kill")
             process.arguments = [signal, String(pid)]
-            
+
             do {
                 try process.run()
                 process.waitUntilExit()
@@ -106,7 +106,7 @@ class PortManager: ObservableObject {
             }
         }
     }
-    
+
     private static func runShellCommand(_ command: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")

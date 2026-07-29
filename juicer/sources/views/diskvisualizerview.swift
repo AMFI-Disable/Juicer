@@ -31,45 +31,45 @@ enum DiskSortMode: String, CaseIterable {
 
 struct TreemapItem: Identifiable {
     let id        = UUID()
-    let name      : String
-    let path      : String
-    let sizeBytes : Int64
+    let name: String
+    let path: String
+    let sizeBytes: Int64
     let isDirectory: Bool
-    let rect      : CGRect
-    let depth     : Int
-    let color     : Color
-    let ratio     : Double   // fraction of parent total
+    let rect: CGRect
+    let depth: Int
+    let color: Color
+    let ratio: Double   // fraction of parent total
 }
 
 // MARK: - Sunburst Arc
 
 struct SunburstArc: Identifiable {
     let id        = UUID()
-    let name      : String
-    let path      : String
-    let sizeBytes : Int64
+    let name: String
+    let path: String
+    let sizeBytes: Int64
     let isDirectory: Bool
-    let depth     : Int
+    let depth: Int
     let startAngle: Double   // radians
-    let endAngle  : Double   // radians
-    let innerR    : CGFloat
-    let outerR    : CGFloat
-    let color     : Color
-    let ratio     : Double
+    let endAngle: Double   // radians
+    let innerR: CGFloat
+    let outerR: CGFloat
+    let color: Color
+    let ratio: Double
 }
 
 struct PieSlice: Identifiable {
     let id        = UUID()
-    let name      : String
-    let path      : String
-    let sizeBytes : Int64
+    let name: String
+    let path: String
+    let sizeBytes: Int64
     let isDirectory: Bool
     let startAngle: Double   // radians
-    let endAngle  : Double   // radians
-    let innerR    : CGFloat
-    let outerR    : CGFloat
-    let color     : Color
-    let ratio     : Double
+    let endAngle: Double   // radians
+    let innerR: CGFloat
+    let outerR: CGFloat
+    let color: Color
+    let ratio: Double
 }
 
 // MARK: - Discard Pile
@@ -102,19 +102,19 @@ struct diskvisualizerview: View {
     @StateObject private var manager     = DiskExplorerManager()
     @StateObject private var discardPile = DiscardPile()
 
-    @State private var pathInput         : String    = ""
-    @State private var viewMode          : DiskViewMode = .treemap
-    @State private var sortMode          : DiskSortMode = .sizeDesc
-    @State private var depthLimit        : Int       = 3
-    @State private var selectedItem      : DiskEntry?
-    @State private var hoveredPath       : String?   = nil
-    @State private var tooltipPos        : CGPoint   = .zero
-    @State private var breadcrumbs       : [String]  = []
-    @State private var navHistory        : [String]  = []
-    @State private var navFuture         : [String]  = []
-    @State private var showDiscardPile   : Bool      = false
-    @State private var showConfirmTrash  : Bool      = false
-    @State private var qlItem            : URL?      = nil
+    @State private var pathInput: String    = ""
+    @State private var viewMode: DiskViewMode = .treemap
+    @State private var sortMode: DiskSortMode = .sizeDesc
+    @State private var depthLimit: Int       = 3
+    @State private var selectedItem: DiskEntry?
+    @State private var hoveredPath: String?
+    @State private var tooltipPos: CGPoint   = .zero
+    @State private var breadcrumbs: [String]  = []
+    @State private var navHistory: [String]  = []
+    @State private var navFuture: [String]  = []
+    @State private var showDiscardPile: Bool      = false
+    @State private var showConfirmTrash: Bool      = false
+    @State private var qlItem: URL?
 
     // MARK: Computed helpers
 
@@ -555,7 +555,7 @@ struct diskvisualizerview: View {
 
     @ViewBuilder
     private func pieSelectedRing(slice: PieSlice, cx: CGFloat, cy: CGFloat) -> some View {
-        Canvas { ctx, size in
+        Canvas { ctx, _ in
             let path = pieSlicePath(slice: slice, cx: cx, cy: cy)
             ctx.stroke(path, with: .color(.white), lineWidth: 2.5)
         }
@@ -708,7 +708,7 @@ struct diskvisualizerview: View {
 
     @ViewBuilder
     private func sunburstSelectedRing(arc: SunburstArc, cx: CGFloat, cy: CGFloat) -> some View {
-        Canvas { ctx, size in
+        Canvas { ctx, _ in
             let path = sunburstPath(arc: arc, cx: cx, cy: cy)
             ctx.stroke(path, with: .color(.white), lineWidth: 2.5)
         }
@@ -771,13 +771,13 @@ struct diskvisualizerview: View {
     @ViewBuilder
     private func legendBar() -> some View {
         let legend: [(color: Color, label: String)] = [
-            (.blue.opacity(0.75),   "Folder"),
-            (.pink.opacity(0.85),   "Media"),
-            (.teal.opacity(0.85),   "Code"),
+            (.blue.opacity(0.75), "Folder"),
+            (.pink.opacity(0.85), "Media"),
+            (.teal.opacity(0.85), "Code"),
             (.orange.opacity(0.85), "Archive"),
             (.purple.opacity(0.85), "Image"),
-            (.mint.opacity(0.85),   "Document"),
-            (.gray.opacity(0.7),    "Other"),
+            (.mint.opacity(0.85), "Document"),
+            (.gray.opacity(0.7), "Other")
         ]
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 14) {
@@ -1123,7 +1123,7 @@ struct diskvisualizerview: View {
         manager.scanDirectory(path: clean)
         selectedItem = nil
         hoveredPath  = nil
-        
+
         if WorkspaceDirectoryManager.shared.currentDirectory != clean {
             WorkspaceDirectoryManager.shared.currentDirectory = clean
         }
@@ -1270,7 +1270,7 @@ struct diskvisualizerview: View {
         guard totalSize > 0 else { return [] }
 
         let minDim    = min(size.width, size.height)
-        let ringWidth : CGFloat = (minDim / 2 - 54) / CGFloat(min(maxDepth, 4))
+        let ringWidth: CGFloat = (minDim / 2 - 54) / CGFloat(min(maxDepth, 4))
         let innerStart: CGFloat = 54  // center hole radius
 
         var arcs: [SunburstArc] = []
@@ -1330,15 +1330,15 @@ struct diskvisualizerview: View {
         if entry.isDirectory { return .blue }
         let ext = (entry.name as NSString).pathExtension.lowercased()
         switch ext {
-        case "mp4","mkv","avi","mov","mp3","wav","flac","aac","m4a","ogg","wma":
+        case "mp4", "mkv", "avi", "mov", "mp3", "wav", "flac", "aac", "m4a", "ogg", "wma":
             return .pink
-        case "swift","go","py","kt","rs","js","ts","html","css","cpp","c","h","java","rb","php","json","yml","yaml","xml","sh","bash","zsh":
+        case "swift", "go", "py", "kt", "rs", "js", "ts", "html", "css", "cpp", "c", "h", "java", "rb", "php", "json", "yml", "yaml", "xml", "sh", "bash", "zsh":
             return .teal
-        case "zip","tar","gz","bz2","rar","7z","dmg","pkg","xip","deb","rpm","iso":
+        case "zip", "tar", "gz", "bz2", "rar", "7z", "dmg", "pkg", "xip", "deb", "rpm", "iso":
             return .orange
-        case "png","jpg","jpeg","gif","svg","heic","webp","tiff","bmp","raw","cr2","arw":
+        case "png", "jpg", "jpeg", "gif", "svg", "heic", "webp", "tiff", "bmp", "raw", "cr2", "arw":
             return .purple
-        case "pdf","doc","docx","xls","xlsx","ppt","pptx","pages","numbers","keynote","txt","rtf","md","csv":
+        case "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pages", "numbers", "keynote", "txt", "rtf", "md", "csv":
             return .mint
         default:
             return .gray
@@ -1348,15 +1348,15 @@ struct diskvisualizerview: View {
     private func fileIcon(for name: String) -> String {
         let ext = (name as NSString).pathExtension.lowercased()
         switch ext {
-        case "mp4","mkv","avi","mov":      return "film.fill"
-        case "mp3","wav","flac","aac","m4a","ogg": return "music.note"
-        case "png","jpg","jpeg","gif","heic","webp","tiff": return "photo.fill"
+        case "mp4", "mkv", "avi", "mov":      return "film.fill"
+        case "mp3", "wav", "flac", "aac", "m4a", "ogg": return "music.note"
+        case "png", "jpg", "jpeg", "gif", "heic", "webp", "tiff": return "photo.fill"
         case "pdf":                        return "doc.richtext.fill"
-        case "zip","tar","gz","dmg","pkg","rar","7z": return "archivebox.fill"
-        case "swift","py","js","ts","rs","go","kt","java","rb","cpp","c","h": return "chevron.left.forwardslash.chevron.right"
-        case "doc","docx","txt","md","rtf","pages": return "doc.text.fill"
-        case "xls","xlsx","numbers","csv": return "tablecells.fill"
-        case "ppt","pptx","keynote":       return "slider.horizontal.below.rectangle"
+        case "zip", "tar", "gz", "dmg", "pkg", "rar", "7z": return "archivebox.fill"
+        case "swift", "py", "js", "ts", "rs", "go", "kt", "java", "rb", "cpp", "c", "h": return "chevron.left.forwardslash.chevron.right"
+        case "doc", "docx", "txt", "md", "rtf", "pages": return "doc.text.fill"
+        case "xls", "xlsx", "numbers", "csv": return "tablecells.fill"
+        case "ppt", "pptx", "keynote":       return "slider.horizontal.below.rectangle"
         default:                           return "doc.fill"
         }
     }
@@ -1364,14 +1364,14 @@ struct diskvisualizerview: View {
     private func fileKindLabel(for name: String) -> String {
         let ext = (name as NSString).pathExtension.lowercased()
         switch ext {
-        case "mp4","mkv","avi","mov":      return "Video File"
-        case "mp3","wav","flac","aac","m4a": return "Audio File"
-        case "png","jpg","jpeg","gif","heic","webp": return "Image File"
+        case "mp4", "mkv", "avi", "mov":      return "Video File"
+        case "mp3", "wav", "flac", "aac", "m4a": return "Audio File"
+        case "png", "jpg", "jpeg", "gif", "heic", "webp": return "Image File"
         case "pdf":                        return "PDF Document"
-        case "zip","tar","gz","dmg","pkg","rar","7z": return "Archive"
-        case "swift","py","js","ts","rs","go","kt","java": return "Source Code"
-        case "doc","docx","txt","md","rtf","pages": return "Document"
-        case "xls","xlsx","numbers","csv": return "Spreadsheet"
+        case "zip", "tar", "gz", "dmg", "pkg", "rar", "7z": return "Archive"
+        case "swift", "py", "js", "ts", "rs", "go", "kt", "java": return "Source Code"
+        case "doc", "docx", "txt", "md", "rtf", "pages": return "Document"
+        case "xls", "xlsx", "numbers", "csv": return "Spreadsheet"
         default:                           return "\(ext.uppercased()) File"
         }
     }
@@ -1389,8 +1389,8 @@ struct diskvisualizerview: View {
 // MARK: - AnnularSector Shape (for sunburst hit testing)
 
 struct AnnularSector: Shape {
-    let startAngle : Double
-    let endAngle   : Double
+    let startAngle: Double
+    let endAngle: Double
     let innerRadius: CGFloat
     let outerRadius: CGFloat
     let cx: CGFloat

@@ -4,11 +4,11 @@ struct cacheprunerview: View {
     @StateObject private var manager = CachePrunerManager()
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             if manager.isScanning {
                 scanningPlaceholder()
             } else if manager.cacheItems.isEmpty {
@@ -38,7 +38,7 @@ struct cacheprunerview: View {
             Text("Are you absolutely sure you want to prune these cache directories? This action cannot be easily undone without rebuilding your projects.")
         }
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -51,9 +51,9 @@ struct cacheprunerview: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
+
             Button(action: { manager.scanCaches() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -68,7 +68,7 @@ struct cacheprunerview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Scanning Placeholder
     @ViewBuilder
     private func scanningPlaceholder() -> some View {
@@ -82,7 +82,7 @@ struct cacheprunerview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Empty State Placeholder
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
@@ -95,7 +95,7 @@ struct cacheprunerview: View {
                     .font(.system(size: 36))
                     .foregroundStyle(.green)
             }
-            
+
             VStack(spacing: 6) {
                 Text("Caches are Empty")
                     .font(.headline)
@@ -108,7 +108,7 @@ struct cacheprunerview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - List UI
     @ViewBuilder
     private func cachesList() -> some View {
@@ -121,18 +121,18 @@ struct cacheprunerview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Bottom Operations Bar
             HStack {
                 let totalSize = manager.cacheItems.filter { $0.isSelected }.reduce(0) { $0 + $1.size }
                 let count = manager.cacheItems.filter { $0.isSelected }.count
-                
+
                 Text("\(count) targets selected (\(formatBytes(totalSize)))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 Button(action: pruneSelected) {
                     if manager.isPruning {
                         ProgressView()
@@ -150,7 +150,7 @@ struct cacheprunerview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -159,7 +159,7 @@ struct cacheprunerview: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            
+
             Text("Target Cache")
                 .bold()
             Spacer()
@@ -169,7 +169,7 @@ struct cacheprunerview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func cacheRow(item: PrunableCacheItem) -> some View {
         HStack(alignment: .top) {
@@ -183,11 +183,11 @@ struct cacheprunerview: View {
             ))
             .toggleStyle(.checkbox)
             .padding(.top, 4)
-            
+
             Image(systemName: "folder.fill")
                 .foregroundStyle(.blue)
                 .padding(.top, 4)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(item.name)
                     .font(.headline)
@@ -203,9 +203,9 @@ struct cacheprunerview: View {
                     .truncationMode(.middle)
                     .padding(.top, 2)
             }
-            
+
             Spacer()
-            
+
             Text(formatBytes(item.size))
                 .font(.body)
                 .bold()
@@ -214,12 +214,12 @@ struct cacheprunerview: View {
         }
         .padding(.vertical, 8)
     }
-    
+
     // MARK: - Actions
     private func pruneSelected() {
         showFirstAlert = true
     }
-    
+
     private func executePrune() {
         manager.pruneSelectedCaches { success in
             if success {
@@ -237,14 +237,14 @@ struct cacheprunerview: View {
             }
         }
     }
-    
+
     private func toggleAllSelection() {
         let allSelected = manager.cacheItems.allSatisfy { $0.isSelected }
         for index in manager.cacheItems.indices {
             manager.cacheItems[index].isSelected = !allSelected
         }
     }
-    
+
     private func allSelectedStateIcon() -> String {
         let selectedCount = manager.cacheItems.filter { $0.isSelected }.count
         if selectedCount == 0 {
@@ -255,7 +255,7 @@ struct cacheprunerview: View {
             return "minus.square.fill"
         }
     }
-    
+
     private func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

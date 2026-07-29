@@ -5,7 +5,7 @@ struct converterstudioview: View {
     @State private var inputText = "{\n  \"name\": \"Juicer\",\n  \"version\": \"1.0.3\",\n  \"active\": true\n}"
     @State private var outputText = ""
     @State private var converterMode = "JSON to Swift"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             JuicerFeatureHeader(
@@ -17,9 +17,9 @@ struct converterstudioview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             HStack {
                 Picker("Conversion Mode:", selection: $converterMode) {
                     Text("JSON → Swift Struct").tag("JSON to Swift")
@@ -29,9 +29,9 @@ struct converterstudioview: View {
                     Text("URL Encode").tag("URL Encode")
                 }
                 .onChange(of: converterMode) { _ in convertInput() }
-                
+
                 Spacer()
-                
+
                 Button("Copy Output") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(outputText, forType: .string)
@@ -39,9 +39,9 @@ struct converterstudioview: View {
                 .buttonStyle(.borderedProminent)
             }
             .padding()
-            
+
             Divider()
-            
+
             HSplitView {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Input Text").font(.headline)
@@ -50,7 +50,7 @@ struct converterstudioview: View {
                         .onChange(of: inputText) { _ in convertInput() }
                 }
                 .padding()
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Converted Output").font(.headline)
                     TextEditor(text: .constant(outputText))
@@ -62,7 +62,7 @@ struct converterstudioview: View {
         .onAppear { convertInput() }
         .allowWindowDragAndFit()
     }
-    
+
     private func convertInput() {
         switch converterMode {
         case "JSON to Swift":
@@ -83,7 +83,7 @@ struct converterstudioview: View {
             outputText = inputText
         }
     }
-    
+
     private func convertJSONToSwift(json: String) -> String {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -92,18 +92,13 @@ struct converterstudioview: View {
         var code = "struct GeneratedModel: Codable {\n"
         for (key, val) in dict {
             let swiftType: String
-            if val is String { swiftType = "String" }
-            else if val is Int { swiftType = "Int" }
-            else if val is Double { swiftType = "Double" }
-            else if val is Bool { swiftType = "Bool" }
-            else if val is [Any] { swiftType = "[String]" }
-            else { swiftType = "AnyCodable" }
+            if val is String { swiftType = "String" } else if val is Int { swiftType = "Int" } else if val is Double { swiftType = "Double" } else if val is Bool { swiftType = "Bool" } else if val is [Any] { swiftType = "[String]" } else { swiftType = "AnyCodable" }
             code += "    let \(key): \(swiftType)\n"
         }
         code += "}"
         return code
     }
-    
+
     private func convertJSONToTS(json: String) -> String {
         guard let data = json.data(using: .utf8),
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
@@ -112,11 +107,7 @@ struct converterstudioview: View {
         var code = "export interface GeneratedModel {\n"
         for (key, val) in dict {
             let tsType: String
-            if val is String { tsType = "string" }
-            else if val is Int || val is Double { tsType = "number" }
-            else if val is Bool { tsType = "boolean" }
-            else if val is [Any] { tsType = "any[]" }
-            else { tsType = "any" }
+            if val is String { tsType = "string" } else if val is Int || val is Double { tsType = "number" } else if val is Bool { tsType = "boolean" } else if val is [Any] { tsType = "any[]" } else { tsType = "any" }
             code += "  \(key): \(tsType);\n"
         }
         code += "}"

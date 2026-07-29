@@ -4,11 +4,11 @@ struct orphanscannerview: View {
     @StateObject private var manager = OrphanScannerManager()
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             if manager.isScanning {
                 scanningPlaceholder()
             } else if manager.orphans.isEmpty {
@@ -38,7 +38,7 @@ struct orphanscannerview: View {
             Text("Are you absolutely sure you want to proceed with trashing these folders? This action will remove their preferences and temporary files.")
         }
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -51,9 +51,9 @@ struct orphanscannerview: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
+
             Button(action: { manager.scanOrphans() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -68,7 +68,7 @@ struct orphanscannerview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Scanning Indicator UI
     @ViewBuilder
     private func scanningPlaceholder() -> some View {
@@ -82,7 +82,7 @@ struct orphanscannerview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Empty State UI
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
@@ -95,7 +95,7 @@ struct orphanscannerview: View {
                     .font(.system(size: 36))
                     .foregroundStyle(.green)
             }
-            
+
             VStack(spacing: 6) {
                 Text("No Orphans Found")
                     .font(.headline)
@@ -108,7 +108,7 @@ struct orphanscannerview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - List UI
     @ViewBuilder
     private func orphansList() -> some View {
@@ -121,18 +121,18 @@ struct orphanscannerview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Bottom Operations Bar
             HStack {
                 let totalSize = manager.orphans.filter { $0.isSelected }.reduce(0) { $0 + $1.size }
                 let count = manager.orphans.filter { $0.isSelected }.count
-                
+
                 Text("\(count) orphaned folders selected (\(formatBytes(totalSize)))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 Button(action: trashSelected) {
                     if manager.isTrashing {
                         ProgressView()
@@ -150,7 +150,7 @@ struct orphanscannerview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -159,7 +159,7 @@ struct orphanscannerview: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            
+
             Text("Orphaned Folder Path")
                 .bold()
             Spacer()
@@ -172,7 +172,7 @@ struct orphanscannerview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func orphanRow(item: LeftoverItem) -> some View {
         HStack {
@@ -185,10 +185,10 @@ struct orphanscannerview: View {
                 }
             ))
             .toggleStyle(.checkbox)
-            
+
             Image(systemName: "folder.badge.minus")
                 .foregroundStyle(.orange)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
                     .font(.body)
@@ -198,26 +198,26 @@ struct orphanscannerview: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            
+
             Spacer()
-            
+
             Text(item.category)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(width: 150, alignment: .leading)
-            
+
             Text(formatBytes(item.size))
                 .font(.subheadline)
                 .frame(width: 80, alignment: .trailing)
         }
         .padding(.vertical, 2)
     }
-    
+
     // MARK: - Actions
     private func trashSelected() {
         showFirstAlert = true
     }
-    
+
     private func executeTrash() {
         manager.trashSelectedOrphans { success in
             if success {
@@ -227,14 +227,14 @@ struct orphanscannerview: View {
             }
         }
     }
-    
+
     private func toggleAllSelection() {
         let allSelected = manager.orphans.allSatisfy { $0.isSelected }
         for index in manager.orphans.indices {
             manager.orphans[index].isSelected = !allSelected
         }
     }
-    
+
     private func allSelectedStateIcon() -> String {
         let selectedCount = manager.orphans.filter { $0.isSelected }.count
         if selectedCount == 0 {
@@ -245,7 +245,7 @@ struct orphanscannerview: View {
             return "minus.square.fill"
         }
     }
-    
+
     private func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

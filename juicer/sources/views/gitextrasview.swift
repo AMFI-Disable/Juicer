@@ -5,7 +5,7 @@ struct gitextrasview: View {
     @StateObject private var manager = GitExtraManager(repoPath: FileManager.default.homeDirectoryForCurrentUser.path + "/Desktop/Projects/Apps/Juicer")
     @State private var activeTab = "Overview"
     @State private var standupDays = "7 days ago"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -18,9 +18,9 @@ struct gitextrasview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Sub-Navigation Tabs
             HStack {
                 Picker("", selection: $activeTab) {
@@ -32,13 +32,13 @@ struct gitextrasview: View {
                     Text("Branch Trim (\(manager.mergedBranchesToTrim.count))").tag("Trim")
                 }
                 .pickerStyle(.segmented)
-                
+
                 Spacer()
             }
             .padding()
-            
+
             Divider()
-            
+
             // Tab Content
             ScrollView {
                 VStack(spacing: 20) {
@@ -61,7 +61,7 @@ struct gitextrasview: View {
         }
         .allowWindowDragAndFit()
     }
-    
+
     // MARK: - 1. Overview Tab (OneFetch + Git-Quick-Stats)
     @ViewBuilder
     private func overviewTab() -> some View {
@@ -71,7 +71,7 @@ struct gitextrasview: View {
                 JuicerMetricTile(title: "Total Commits", value: "\(overview.totalCommits)", detail: "Age: \(overview.repoAge)")
                 JuicerMetricTile(title: "Contributors", value: "\(overview.totalAuthors)", detail: "Primary: \(overview.primaryLanguage)")
             }
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 Text("Author Commit Distribution (Git-Quick-Stats)").font(.headline)
                 ForEach(manager.authorStats) { author in
@@ -93,7 +93,7 @@ struct gitextrasview: View {
             ProgressView("Analyzing repository...")
         }
     }
-    
+
     // MARK: - 2. Health Tab (Git-Sizer)
     @ViewBuilder
     private func healthTab() -> some View {
@@ -110,14 +110,14 @@ struct gitextrasview: View {
                         .foregroundStyle(sizer.healthRating == "Healthy" ? Color.green : Color.orange)
                         .cornerRadius(6)
                 }
-                
+
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     JuicerMetricTile(title: "Total Objects", value: "\(sizer.totalObjects)", detail: "Loose + Packfile objects")
                     JuicerMetricTile(title: "Packfile Size", value: "\(sizer.packfileSizeBytes / (1024 * 1024)) MB", detail: "Disk consumption")
                     JuicerMetricTile(title: "Branches Count", value: "\(sizer.totalBranches)", detail: "Local and remotes")
                     JuicerMetricTile(title: "Tags Count", value: "\(sizer.totalTags)", detail: "Annotated & lightweight")
                 }
-                
+
                 if !sizer.warnings.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Health Warnings").bold().foregroundStyle(.orange)
@@ -136,7 +136,7 @@ struct gitextrasview: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         }
     }
-    
+
     // MARK: - 3. Standup Tab (Git-Standup)
     @ViewBuilder
     private func standupTab() -> some View {
@@ -150,13 +150,13 @@ struct gitextrasview: View {
                     Text("Past 14 Days").tag("14 days ago")
                 }
                 .frame(width: 160)
-                
+
                 Button("Generate Standup") {
                     manager.generateStandup(since: standupDays)
                 }
                 .buttonStyle(.borderedProminent)
             }
-            
+
             TextEditor(text: .constant(manager.standupLog.isEmpty ? "Click 'Generate Standup' to compile your commit activity log for team standup meetings." : manager.standupLog))
                 .font(.system(.body, design: .monospaced))
                 .frame(height: 250)
@@ -165,7 +165,7 @@ struct gitextrasview: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
-    
+
     // MARK: - 4. Changelog Tab (Git-Cliff)
     @ViewBuilder
     private func changelogTab() -> some View {
@@ -178,7 +178,7 @@ struct gitextrasview: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            
+
             TextEditor(text: .constant(manager.generatedChangelog.isEmpty ? "Click 'Generate Changelog' to auto-generate release notes from Conventional Commits." : manager.generatedChangelog))
                 .font(.system(.body, design: .monospaced))
                 .frame(height: 280)
@@ -187,7 +187,7 @@ struct gitextrasview: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
-    
+
     // MARK: - 5. Secrets Tab (GitLeaks)
     @ViewBuilder
     private func secretsTab() -> some View {
@@ -199,7 +199,7 @@ struct gitextrasview: View {
                     .bold()
                     .foregroundStyle(manager.secretIssues.isEmpty ? Color.green : Color.red)
             }
-            
+
             if manager.secretIssues.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "shield.checkmark.fill")
@@ -233,7 +233,7 @@ struct gitextrasview: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
-    
+
     // MARK: - 6. Trim Tab (Git-Trim)
     @ViewBuilder
     private func trimTab() -> some View {
@@ -247,7 +247,7 @@ struct gitextrasview: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(manager.mergedBranchesToTrim.isEmpty)
             }
-            
+
             if manager.mergedBranchesToTrim.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.seal.fill")

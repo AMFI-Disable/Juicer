@@ -420,7 +420,7 @@ class CacheCleanerManager: ObservableObject {
         // Ruby
         "vendor", ".bundle",
         // Go
-        "pkg",
+        "pkg"
     ]
 
     func scanProjectDeps(root: String) {
@@ -492,7 +492,7 @@ class CacheCleanerManager: ObservableObject {
         loadBackups()
         let cutoff = Date().addingTimeInterval(-259200) // 3 days (3 * 86400)
         var updated: [RollbackBackup] = []
-        
+
         for backup in backups {
             if backup.timestamp < cutoff {
                 AppLogger.shared.log("Pruning expired cache backup: \(backup.name)")
@@ -508,17 +508,17 @@ class CacheCleanerManager: ObservableObject {
     func restoreBackup(_ backup: RollbackBackup) {
         let sourceURL = URL(fileURLWithPath: backup.backupPath)
         let destURL = URL(fileURLWithPath: backup.originalPath)
-        
+
         // Ensure parent directory exists
         let parentDir = destURL.deletingLastPathComponent()
         try? fm.createDirectory(at: parentDir, withIntermediateDirectories: true)
-        
+
         do {
             if fm.fileExists(atPath: destURL.path) {
                 try fm.removeItem(at: destURL)
             }
             try fm.moveItem(at: sourceURL, to: destURL)
-            
+
             // Remove from metadata list
             if let idx = backups.firstIndex(where: { $0.id == backup.id }) {
                 backups.remove(at: idx)
@@ -551,14 +551,14 @@ class CacheCleanerManager: ObservableObject {
             for item in toClean {
                 let url = URL(fileURLWithPath: item.path)
                 let backupDestURL = self.backupsDir.appendingPathComponent("\(item.name)_\(Int(timestamp.timeIntervalSince1970))")
-                
+
                 var backedUp = false
                 do {
                     // Try to move folder/file to backup dir
                     if self.fm.fileExists(atPath: url.path) {
                         try self.fm.moveItem(at: url, to: backupDestURL)
                         backedUp = true
-                        
+
                         let backupObj = RollbackBackup(
                             id: UUID(),
                             name: item.name,
@@ -568,7 +568,7 @@ class CacheCleanerManager: ObservableObject {
                             sizeBytes: item.sizeBytes
                         )
                         newBackups.append(backupObj)
-                        
+
                         cleaned += 1
                         freed += max(0, item.sizeBytes)
                         await MainActor.run {

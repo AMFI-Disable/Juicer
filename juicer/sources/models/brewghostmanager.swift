@@ -6,7 +6,7 @@ struct BrewGhostPackage: Identifiable, Codable, Hashable {
     let daysIdle: Int
     let size: Int64
     let formattedSize: String
-    
+
     enum CodingKeys: String, CodingKey {
         case name
         case daysIdle = "days_idle"
@@ -21,14 +21,14 @@ struct BrewGhostHistoryItem: Identifiable, Codable, Hashable {
     let package: String
     let size: Int64
     let daysIdle: Int
-    
+
     enum CodingKeys: String, CodingKey {
         case timestamp
         case package
         case size
         case daysIdle = "days_idle"
     }
-    
+
     var formattedDate: String {
         let date = Date(timeIntervalSince1970: TimeInterval(timestamp))
         let formatter = DateFormatter()
@@ -36,7 +36,7 @@ struct BrewGhostHistoryItem: Identifiable, Codable, Hashable {
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-    
+
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
     }
@@ -44,15 +44,15 @@ struct BrewGhostHistoryItem: Identifiable, Codable, Hashable {
 
 class BrewGhostManager: ObservableObject {
     static let shared = BrewGhostManager()
-    
+
     @Published var ghosts: [BrewGhostPackage] = []
     @Published var historyItems: [BrewGhostHistoryItem] = []
     @Published var isLoading = false
     @Published var statusMessage = ""
     @Published var daysThreshold: Int = 90
-    
+
     private let fileManager = FileManager.default
-    
+
     static var brewGhostPath: String? {
         let paths = [
             "/opt/homebrew/bin/brew-ghost",
@@ -66,19 +66,19 @@ class BrewGhostManager: ObservableObject {
         }
         return nil
     }
-    
+
     var configPath: String {
         NSString(string: "~/.config/brew-ghost/config.json").expandingTildeInPath
     }
-    
+
     var historyPath: String {
         NSString(string: "~/.config/brew-ghost/history.json").expandingTildeInPath
     }
-    
+
     init() {
         loadConfig()
     }
-    
+
     func loadConfig() {
         if fileManager.fileExists(atPath: configPath),
            let data = try? Data(contentsOf: URL(fileURLWithPath: configPath)),
@@ -87,16 +87,16 @@ class BrewGhostManager: ObservableObject {
             self.daysThreshold = threshold
         }
     }
-    
+
     func fetchGhosts() {
         guard let executable = Self.brewGhostPath else {
             self.statusMessage = "brew-ghost CLI utility not found in PATH."
             return
         }
-        
+
         self.isLoading = true
         self.statusMessage = "Scanning Homebrew Cellar for idle ghosts..."
-        
+
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             do {
@@ -122,7 +122,7 @@ class BrewGhostManager: ObservableObject {
             }
         }
     }
-    
+
     func fetchHistory() {
         guard fileManager.fileExists(atPath: historyPath),
               let data = try? Data(contentsOf: URL(fileURLWithPath: historyPath)),
@@ -132,7 +132,7 @@ class BrewGhostManager: ObservableObject {
         }
         self.historyItems = items.reversed()
     }
-    
+
     func setDaysThreshold(_ days: Int) {
         guard let executable = Self.brewGhostPath else { return }
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -144,12 +144,12 @@ class BrewGhostManager: ObservableObject {
             }
         }
     }
-    
+
     func exorcise(package: String) {
         guard let brew = BrewManager.brewPath else { return }
         self.isLoading = true
         self.statusMessage = "Uninstalling \(package)..."
-        
+
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             do {
@@ -167,24 +167,24 @@ class BrewGhostManager: ObservableObject {
             }
         }
     }
-    
+
     func clearHistory() {
         try? fileManager.removeItem(atPath: historyPath)
         self.historyItems = []
     }
-    
+
     private static func runCommand(_ executable: String, arguments: [String]) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        
+
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
-        
+
         try process.run()
         process.waitUntilExit()
-        
+
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }

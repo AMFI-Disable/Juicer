@@ -34,7 +34,7 @@ struct JuicerFeatureHeader: View { let title: String; let subtitle: String; let 
 struct JuicerBackToHubButton: View {
     let action: () -> Void
     @State private var isHovering = false
-    
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
@@ -43,14 +43,14 @@ struct JuicerBackToHubButton: View {
                     .foregroundColor(.accentColor)
                     .frame(width: 24, height: 24)
                     .background(Color.accentColor.opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
-                
+
                 Text("Back to Juicer Hub")
                     .font(.body.weight(.medium))
                     .foregroundColor(.primary)
                     .lineLimit(1)
-                
+
                 Spacer(minLength: 4)
-                
+
                 Image(systemName: "chevron.left")
                     .font(.caption2.bold())
                     .foregroundStyle(.secondary)
@@ -80,7 +80,7 @@ struct JuicerFeatureList<Content: View>: View { let title: String; @ViewBuilder 
 struct JuicerUsageBar: View {
     let value: Double // 0 to 100
     let color: Color
-    
+
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
@@ -98,7 +98,7 @@ struct JuicerUsageBar: View {
 struct JuicerEmptyState: View {
     let title: String
     let detail: String
-    
+
     var body: some View {
         VStack(spacing: 8) {
             Text(title)
@@ -152,7 +152,7 @@ enum JuicerHaptic {
 
 struct JuicerAnimatedButtonStyle: ButtonStyle {
     var isProminent: Bool = false
-    
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.96 : 1.0)

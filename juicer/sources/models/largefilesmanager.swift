@@ -6,7 +6,7 @@ struct LargeFileItem: Identifiable, Hashable {
     let size: Int64
     let modificationDate: Date
     var isSelected: Bool
-    
+
     var name: String { url.lastPathComponent }
     var path: String { url.path }
 }
@@ -18,7 +18,7 @@ class LargeFilesManager: ObservableObject {
     @Published var sizeThresholdMB: Double = 100.0
     @Published var ageThresholdMonths: Int = 12
     @Published var searchDirectories: [URL]
-    
+
     private let fileManager = FileManager.default
 
     init() {
@@ -31,38 +31,38 @@ class LargeFilesManager: ObservableObject {
         searchDirectories.append(url)
         startScan()
     }
-    
+
     func startScan() {
         self.isScanning = true
         self.largeFiles = []
         AppLogger.shared.log("Scanning Downloads, Documents, and Desktop folders for large or old files...")
-        
+
         let sizeLimit = Int64(sizeThresholdMB) * 1024 * 1024
         let calendar = Calendar.current
         let cutoffDate = calendar.date(byAdding: .month, value: -ageThresholdMonths, to: Date()) ?? Date.distantPast
-        
+
         Task.detached(priority: .userInitiated) {
             var discovered: [LargeFileItem] = []
             let keys: [URLResourceKey] = [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey]
-            
+
             for directory in self.searchDirectories {
                 guard self.fileManager.fileExists(atPath: directory.path) else { continue }
-                
+
                 guard let enumerator = self.fileManager.enumerator(
                     at: directory,
                     includingPropertiesForKeys: keys,
                     options: [.skipsPackageDescendants, .skipsHiddenFiles]
                 ) else { continue }
-                
+
                 for case let fileURL as URL in enumerator {
                     guard let resourceValues = try? fileURL.resourceValues(forKeys: Set(keys)),
                           let isFile = resourceValues.isRegularFile, isFile,
                           let fileSize = resourceValues.fileSize,
                           let modDate = resourceValues.contentModificationDate
                     else { continue }
-                    
+
                     let size = Int64(fileSize)
-                    
+
                     // Match either larger than size threshold OR older than age threshold
                     if size >= sizeLimit || modDate < cutoffDate {
                         discovered.append(LargeFileItem(
@@ -74,10 +74,10 @@ class LargeFilesManager: ObservableObject {
                     }
                 }
             }
-            
+
             // Sort by size descending
             let sorted = discovered.sorted(by: { $0.size > $1.size })
-            
+
             await MainActor.run {
                 self.largeFiles = sorted
                 self.isScanning = false
@@ -85,16 +85,16 @@ class LargeFilesManager: ObservableObject {
             }
         }
     }
-    
+
     func trashSelectedItems(completion: @escaping (Bool) -> Void) {
         self.isTrashing = true
         let itemsToTrash = largeFiles.filter { $0.isSelected }
-        
+
         AppLogger.shared.log("Moving \(itemsToTrash.count) selected large files to Trash...")
-        
+
         Task.detached(priority: .userInitiated) {
             var success = true
-            
+
             for item in itemsToTrash {
                 do {
                     if self.fileManager.fileExists(atPath: item.path) {
@@ -105,7 +105,7 @@ class LargeFilesManager: ObservableObject {
                     success = false
                 }
             }
-            
+
             await MainActor.run {
                 self.isTrashing = false
                 self.startScan() // Refresh scan

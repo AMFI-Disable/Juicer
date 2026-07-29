@@ -3,11 +3,11 @@ import SwiftUI
 struct statusmonitorview: View {
     @StateObject private var manager = StatusMonitorManager()
     @State private var activeTab: MonitorTab = .overview
-    @State private var killTargetPID: Int? = nil
+    @State private var killTargetPID: Int?
     @State private var showKillConfirm = false
     @State private var killMessage: String = ""
     @State private var showKillResult = false
-    @State private var selectedRogueProcess: ProcessMonitorEntry? = nil
+    @State private var selectedRogueProcess: ProcessMonitorEntry?
 
     enum MonitorTab: String, CaseIterable {
         case overview = "Overview"
@@ -289,7 +289,7 @@ struct statusmonitorview: View {
                         }
                     }
                     .frame(height: 12)
-                    
+
                     HStack {
                         Text("VRAM: " + StatusMonitorManager.formatBytes(UInt64(manager.gpu.vramUsedBytes)))
                             .font(.caption2).foregroundStyle(.secondary)
@@ -327,7 +327,7 @@ struct statusmonitorview: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Connected Devices:")
                         .font(.caption).bold().foregroundStyle(.secondary)
-                    
+
                     if manager.bluetooth.connectedDevices.isEmpty {
                         Text("No devices connected")
                             .font(.caption).foregroundStyle(.secondary)
@@ -340,7 +340,7 @@ struct statusmonitorview: View {
                         }
                     }
                 }
-                
+
                 Spacer()
             }
         }
@@ -611,16 +611,16 @@ struct statusmonitorview: View {
                         Divider()
                         Text("Process '\(rogueProc.name)' (PID \(rogueProc.pid)) is consuming abnormally high system resources:")
                             .font(.subheadline)
-                        
+
                         VStack(alignment: .leading, spacing: 6) {
                             Text("• CPU Consumption: \(String(format: "%.1f%%", rogueProc.cpuPercent))")
                             Text("• Memory Footprint: \(StatusMonitorManager.formatBytes(rogueProc.memBytes))")
                         }
                         .font(.caption).bold()
-                        
+
                         Text("This resource pressure might drain battery, lock core execution threads, or cause macOS UI stuttering. Terminating the process is recommended.")
                             .font(.caption).foregroundColor(.secondary)
-                        
+
                         Divider()
                         HStack {
                             Button("Force Quit Process") {
@@ -632,9 +632,9 @@ struct statusmonitorview: View {
                                 }
                             }
                             .buttonStyle(.borderedProminent).tint(.red)
-                            
+
                             Spacer()
-                            
+
                             Button("Ignore") {
                                 selectedRogueProcess = nil
                             }
