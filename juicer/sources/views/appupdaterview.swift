@@ -3,9 +3,9 @@ import AppKit
 
 struct appupdaterview: View {
     @StateObject private var manager = AppUpdateManager.shared
-    @State private var filterType: SoftwareUpdateItem.UpdateType? = nil
+    @State private var filterType: SoftwareUpdateItem.UpdateType?
     @State private var showAdoptAlert = false
-    @State private var selectedItemForAdoption: SoftwareUpdateItem? = nil
+    @State private var selectedItemForAdoption: SoftwareUpdateItem?
     @State private var alertMessage = ""
 
     var body: some View {
@@ -51,7 +51,7 @@ struct appupdaterview: View {
             Button("Cancel", role: .cancel) {}
             Button("Adopt", role: .destructive) {
                 if let item = selectedItemForAdoption {
-                    manager.adoptViaHomebrewCask(item) { success, msg in
+                    manager.adoptViaHomebrewCask(item) { _, msg in
                         alertMessage = msg
                     }
                 }
@@ -74,7 +74,7 @@ struct appupdaterview: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
-            
+
             Button(action: { manager.checkForUpdates() }) {
                 Image(systemName: "arrow.clockwise")
             }
@@ -119,7 +119,7 @@ struct appupdaterview: View {
     @ViewBuilder
     private func updatesList() -> some View {
         let filtered = filterType == nil ? manager.updates : manager.updates.filter { $0.type == filterType }
-        
+
         List {
             ForEach(filtered) { item in
                 HStack(spacing: 12) {

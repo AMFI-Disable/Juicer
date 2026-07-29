@@ -48,10 +48,10 @@ class DiskExplorerManager: ObservableObject {
     @Published var currentPath: String = ""
     @Published var isScanning: Bool = false
     @Published var scanProgress: Double = 0.0
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
     @Published var topConsumers: [DiskEntry] = []
     @Published var storageHistory: [StorageSnapshot] = []
-    @Published var predictedDaysUntilFull: Int? = nil
+    @Published var predictedDaysUntilFull: Int?
     @Published var dailyGrowthRate: Int64 = 0
 
     private let fileManager = FileManager.default
@@ -216,7 +216,7 @@ class DiskExplorerManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([StorageSnapshot].self, from: data) {
             history = decoded
         }
-        
+
         let now = Date()
         // Limit snapshot frequency to once per day, unless empty or history is less than 2
         if let last = history.last, now.timeIntervalSince(last.timestamp) < 86400 && history.count >= 2 {
@@ -226,40 +226,40 @@ class DiskExplorerManager: ObservableObject {
         } else {
             history.append(StorageSnapshot(timestamp: now, usedBytes: used, freeBytes: free))
         }
-        
+
         if history.count > 30 {
             history.removeFirst(history.count - 30)
         }
-        
+
         if let encoded = try? JSONEncoder().encode(history) {
             UserDefaults.standard.set(encoded, forKey: key)
         }
-        
+
         DispatchQueue.main.async {
             self.storageHistory = history
             self.calculateForecast()
         }
     }
-    
+
     private func calculateForecast() {
         guard storageHistory.count >= 2 else {
             self.predictedDaysUntilFull = nil
             self.dailyGrowthRate = 0
             return
         }
-        
+
         guard let oldest = storageHistory.first, let newest = storageHistory.last else {
             predictedDaysUntilFull = nil
             dailyGrowthRate = 0
             return
         }
-        
+
         let timeDiffSec = newest.timestamp.timeIntervalSince(oldest.timestamp)
         let timeDiffDays = max(timeDiffSec / 86400.0, 0.1)
-        
+
         let usedDiff = newest.usedBytes - oldest.usedBytes
         let growthPerDay = Double(usedDiff) / timeDiffDays
-        
+
         DispatchQueue.main.async {
             self.dailyGrowthRate = Int64(max(0, growthPerDay))
             if growthPerDay > 0 {
@@ -270,7 +270,7 @@ class DiskExplorerManager: ObservableObject {
             }
         }
     }
-    
+
     func loadMockHistoryIfNeeded(currentUsed: Int64, currentFree: Int64) {
         let key = "juicer.settings.storageHistory"
         var history: [StorageSnapshot] = []
@@ -278,24 +278,24 @@ class DiskExplorerManager: ObservableObject {
            let decoded = try? JSONDecoder().decode([StorageSnapshot].self, from: data) {
             history = decoded
         }
-        
+
         if history.count < 2 {
             history = []
             let daySec: TimeInterval = 86400
             let baseGrowth: Int64 = 1_200_000_000 // ~1.2 GB growth per day
-            
+
             for i in (0...6).reversed() {
                 let date = Date().addingTimeInterval(-Double(i) * daySec)
                 let mockUsed = currentUsed - Int64(i) * baseGrowth
                 let mockFree = currentFree + Int64(i) * baseGrowth
                 history.append(StorageSnapshot(timestamp: date, usedBytes: mockUsed, freeBytes: mockFree))
             }
-            
+
             if let encoded = try? JSONEncoder().encode(history) {
                 UserDefaults.standard.set(encoded, forKey: key)
             }
         }
-        
+
         self.storageHistory = history
         self.calculateForecast()
     }

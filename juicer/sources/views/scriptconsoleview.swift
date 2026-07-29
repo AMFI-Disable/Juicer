@@ -12,8 +12,8 @@ struct scriptconsoleview: View {
     @State private var scriptCode: String = ""
     @State private var consoleOutput: String = ""
     @State private var isRunning = false
-    @State private var activeProcess: Process? = nil
-    
+    @State private var activeProcess: Process?
+
     private let templates = [
         ScriptTemplate(name: "Flush DNS Cache", desc: "Flush macOS resolver and restart mDNSResponder service.", code: "dscacheutil -flushcache; sudo killall -HUP mDNSResponder\necho '✅ DNS Cache flushed successfully.'", icon: "network"),
         ScriptTemplate(name: "Free Inactive RAM", desc: "Forcibly purge memory caches using macOS system purge.", code: "sudo purge\necho '✅ RAM Purge completed.'", icon: "cpu"),
@@ -21,21 +21,21 @@ struct scriptconsoleview: View {
         ScriptTemplate(name: "Clean Xcode Simulators", desc: "Reclaim space by erasing simulated device runtimes.", code: "xcrun simctl erase all\necho '✅ Simulator runtimes cleaned.'", icon: "iphone"),
         ScriptTemplate(name: "Prune Docker system", desc: "Reclaim space by removing stopped containers, unused networks/images.", code: "docker system prune -a --volumes -f\necho '✅ Docker cleanup finished.'", icon: "shippingbox.fill")
     ]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar()
             Divider()
-            
+
             HSplitView {
                 // Left Column: Templates selection
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Script Library")
                         .font(.headline)
                         .padding()
-                    
+
                     Divider()
-                    
+
                     List(templates) { template in
                         Button(action: { scriptCode = template.code }) {
                             HStack(spacing: 12) {
@@ -43,7 +43,7 @@ struct scriptconsoleview: View {
                                     .font(.title3)
                                     .foregroundColor(.accentColor)
                                     .frame(width: 24)
-                                
+
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(template.name).font(.subheadline).bold()
                                     Text(template.desc).font(.caption2).foregroundStyle(.secondary)
@@ -57,7 +57,7 @@ struct scriptconsoleview: View {
                     .listStyle(.inset)
                 }
                 .frame(minWidth: 260, idealWidth: 300, maxWidth: 340)
-                
+
                 // Right Column: Editor & Terminal Console
                 VStack(spacing: 16) {
                     // Editor Panel
@@ -78,7 +78,7 @@ struct scriptconsoleview: View {
                                 .disabled(scriptCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                             }
                         }
-                        
+
                         TextEditor(text: $scriptCode)
                             .font(.system(.body, design: .monospaced))
                             .padding(8)
@@ -87,7 +87,7 @@ struct scriptconsoleview: View {
                             .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
                             .frame(minHeight: 180)
                     }
-                    
+
                     // Console Output Terminal
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -98,7 +98,7 @@ struct scriptconsoleview: View {
                             }
                             .buttonStyle(.bordered).controlSize(.small)
                         }
-                        
+
                         ScrollViewReader { proxy in
                             ScrollView {
                                 Text(consoleOutput.isEmpty ? "Ready to run. Execution outputs will stream here in real time." : consoleOutput)
@@ -124,7 +124,7 @@ struct scriptconsoleview: View {
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
-    
+
     @ViewBuilder
     private func headerBar() -> some View {
         HStack {
@@ -138,29 +138,29 @@ struct scriptconsoleview: View {
         }
         .padding()
     }
-    
+
     // MARK: - Process Execution Runner
-    
+
     private func runScript() {
         guard !isRunning else { return }
         isRunning = true
         consoleOutput = "⏳ Initializing shell execution session...\n\n"
-        
+
         let commandStr = scriptCode
-        
+
         Task.detached(priority: .userInitiated) {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/bin/sh")
             proc.arguments = ["-c", commandStr]
-            
+
             let pipe = Pipe()
             proc.standardOutput = pipe
             proc.standardError = pipe
-            
+
             await MainActor.run {
                 self.activeProcess = proc
             }
-            
+
             let fileHandle = pipe.fileHandleForReading
             fileHandle.readabilityHandler = { handle in
                 let data = handle.availableData
@@ -171,12 +171,12 @@ struct scriptconsoleview: View {
                     }
                 }
             }
-            
+
             do {
                 try proc.run()
                 proc.waitUntilExit()
                 fileHandle.readabilityHandler = nil
-                
+
                 let exitStatus = proc.terminationStatus
                 await MainActor.run {
                     self.isRunning = false
@@ -197,7 +197,7 @@ struct scriptconsoleview: View {
             }
         }
     }
-    
+
     private func cancelExecution() {
         activeProcess?.terminate()
         activeProcess = nil

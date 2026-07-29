@@ -4,15 +4,15 @@ import UniformTypeIdentifiers
 struct quarantinestripperview: View {
     @StateObject private var stripper = QuarantineStripper()
     @State private var isDragging = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             // Drag and drop zone
             dragAndDropZone()
                 .padding()
-            
+
             // Cleaned list header
             HStack {
                 Text("Processed Files History")
@@ -29,7 +29,7 @@ struct quarantinestripperview: View {
             }
             .padding(.horizontal)
             .padding(.top, 10)
-            
+
             // History list
             if stripper.processedItems.isEmpty {
                 emptyHistoryView()
@@ -40,7 +40,7 @@ struct quarantinestripperview: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -58,7 +58,7 @@ struct quarantinestripperview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Drag and Drop Zone UI
     @ViewBuilder
     private func dragAndDropZone() -> some View {
@@ -72,7 +72,7 @@ struct quarantinestripperview: View {
                             style: StrokeStyle(lineWidth: 2, dash: isDragging ? [] : [6])
                         )
                 )
-            
+
             VStack(spacing: 16) {
                 if stripper.isProcessing {
                     ProgressView("Stripping quarantine attributes...")
@@ -83,7 +83,7 @@ struct quarantinestripperview: View {
                         .foregroundStyle(isDragging ? Color.accentColor : Color.secondary)
                         .scaleEffect(isDragging ? 1.1 : 1.0)
                         .animation(.spring(), value: isDragging)
-                    
+
                     VStack(spacing: 4) {
                         Text("Drop Quarantined Files or Apps")
                             .font(.headline)
@@ -91,7 +91,7 @@ struct quarantinestripperview: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Button("Select Files Manually...") {
                         selectFilesManually()
                     }
@@ -104,27 +104,27 @@ struct quarantinestripperview: View {
         .onDrop(of: [.item], isTargeted: $isDragging) { providers in
             var urls: [URL] = []
             let group = DispatchGroup()
-            
+
             for provider in providers {
                 group.enter()
-                _ = provider.loadObject(ofClass: URL.self) { url, error in
+                _ = provider.loadObject(ofClass: URL.self) { url, _ in
                     if let url = url {
                         urls.append(url)
                     }
                     group.leave()
                 }
             }
-            
+
             group.notify(queue: .main) {
                 if !urls.isEmpty {
                     stripper.stripQuarantine(for: urls)
                 }
             }
-            
+
             return true
         }
     }
-    
+
     // MARK: - Empty State UI
     @ViewBuilder
     private func emptyHistoryView() -> some View {
@@ -141,7 +141,7 @@ struct quarantinestripperview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - History List UI
     @ViewBuilder
     private func historyList() -> some View {
@@ -149,7 +149,7 @@ struct quarantinestripperview: View {
             HStack {
                 Image(systemName: item.status == "Stripped" ? "lock.open.fill" : (item.status == "Failed" ? "exclamationmark.shield.fill" : "shield.fill"))
                     .foregroundStyle(item.status == "Stripped" ? .green : (item.status == "Failed" ? .red : .secondary))
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.name)
                         .font(.body)
@@ -160,20 +160,20 @@ struct quarantinestripperview: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                
+
                 Spacer()
-                
+
                 statusBadge(status: item.status)
             }
             .padding(.vertical, 4)
         }
         .listStyle(.inset)
     }
-    
+
     private func statusBadge(status: String) -> some View {
         let color: Color
         let bgColor: Color
-        
+
         switch status {
         case "Stripped":
             color = .green
@@ -185,7 +185,7 @@ struct quarantinestripperview: View {
             color = .secondary
             bgColor = .secondary.opacity(0.15)
         }
-        
+
         return Text(status)
             .font(.caption2)
             .bold()
@@ -195,7 +195,7 @@ struct quarantinestripperview: View {
             .foregroundColor(color)
             .cornerRadius(8)
     }
-    
+
     // MARK: - Actions
     private func selectFilesManually() {
         let panel = NSOpenPanel()
@@ -203,7 +203,7 @@ struct quarantinestripperview: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = true
         panel.prompt = "Strip Quarantine"
-        
+
         if panel.runModal() == .OK {
             stripper.stripQuarantine(for: panel.urls)
         }

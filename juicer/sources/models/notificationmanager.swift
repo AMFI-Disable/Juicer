@@ -3,12 +3,12 @@ import UserNotifications
 
 class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationManager()
-    
+
     private override init() {
         super.init()
         UNUserNotificationCenter.current().delegate = self
     }
-    
+
     func requestAuthorization() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
@@ -18,26 +18,26 @@ class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
             }
         }
     }
-    
+
     func sendNotification(title: String, body: String) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
         content.sound = .default
-        
+
         let request = UNNotificationRequest(
             identifier: UUID().uuidString,
             content: content,
             trigger: nil // Deliver immediately
         )
-        
+
         UNUserNotificationCenter.current().add(request) { error in
             if let error = error {
                 AppLogger.shared.log("Failed to deliver notification: \(error.localizedDescription)")
             }
         }
     }
-    
+
     // UNUserNotificationCenterDelegate to show notifications even in foreground
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,

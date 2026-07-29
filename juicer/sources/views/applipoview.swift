@@ -3,7 +3,7 @@ import SwiftUI
 struct applipoview: View {
     @StateObject private var manager = AppLipoManager()
     @State private var searchText = ""
-    
+
     var filteredApps: [LipoAppItem] {
         if searchText.isEmpty {
             return manager.universalApps
@@ -14,18 +14,18 @@ struct applipoview: View {
             }
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             // Search / Filter row
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 TextField("Search universal applications...", text: $searchText)
                     .textFieldStyle(.plain)
-                
+
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
@@ -36,7 +36,7 @@ struct applipoview: View {
             }
             .padding()
             .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-            
+
             // List of universal applications
             if manager.isScanning && manager.universalApps.isEmpty {
                 scanningPlaceholder()
@@ -52,7 +52,7 @@ struct applipoview: View {
             manager.scanForUniversalApps()
         }
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -66,7 +66,7 @@ struct applipoview: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            
+
             Button(action: { manager.scanForUniversalApps() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -79,7 +79,7 @@ struct applipoview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Scanning Placeholder
     @ViewBuilder
     private func scanningPlaceholder() -> some View {
@@ -92,7 +92,7 @@ struct applipoview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Empty State UI
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
@@ -112,7 +112,7 @@ struct applipoview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Applications List
     @ViewBuilder
     private func appsList() -> some View {
@@ -125,7 +125,7 @@ struct applipoview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Total Savings Bar
             HStack {
                 let totalSavings = manager.universalApps.reduce(0) { $0 + $1.estimatedSavings }
@@ -139,7 +139,7 @@ struct applipoview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -162,7 +162,7 @@ struct applipoview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func appRow(item: LipoAppItem) -> some View {
         HStack {
@@ -172,7 +172,7 @@ struct applipoview: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 32, height: 32)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.appName)
                         .font(.headline)
@@ -184,27 +184,27 @@ struct applipoview: View {
                 }
             }
             .frame(width: 240, alignment: .leading)
-            
+
             // Architectures
             Text(item.architectures.joined(separator: " + "))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(width: 250, alignment: .leading)
-            
+
             // Current Size
             Text(formatBytes(item.totalSize))
                 .font(.system(.body, design: .monospaced))
                 .frame(width: 100, alignment: .trailing)
-            
+
             Spacer()
-            
+
             // Estimated savings
             Text(formatBytes(item.estimatedSavings))
                 .font(.system(.body, design: .monospaced))
                 .bold()
                 .foregroundColor(.green)
                 .frame(width: 100, alignment: .trailing)
-            
+
             // Action
             Button(item.isThinned ? "Thinned" : "Thin App") {
                 confirmThinning(for: item)
@@ -217,7 +217,7 @@ struct applipoview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     // MARK: - Actions
     private func confirmThinning(for item: LipoAppItem) {
         let alert = NSAlert()
@@ -226,12 +226,12 @@ struct applipoview: View {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Thin Application")
         alert.addButton(withTitle: "Cancel")
-        
+
         if alert.runModal() == .alertFirstButtonReturn {
             manager.thinApplication(item) { _ in }
         }
     }
-    
+
     private func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
