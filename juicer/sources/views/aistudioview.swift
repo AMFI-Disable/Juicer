@@ -14,11 +14,11 @@ class AIStudioManager: ObservableObject {
     @Published var promptInput = ""
     @Published var chatResponse = ""
     @Published var isGenerating = false
-    
+
     init() {
         self.scanLocalModels()
     }
-    
+
     func scanLocalModels() {
         Task.detached(priority: .userInitiated) {
             let output = self.runShellCommand("ollama list")
@@ -33,32 +33,32 @@ class AIStudioManager: ObservableObject {
                     items.append(AIModelItem(name: name, size: size, modified: "Local"))
                 }
             }
-            
+
             await MainActor.run {
                 self.localModels = items
                 self.isOllamaRunning = !items.isEmpty
             }
         }
     }
-    
+
     func generateResponse(prompt: String) {
         guard !prompt.isEmpty else { return }
         self.isGenerating = true
         self.chatResponse = "Generating response via local Ollama instance..."
-        
+
         Task.detached(priority: .userInitiated) {
             let safePrompt = prompt.replacingOccurrences(of: "\"", with: "\\\"")
             let modelName = self.localModels.first?.name ?? "llama3"
             let cmd = "ollama run \(modelName) \"\(safePrompt)\""
             let output = self.runShellCommand(cmd)
-            
+
             await MainActor.run {
                 self.chatResponse = output.isEmpty ? "No response received. Ensure Ollama daemon is running (`ollama serve`)." : output
                 self.isGenerating = false
             }
         }
     }
-    
+
     private func runShellCommand(_ cmd: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -79,7 +79,7 @@ struct aistudioview: View {
     @StateObject private var manager = AIStudioManager()
     @State private var selectedTab = "Chat"
     @State private var promptText = "Explain how async/await works in Swift 6 concurrency."
-    
+
     var body: some View {
         VStack(spacing: 0) {
             JuicerFeatureHeader(
@@ -91,9 +91,9 @@ struct aistudioview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             HStack {
                 Picker("", selection: $selectedTab) {
                     Text("AI Chat Assistant").tag("Chat")
@@ -102,13 +102,13 @@ struct aistudioview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 340)
-                
+
                 Spacer()
             }
             .padding()
-            
+
             Divider()
-            
+
             if selectedTab == "Chat" {
                 chatView()
             } else if selectedTab == "Models" {
@@ -119,7 +119,7 @@ struct aistudioview: View {
         }
         .allowWindowDragAndFit()
     }
-    
+
     @ViewBuilder
     private func chatView() -> some View {
         VStack(spacing: 12) {
@@ -132,14 +132,14 @@ struct aistudioview: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(manager.isGenerating || promptText.isEmpty)
             }
-            
+
             TextEditor(text: .constant(manager.chatResponse.isEmpty ? "Response output will appear here..." : manager.chatResponse))
                 .font(.system(.body, design: .monospaced))
                 .cornerRadius(8)
         }
         .padding()
     }
-    
+
     @ViewBuilder
     private func modelsView() -> some View {
         if manager.localModels.isEmpty {
@@ -171,7 +171,7 @@ struct aistudioview: View {
             .listStyle(.inset)
         }
     }
-    
+
     @ViewBuilder
     private func vaultView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -185,7 +185,7 @@ struct aistudioview: View {
         }
         .padding()
     }
-    
+
     private func promptTemplateRow(title: String, bodyText: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title).bold()

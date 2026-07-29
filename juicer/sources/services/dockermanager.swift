@@ -9,7 +9,7 @@ struct DockerContainer: Identifiable, Hashable {
     let state: String
     let created: String
     let ports: String
-    
+
     var isRunning: Bool {
         state.lowercased() == "running" || status.lowercased().contains("up")
     }
@@ -26,7 +26,7 @@ struct DockerDiskUsage: Identifiable {
 
 final class DockerManager: ObservableObject {
     static let shared = DockerManager()
-    
+
     @Published var isDockerInstalled = false
     @Published var isDaemonRunning = false
     @Published var dockerPath: String = ""
@@ -35,11 +35,11 @@ final class DockerManager: ObservableObject {
     @Published var isRefreshing = false
     @Published var statusMessage: String = ""
     @Published var totalReclaimableSpace: String = "0 B"
-    
+
     private init() {
         detectDocker()
     }
-    
+
     func detectDocker() {
         let candidates = [
             "/opt/homebrew/bin/docker",
@@ -48,7 +48,7 @@ final class DockerManager: ObservableObject {
             NSHomeDirectory() + "/.colima/bin/docker",
             "/usr/bin/docker"
         ]
-        
+
         for path in candidates {
             if FileManager.default.fileExists(atPath: path) {
                 self.dockerPath = path
@@ -56,7 +56,7 @@ final class DockerManager: ObservableObject {
                 break
             }
         }
-        
+
         if !isDockerInstalled {
             // Check PATH fallback
             let process = Process()
@@ -72,21 +72,21 @@ final class DockerManager: ObservableObject {
                 self.isDockerInstalled = true
             }
         }
-        
+
         refreshAll()
     }
-    
+
     func refreshAll() {
         guard isDockerInstalled else { return }
         isRefreshing = true
-        
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            
+
             let daemonOk = self.checkDaemonStatus()
             let loadedContainers = daemonOk ? self.loadContainers() : []
             let loadedDiskUsage = daemonOk ? self.loadDiskUsage() : []
-            
+
             DispatchQueue.main.async {
                 self.isDaemonRunning = daemonOk
                 self.containers = loadedContainers
@@ -95,7 +95,7 @@ final class DockerManager: ObservableObject {
             }
         }
     }
-    
+
     private func checkDaemonStatus() -> Bool {
         guard !dockerPath.isEmpty else { return false }
         let process = Process()
@@ -112,7 +112,7 @@ final class DockerManager: ObservableObject {
             return false
         }
     }
-    
+
     private func loadContainers() -> [DockerContainer] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: dockerPath)
@@ -124,7 +124,7 @@ final class DockerManager: ObservableObject {
             process.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             guard let output = String(data: data, encoding: .utf8) else { return [] }
-            
+
             var items: [DockerContainer] = []
             let lines = output.components(separatedBy: .newlines)
             for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -147,7 +147,7 @@ final class DockerManager: ObservableObject {
             return []
         }
     }
-    
+
     private func loadDiskUsage() -> [DockerDiskUsage] {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: dockerPath)
@@ -159,7 +159,7 @@ final class DockerManager: ObservableObject {
             process.waitUntilExit()
             let data = pipe.fileHandleForReading.readDataToEndOfFile()
             guard let output = String(data: data, encoding: .utf8) else { return [] }
-            
+
             var items: [DockerDiskUsage] = []
             let lines = output.components(separatedBy: .newlines)
             for line in lines {
@@ -184,45 +184,45 @@ final class DockerManager: ObservableObject {
             return []
         }
     }
-    
+
     // Container Actions
     func startContainer(id: String) {
         runDockerCommand(["start", id]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func stopContainer(id: String) {
         runDockerCommand(["stop", id]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func restartContainer(id: String) {
         runDockerCommand(["restart", id]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func removeContainer(id: String) {
         runDockerCommand(["rm", "-f", id]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     // Purge Reclaimer Actions
     func purgeImages() {
         runDockerCommand(["image", "prune", "-a", "-f"]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func purgeStoppedContainers() {
         runDockerCommand(["container", "prune", "-f"]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func purgeVolumes() {
         runDockerCommand(["volume", "prune", "-f"]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func purgeBuildCache() {
         runDockerCommand(["builder", "prune", "-a", "-f"]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     func purgeEverything() {
         runDockerCommand(["system", "prune", "-a", "--volumes", "-f"]) { [weak self] _ in self?.refreshAll() }
     }
-    
+
     private func runDockerCommand(_ args: [String], completion: @escaping (Bool) -> Void) {
         guard !dockerPath.isEmpty else { completion(false); return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in

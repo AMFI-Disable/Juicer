@@ -4,16 +4,16 @@ struct brewghostview: View {
     @StateObject private var manager = BrewGhostManager.shared
     @State private var selectedTab = 0
     @State private var showingExorciseConfirm = false
-    @State private var targetExorcisePackage: String? = nil
-    
+    @State private var targetExorcisePackage: String?
+
     var totalReclaimableBytes: Int64 {
         manager.ghosts.reduce(0) { $0 + $1.size }
     }
-    
+
     var formattedReclaimableSpace: String {
         ByteCountFormatter.string(fromByteCount: totalReclaimableBytes, countStyle: .file)
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Banner
@@ -26,19 +26,19 @@ struct brewghostview: View {
                         .font(.title2)
                         .foregroundColor(.white)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 8) {
                         Text("Brew-Ghost Companion")
                             .font(.title2).bold()
-                        
+
                         Text("🌟 CREATOR ORIGINAL")
                             .font(.system(size: 9, weight: .black))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Color.purple.opacity(0.18), in: Capsule())
                             .foregroundColor(.purple)
-                        
+
                         Text("TOP BREW TOOL")
                             .font(.system(size: 9, weight: .black))
                             .padding(.horizontal, 6)
@@ -46,12 +46,12 @@ struct brewghostview: View {
                             .background(Color.orange.opacity(0.18), in: Capsule())
                             .foregroundColor(.orange)
                     }
-                    
+
                     HStack(spacing: 8) {
                         Text("Automated ghost package & orphan formula cleanup utility")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         Button(action: {
                             if let url = URL(string: "https://github.com/amfi-disable/Brew-Ghost") {
                                 NSWorkspace.shared.open(url)
@@ -67,9 +67,9 @@ struct brewghostview: View {
                         .buttonStyle(.plain)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     manager.fetchGhosts()
                     manager.fetchHistory()
@@ -81,9 +81,9 @@ struct brewghostview: View {
             }
             .padding(20)
             .background(Color(NSColor.controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Picker tab bar
             HStack {
                 Picker("", selection: $selectedTab) {
@@ -93,9 +93,9 @@ struct brewghostview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 400)
-                
+
                 Spacer()
-                
+
                 if selectedTab == 0 && !manager.ghosts.isEmpty {
                     Text("Reclaimable: \(formattedReclaimableSpace)")
                         .font(.subheadline).bold()
@@ -104,9 +104,9 @@ struct brewghostview: View {
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            
+
             Divider()
-            
+
             // Main content body
             if manager.isLoading {
                 VStack(spacing: 12) {
@@ -142,7 +142,7 @@ struct brewghostview: View {
             )
         }
     }
-    
+
     // MARK: - Ghosts List View
     @ViewBuilder
     private func ghostsListView() -> some View {
@@ -165,7 +165,7 @@ struct brewghostview: View {
                         Image(systemName: "shippingbox.fill")
                             .font(.title2)
                             .foregroundColor(.orange)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(ghost.name)
                                 .font(.headline)
@@ -173,13 +173,13 @@ struct brewghostview: View {
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
-                        
+
                         Spacer()
-                        
+
                         Text(ghost.formattedSize)
                             .font(.callout).bold()
                             .foregroundStyle(.secondary)
-                        
+
                         Button("Exorcise") {
                             targetExorcisePackage = ghost.name
                         }
@@ -193,7 +193,7 @@ struct brewghostview: View {
             .listStyle(.inset)
         }
     }
-    
+
     // MARK: - History List View
     @ViewBuilder
     private func historyListView() -> some View {
@@ -224,16 +224,16 @@ struct brewghostview: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 8)
-                
+
                 Divider()
-                
+
                 List {
                     ForEach(manager.historyItems) { item in
                         HStack(spacing: 16) {
                             Image(systemName: "trash.circle.fill")
                                 .font(.title3)
                                 .foregroundColor(.purple)
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.package)
                                     .font(.headline)
@@ -241,9 +241,9 @@ struct brewghostview: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            
+
                             Spacer()
-                            
+
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(item.formattedSize)
                                     .font(.subheadline).bold()
@@ -259,7 +259,7 @@ struct brewghostview: View {
             }
         }
     }
-    
+
     // MARK: - Settings View
     @ViewBuilder
     private func settingsView() -> some View {
@@ -277,12 +277,12 @@ struct brewghostview: View {
                     Text("180 Days").tag(180)
                 }
                 .pickerStyle(.menu)
-                
+
                 Text("Packages unused for longer than this threshold will be flagged as freeloaders.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            
+
             Section("CLI Integration Status") {
                 HStack {
                     Text("brew-ghost Path:")
@@ -291,7 +291,7 @@ struct brewghostview: View {
                         .font(.footnote)
                         .foregroundColor(BrewGhostManager.brewGhostPath != nil ? .green : .red)
                 }
-                
+
                 HStack {
                     Text("Config Location:")
                     Spacer()
@@ -299,7 +299,7 @@ struct brewghostview: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 HStack {
                     Text("History Location:")
                     Spacer()

@@ -3,13 +3,13 @@ import Combine
 
 struct statusbarview: View {
     @ObservedObject var logger = AppLogger.shared
-    
+
     @State private var diskUsageString: String = ""
     @State private var memoryUsageString: String = ""
     @State private var diskUsageRatio: Double = 0
     @State private var memoryUsageRatio: Double = 0
     @State private var timer = Timer.publish(every: 3, on: .main, in: .common).autoconnect()
-    
+
     var body: some View {
         HStack(spacing: 20) {
             // Logs & Terminal toggle display
@@ -23,17 +23,17 @@ struct statusbarview: View {
                 }
                 .buttonStyle(.plain)
                 .help("Toggle Bottom Terminal")
-                
+
                 Text(logger.latestLog)
                     .font(.caption)
                     .lineLimit(1)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
+
             Divider()
                 .frame(height: 16)
-            
+
             // Disk usage display
             HStack(spacing: 6) {
                 Image(systemName: "square.grid.3x1.below.line.grid.1x2")
@@ -47,10 +47,10 @@ struct statusbarview: View {
                     .frame(width: 52)
             }
             .help("Disk usage: \(diskUsageString)")
-            
+
             Divider()
                 .frame(height: 16)
-            
+
             // Memory display
             HStack(spacing: 6) {
                 Image(systemName: "memorychip")
@@ -78,7 +78,7 @@ struct statusbarview: View {
             updateMetrics()
         }
     }
-    
+
     private func updateMetrics() {
         // Update Disk Metrics
         let fileManager = FileManager.default
@@ -94,7 +94,7 @@ struct statusbarview: View {
             diskUsageString = "\(usedString) / \(totalString)"
             diskUsageRatio = totalBytes > 0 ? Double(usedBytes) / Double(totalBytes) : 0
         }
-        
+
         // Update Memory Metrics using mach host call
         let mem = getMemoryUsage()
         let byteFormatter = ByteCountFormatter()
@@ -105,29 +105,29 @@ struct statusbarview: View {
         memoryUsageString = "\(usedMemString) / \(totalMemString)"
         memoryUsageRatio = mem.total > 0 ? mem.used / mem.total : 0
     }
-    
+
     private func getMemoryUsage() -> (used: Double, total: Double) {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
         let hostPort = mach_host_self()
-        
+
         let result = withUnsafeMutablePointer(to: &stats) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
                 host_statistics64(hostPort, HOST_VM_INFO64, $0, &count)
             }
         }
-        
+
         let total = Double(ProcessInfo.processInfo.physicalMemory)
         guard result == KERN_SUCCESS else {
             return (0.0, total)
         }
-        
+
         let pageSize = vm_kernel_page_size
         let active = Double(stats.active_count) * Double(pageSize)
         let wire = Double(stats.wire_count) * Double(pageSize)
         let compressed = Double(stats.compressor_page_count) * Double(pageSize)
         let used = active + wire + compressed
-        
+
         return (used, total)
     }
 }

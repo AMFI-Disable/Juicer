@@ -5,18 +5,18 @@ enum UnifiedStoreItem: String, CaseIterable, Identifiable {
     case allCasks = "All Casks"
     case installedCasks = "Installed Casks"
     case updatesCasks = "Cask Updates"
-    
+
     case allFormulae = "All Formulae"
     case installedFormulae = "Installed Formulae"
     case updatesFormulae = "Formula Updates"
-    
+
     case services = "Background Services"
     case taps = "Taps Repositories"
     case brewfile = "Brewfile Sync"
     case diagnostics = "Diagnostics & Maintenance"
-    
+
     var id: String { rawValue }
-    
+
     var iconName: String {
         switch self {
         case .allCasks: return "square.grid.3x3.fill"
@@ -35,7 +35,7 @@ enum UnifiedStoreItem: String, CaseIterable, Identifiable {
 
 struct mainsidebarview: View {
     @State private var currentWorkspace: JuicerWorkspace = .hub
-    @State private var selectedItem: NavigationItem? = nil
+    @State private var selectedItem: NavigationItem?
     @State private var selectedStoreItem: UnifiedStoreItem = .allCasks
     @State private var isShowingGuide = false
     @State private var isShowingCommandPalette = false
@@ -53,12 +53,12 @@ struct mainsidebarview: View {
     @State private var sidebarScope = "all"
     @State private var isEcosystemExpanded = true
     @State private var showTerminal = false
-    
+
     // Home Screen Canvas Drag Panning State
     @State private var hubOffset: CGSize = .zero
     @State private var lastHubOffset: CGSize = .zero
     @State private var isShowingSettings = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             if currentWorkspace == .hub {
@@ -73,21 +73,21 @@ struct mainsidebarview: View {
                                 selectedItem = nil
                             }
                         }
-                        
+
                         Divider().padding(.vertical, 4)
-                        
+
                         Section("Cask Store (Apps)") {
                             sidebarStoreLink(for: .allCasks)
                             sidebarStoreLink(for: .installedCasks)
                             sidebarStoreLink(for: .updatesCasks)
                         }
-                        
+
                         Section("Brew Store (CLI)") {
                             sidebarStoreLink(for: .allFormulae)
                             sidebarStoreLink(for: .installedFormulae)
                             sidebarStoreLink(for: .updatesFormulae)
                         }
-                        
+
                         Section("Homebrew Utilities") {
                             sidebarStoreLink(for: .services)
                             sidebarStoreLink(for: .taps)
@@ -131,7 +131,7 @@ struct mainsidebarview: View {
                                 selectedItem = nil
                             }
                         }
-                        
+
                         Divider().padding(.vertical, 4)
 
                         Picker("Tool scope", selection: $sidebarScope) {
@@ -140,13 +140,13 @@ struct mainsidebarview: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal, 4)
-                        
+
                         // Dynamically filtered workspace items
                         let items = NavigationItem.allCases.filter { item in
                             let matchesScope: Bool = (sidebarScope == "favorites") ? navigationPreferences.isFavorite(item) : true
                             return item.workspace == currentWorkspace && matchesScope && (sidebarSearch.isEmpty || item.title.localizedCaseInsensitiveContains(sidebarSearch))
                         }
-                        
+
                         // Workspace Header & Controls
                         Section(header: HStack(spacing: 6) {
                             Image(systemName: currentWorkspace.iconName)
@@ -172,7 +172,7 @@ struct mainsidebarview: View {
                                     }
                                 }
                             }
-                            
+
                             // Direct Subcategory Listing (1-Click Instant Navigation)
                             let categories = Array(Set(items.map { $0.subcategory })).sorted()
                             ForEach(categories, id: \.self) { category in
@@ -191,7 +191,6 @@ struct mainsidebarview: View {
                                 }
                             }
                         }
-                        
 
                         // Footer Settings & Minimize Controls
                         Section("Preferences") {
@@ -211,7 +210,7 @@ struct mainsidebarview: View {
                             .buttonStyle(.plain)
                             .padding(.vertical, 4)
                             .help("Open Juicer Preferences & Settings")
-                            
+
                             Button(action: {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     compactNavigation.toggle()
@@ -287,6 +286,7 @@ struct mainsidebarview: View {
                         case .imageConverter:   imageconverterview()
                         case .juicerGit:        gitdashboardview()
                         case .gitExtras:        gitextrasview()
+                        case .developerAccounts: developeraccountsview()
                         case .dockerDashboard, .dockerPurge, .dockerLogs, .dockerCompose: dockerstudioview()
                         case .aiWorkbench, .aiPromptVault, .aiChat, .aiKeyManager: aistudioview()
                         case .dbDaemonMonitor, .sqliteInspector, .redisViewer, .dbBackupTool: databasestudioview()
@@ -400,7 +400,7 @@ struct mainsidebarview: View {
                     }
                 }
             }
-            
+
             if showTerminal {
                 bottomterminalview()
                 Divider()
@@ -502,7 +502,7 @@ struct mainsidebarview: View {
                 currentWorkspace = item.workspace
             }
         }
-        
+
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.nav.uninstaller.scan"))) { notification in
             if let appURL = notification.object as? URL {
                 currentWorkspace = .configs
@@ -512,7 +512,7 @@ struct mainsidebarview: View {
                 }
             }
         }
-        
+
         .onAppear {
             guard !hasAppeared else { return }
             hasAppeared = true
@@ -522,12 +522,12 @@ struct mainsidebarview: View {
                 NSApp.windows.first(where: { $0.canBecomeKey && $0.title != "" })?.makeKeyAndOrderFront(nil)
             }
         }
-        
+
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.action.refresh"))) { _ in
             AppLogger.shared.log("Cmd + R Refresh triggered.")
             NotificationCenter.default.post(name: NSNotification.Name("juicer.tool.refreshActive"), object: nil)
         }
-        
+
         // Help & Guide triggers
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.action.showGuide"))) { _ in
             isShowingGuide = true
@@ -560,7 +560,7 @@ struct mainsidebarview: View {
         default: return .orange
         }
     }
-    
+
     // MARK: - Startup Hub Launchpad View (Full-Window Centered Grid & Panning Canvas)
     @ViewBuilder
     private func hubLaunchpadView() -> some View {
@@ -569,7 +569,7 @@ struct mainsidebarview: View {
                 ScrollView([.horizontal, .vertical], showsIndicators: false) {
                     VStack(spacing: 0) {
                         Spacer(minLength: 24)
-                        
+
                         VStack(spacing: 32) {
                             // App Hub Header
                             VStack(spacing: 12) {
@@ -600,11 +600,11 @@ struct mainsidebarview: View {
                                     .foregroundStyle(.secondary)
                                     .multilineTextAlignment(.center)
                             }
-                            
+
                             // Startup App Grid (Expands & Fills Full Available Window)
                             let columnsCount = geo.size.width >= 1000 ? 3 : (geo.size.width >= 640 ? 2 : 1)
                             let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 20), count: columnsCount)
-                            
+
                             LazyVGrid(columns: gridColumns, spacing: 20) {
                                 hubAppCard(workspace: .store, defaultItem: .appStore)
                                 hubAppCard(workspace: .system, defaultItem: .dashboard)
@@ -625,7 +625,7 @@ struct mainsidebarview: View {
                             .frame(maxWidth: min(geo.size.width - 64, 1280))
                         }
                         .padding(.horizontal, 32)
-                        
+
                         Spacer(minLength: 24)
                     }
                     .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .center)
@@ -643,7 +643,7 @@ struct mainsidebarview: View {
                             }
                     )
                 }
-                
+
                 // Top-Right Reset Canvas Overlay (if canvas was dragged)
                 if hubOffset != .zero {
                     Button(action: {
@@ -667,11 +667,11 @@ struct mainsidebarview: View {
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
-    
+
     @ViewBuilder
     private func hubAppCard(workspace: JuicerWorkspace, defaultItem: NavigationItem) -> some View {
         let toolCount = NavigationItem.allCases.filter { $0.workspace == workspace }.count
-        
+
         Button(action: {
             withAnimation(.easeInOut(duration: 0.2)) {
                 currentWorkspace = workspace
@@ -685,30 +685,30 @@ struct mainsidebarview: View {
                         .foregroundColor(workspace.themeColor)
                         .frame(width: 38, height: 38)
                         .background(workspace.themeColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         Text(workspace.title)
                             .font(.headline.bold())
                             .foregroundColor(.primary)
                             .lineLimit(1)
-                        
+
                         Text("\(toolCount) tools available")
                             .font(.caption2.weight(.medium))
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
                 }
-                
+
                 Text(workspace.description)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                
+
                 Spacer(minLength: 4)
-                
+
                 HStack {
                     Spacer()
                     HStack(spacing: 4) {
@@ -736,7 +736,7 @@ struct mainsidebarview: View {
             if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
     }
-    
+
     @ViewBuilder
     private func sidebarLink(for item: NavigationItem) -> some View {
         NavigationLink(value: item) {
@@ -771,7 +771,7 @@ struct mainsidebarview: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func creatorRepoLink(name: String, title: String, desc: String, icon: String, color: Color, tag: String? = nil) -> some View {
         Button(action: {
@@ -836,7 +836,7 @@ struct mainsidebarview: View {
         .background(selectedStoreItem == item ? Color.accentColor.opacity(0.12) : Color.clear)
         .cornerRadius(6)
     }
-    
+
     // MARK: - Help User Guide
     @ViewBuilder
     private func userGuideSheet() -> some View {
@@ -852,9 +852,9 @@ struct mainsidebarview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor))
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Group {
@@ -863,46 +863,46 @@ struct mainsidebarview: View {
                         Text("Juicer is an open-source macOS developer utility. It combines disk analysis, live system monitoring, developer cache management, app uninstalling, and system optimization — all in one native app.")
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Divider()
-                    
+
                     Group {
                         Text("Core Modules")
                             .font(.headline)
-                        
+
                         guideItem(title: "Live Status Monitor", icon: "waveform.path.ecg", color: .green,
                             desc: "Real-time CPU gauges, memory pressure, network speed, health scoring, and a full process list with force-quit support. Refresh rate is fully configurable (1s / 2s / 5s / 10s / 30s / Manual).")
-                        
+
                         guideItem(title: "Cache Cleaner & Space Insights", icon: "sparkle.magnifyingglass", color: .orange,
                             desc: "27 categorised cleanable space items (iOS Backups, Xcode Simulators, Docker, Spotify, JetBrains, and more) plus a project scanner that finds node_modules, .build, target/, venv/ and other dependency directories.")
-                        
+
                         guideItem(title: "Disk Explorer", icon: "internaldrive.fill", color: .blue,
                             desc: "Visualize disk usage with proportional bar maps. Browse all mounted volumes including external drives, drill into any folder, and reveal items in Finder.")
-                        
+
                         guideItem(title: "System Optimizer", icon: "bolt.fill", color: .yellow,
                             desc: "15 targeted optimisation tasks: flush DNS, purge memory, rebuild LaunchServices DB, clear QuickLook caches, update Homebrew and more.")
-                        
+
                         guideItem(title: "Developer Caches", icon: "hammer.fill", color: .indigo,
                             desc: "50+ cache targets covering Xcode, Node, Python, Ruby, Rust, Go, Java, Docker, VS Code, JetBrains, Terraform, and more.")
-                        
+
                         guideItem(title: "Software Center", icon: "square.grid.3x3.fill", color: .purple,
                             desc: "Explore Homebrew's vast catalog of graphical applications (Casks) and command line utilities (Formulae). Installs and uninstalls items directly with a real-time console log.")
-                        
+
                         guideItem(title: "App Uninstaller & Orphan Finder", icon: "trash.fill", color: .red,
                             desc: "Detect and remove leftover files from previously uninstalled apps.")
-                        
+
                         guideItem(title: "SDK & Runtime Switcher", icon: "square.stack.3d.up.fill", color: .purple,
                             desc: "Switch between Node.js, Python, Ruby, and Rust versions using nvm, pyenv, rbenv, and rustup.")
-                        
+
                         guideItem(title: "Port Listener", icon: "network.badge.shield.half.filled", color: .teal,
                             desc: "Inspect open network ports and kill hanging server processes.")
-                        
+
                         guideItem(title: "Homebrew Explorer", icon: "shippingbox.fill", color: .cyan,
                             desc: "Manage Homebrew formulae, casks, run brew doctor, and cleanup downloads.")
                     }
-                    
+
                     Divider()
-                    
+
                     Group {
                         Text("Keyboard Shortcuts").font(.headline)
                         VStack(alignment: .leading, spacing: 8) {
@@ -933,7 +933,7 @@ struct mainsidebarview: View {
         }
         .frame(width: 620, height: 560)
     }
-    
+
     @ViewBuilder
     private func guideItem(title: String, icon: String, color: Color, desc: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
@@ -949,7 +949,7 @@ struct mainsidebarview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func shortcutRow(keys: String, desc: String) -> some View {
         HStack {

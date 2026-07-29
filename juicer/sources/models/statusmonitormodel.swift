@@ -117,10 +117,7 @@ struct HealthScoreData {
 
         let finalScore = max(0, min(100, Int(score)))
         let grade: String
-        if finalScore >= 85 { grade = "Excellent" }
-        else if finalScore >= 65 { grade = "Good" }
-        else if finalScore >= 45 { grade = "Fair" }
-        else { grade = "Poor" }
+        if finalScore >= 85 { grade = "Excellent" } else if finalScore >= 65 { grade = "Good" } else if finalScore >= 45 { grade = "Fair" } else { grade = "Poor" }
 
         return HealthScoreData(score: finalScore, grade: grade, tips: tips)
     }
@@ -338,9 +335,7 @@ class StatusMonitorManager: ObservableObject {
         // Memory pressure
         if let out = shell("/usr/bin/memory_pressure", []) {
             let lower = out.lowercased()
-            if lower.contains("critical") { data.pressure = "critical" }
-            else if lower.contains("warn") { data.pressure = "warn" }
-            else { data.pressure = "normal" }
+            if lower.contains("critical") { data.pressure = "critical" } else if lower.contains("warn") { data.pressure = "warn" } else { data.pressure = "normal" }
         }
 
         // Swap
@@ -532,10 +527,10 @@ class StatusMonitorManager: ObservableObject {
         task.standardOutput = pipe
         task.launch()
         task.waitUntilExit()
-        
+
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8) ?? ""
-        
+
         var gpuName = "Apple Silicon GPU"
         let lines = output.components(separatedBy: .newlines)
         for line in lines {
@@ -545,7 +540,7 @@ class StatusMonitorManager: ObservableObject {
                 break
             }
         }
-        
+
         let ioregTask = Process()
         ioregTask.launchPath = "/usr/sbin/ioreg"
         ioregTask.arguments = ["-l", "-d", "1", "-w", "0", "-c", "IOAccelerator"]
@@ -553,10 +548,10 @@ class StatusMonitorManager: ObservableObject {
         ioregTask.standardOutput = ioregPipe
         ioregTask.launch()
         ioregTask.waitUntilExit()
-        
+
         let ioregData = ioregPipe.fileHandleForReading.readDataToEndOfFile()
         let ioregOutput = String(data: ioregData, encoding: .utf8) ?? ""
-        
+
         var gpuUsage: Double = 0.0
         if let range = ioregOutput.range(of: "\"Device Utilization\" = ") {
             let start = range.upperBound
@@ -568,10 +563,10 @@ class StatusMonitorManager: ObservableObject {
         } else {
             gpuUsage = Double(Int.random(in: 2...12)) + (cpu.usagePercent * 0.1)
         }
-        
+
         let vramTotal = Int64(memory.totalBytes)
         let vramUsed = Int64(Double(memory.usedBytes) * 0.2)
-        
+
         DispatchQueue.main.async {
             self.gpu = GPUStatusData(
                 usagePercent: min(100.0, max(0.0, gpuUsage)),
@@ -581,7 +576,7 @@ class StatusMonitorManager: ObservableObject {
             )
         }
     }
-    
+
     func collectBluetoothInfo() {
         let task = Process()
         task.launchPath = "/usr/sbin/system_profiler"
@@ -590,17 +585,17 @@ class StatusMonitorManager: ObservableObject {
         task.standardOutput = pipe
         task.launch()
         task.waitUntilExit()
-        
+
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         let output = String(data: data, encoding: .utf8) ?? ""
-        
+
         var isEnabled = false
         var devices: [String] = []
-        
+
         if output.contains("State: On") || output.contains("State: Enabled") || output.contains("Turn On: Yes") || output.contains("Bluetooth: On") || output.contains("Power: On") {
             isEnabled = true
         }
-        
+
         let lines = output.components(separatedBy: .newlines)
         var insideConnected = false
         for line in lines {
@@ -620,11 +615,11 @@ class StatusMonitorManager: ObservableObject {
                 }
             }
         }
-        
+
         if isEnabled && devices.isEmpty {
             devices = ["Magic Mouse", "Keychron K2"]
         }
-        
+
         DispatchQueue.main.async {
             self.bluetooth = BluetoothStatusData(isEnabled: isEnabled, connectedDevices: devices)
         }

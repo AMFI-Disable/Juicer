@@ -38,40 +38,40 @@ class GitRepositoryManager: ObservableObject {
     @Published var branches: [GitBranchItem] = []
     @Published var isLoading = false
     @Published var errorMessage: String = ""
-    
+
     private var fileWatcher: DispatchSourceFileSystemObject?
-    
+
     init(repoPath: String = "") {
         if !repoPath.isEmpty {
             self.openRepository(at: repoPath)
         }
     }
-    
+
     func openRepository(at path: String) {
         self.repoPath = path
         self.loadRepositoryState()
         self.startFileWatcher()
     }
-    
+
     func loadRepositoryState() {
         guard !repoPath.isEmpty, FileManager.default.fileExists(atPath: "\(repoPath)/.git") else {
             self.errorMessage = "Not a valid Git repository."
             return
         }
-        
+
         self.isLoading = true
         self.errorMessage = ""
-        
+
         Task.detached(priority: .userInitiated) {
             let branch = self.runGitCommand(["rev-parse", "--abbrev-ref", "HEAD"]).trimmingCharacters(in: .whitespacesAndNewlines)
             let statusOutput = self.runGitCommand(["status", "--porcelain=v2", "--branch"])
             let logOutput = self.runGitCommand(["log", "-n", "50", "--pretty=format:%H|%h|%an|%ae|%ar|%s|%P"])
             let branchOutput = self.runGitCommand(["branch", "-a", "--format=%(HEAD)|%(refname:short)|%(upstream:short)"])
-            
+
             let parsedStatus = self.parsePorcelainV2(statusOutput)
             let parsedCommits = self.parseCommitLog(logOutput)
             let parsedBranches = self.parseBranches(branchOutput)
-            
+
             await MainActor.run {
                 self.currentBranch = branch.isEmpty ? "HEAD (detached)" : branch
                 self.statusFiles = parsedStatus
@@ -81,23 +81,23 @@ class GitRepositoryManager: ObservableObject {
             }
         }
     }
-    
+
     func stageFile(path: String) {
         runGitCommandAsync(["add", path]) { self.loadRepositoryState() }
     }
-    
+
     func unstageFile(path: String) {
         runGitCommandAsync(["restore", "--staged", path]) { self.loadRepositoryState() }
     }
-    
+
     func stageAll() {
         runGitCommandAsync(["add", "-A"]) { self.loadRepositoryState() }
     }
-    
+
     func unstageAll() {
         runGitCommandAsync(["restore", "--staged", "."]) { self.loadRepositoryState() }
     }
-    
+
     func createCommit(message: String, completion: @escaping (Bool) -> Void) {
         guard !message.isEmpty else { completion(false); return }
         runGitCommandAsync(["commit", "-m", message]) {
@@ -105,34 +105,20 @@ class GitRepositoryManager: ObservableObject {
             completion(true)
         }
     }
-    
+
     func checkoutBranch(name: String) {
         runGitCommandAsync(["checkout", name]) { self.loadRepositoryState() }
     }
-    
+
     func createBranch(name: String) {
         runGitCommandAsync(["checkout", "-b", name]) { self.loadRepositoryState() }
     }
-    
+
     // MARK: - Git Command Runner
     private func runGitCommand(_ args: [String]) -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = ["-C", repoPath] + args
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            return ""
-        }
+        SystemMetricsSupport.run("/usr/bin/git", ["-C", repoPath] + args, timeout: 30) ?? ""
     }
-    
+
     private func runGitCommandAsync(_ args: [String], completion: @escaping () -> Void) {
         Task.detached(priority: .userInitiated) {
             _ = self.runGitCommand(args)
@@ -141,7 +127,7 @@ class GitRepositoryManager: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Parsers
     private func parsePorcelainV2(_ output: String) -> [GitStatusFile] {
         var results: [GitStatusFile] = []
@@ -168,7 +154,7 @@ class GitRepositoryManager: ObservableObject {
         }
         return results
     }
-    
+
     private func parseCommitLog(_ output: String) -> [GitCommitItem] {
         var results: [GitCommitItem] = []
         let lines = output.components(separatedBy: "\n")
@@ -182,7 +168,7 @@ class GitRepositoryManager: ObservableObject {
                 let date = parts[4]
                 let message = parts[5]
                 let parents = parts.count >= 7 ? parts[6].components(separatedBy: " ").filter { !$0.isEmpty } : []
-                
+
                 results.append(GitCommitItem(
                     hash: hash,
                     shortHash: shortHash,
@@ -197,7 +183,7 @@ class GitRepositoryManager: ObservableObject {
         }
         return results
     }
-    
+
     private func parseBranches(_ output: String) -> [GitBranchItem] {
         var results: [GitBranchItem] = []
         let lines = output.components(separatedBy: "\n")
@@ -208,7 +194,7 @@ class GitRepositoryManager: ObservableObject {
             let name = parts[1].trimmingCharacters(in: .whitespaces)
             let upstream = parts.count >= 3 && !parts[2].isEmpty ? parts[2] : nil
             guard !name.isEmpty else { continue }
-            
+
             results.append(GitBranchItem(
                 name: name,
                 isCurrent: isHead,
@@ -218,15 +204,15 @@ class GitRepositoryManager: ObservableObject {
         }
         return results
     }
-    
+
     private func startFileWatcher() {
         fileWatcher?.cancel()
         fileWatcher = nil
-        
+
         let gitDirPath = "\(repoPath)/.git"
         let descriptor = open(gitDirPath, O_EVTONLY)
         guard descriptor >= 0 else { return }
-        
+
         let watcher = DispatchSource.makeFileSystemObjectSource(fileDescriptor: descriptor, eventMask: .write, queue: .main)
         watcher.setEventHandler { [weak self] in
             self?.loadRepositoryState()

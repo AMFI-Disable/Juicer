@@ -4,7 +4,7 @@ import AppKit
 struct ocrscreengraberview: View {
     @StateObject private var manager = OCRScreenGrabberManager()
     @State private var copiedNotice = ""
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -17,9 +17,9 @@ struct ocrscreengraberview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: { manager.captureAndRecognizeText() }) {
                     Label("Capture Screen Text", systemImage: "viewfinder")
                 }
@@ -28,9 +28,9 @@ struct ocrscreengraberview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Status Bar
             if manager.isProcessing {
                 HStack(spacing: 10) {
@@ -56,7 +56,7 @@ struct ocrscreengraberview: View {
                 .background(Color(NSColor.windowBackgroundColor))
                 Divider()
             }
-            
+
             // Recognized Text Editor
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
@@ -77,7 +77,7 @@ struct ocrscreengraberview: View {
                 }
                 .padding(.horizontal)
                 .padding(.top, 12)
-                
+
                 if !copiedNotice.isEmpty {
                     Text(copiedNotice)
                         .font(.caption)
@@ -85,7 +85,7 @@ struct ocrscreengraberview: View {
                         .bold()
                         .padding(.horizontal)
                 }
-                
+
                 TextEditor(text: $manager.recognizedText)
                     .font(.system(.body, design: .monospaced))
                     .padding(8)

@@ -252,17 +252,17 @@ struct diskexplorerview: View {
             // Proportional Block Treemap Grid (Top 8 items)
             let topEntries = manager.entries.prefix(8)
             let totalBytes = manager.entries.reduce(0) { $0 + $1.sizeBytes }
-            
+
             if totalBytes > 0 && !topEntries.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Visual Disk Distribution (Treemap Grid)").font(.headline)
-                    
+
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         ForEach(Array(topEntries.enumerated()), id: \.element.id) { idx, entry in
                             let fraction = Double(entry.sizeBytes) / Double(totalBytes)
                             let colors: [Color] = [.blue, .purple, .teal, .orange, .pink, .indigo, .cyan, .mint]
                             let color = colors[idx % colors.count]
-                            
+
                             Button(action: {
                                 selectedEntry = entry
                                 if entry.isDirectory {
@@ -280,9 +280,9 @@ struct diskexplorerview: View {
                                         Text(String(format: "%.1f%%", fraction * 100))
                                             .font(.caption2).bold()
                                     }
-                                    
+
                                     Spacer()
-                                    
+
                                     HStack {
                                         Text(formatBytes(entry.sizeBytes))
                                             .font(.caption)
@@ -306,9 +306,9 @@ struct diskexplorerview: View {
                 }
                 .padding()
             }
-            
+
             Divider()
-            
+
             // Bar Map list below
             HStack {
                 Text("Folder Size Breakdown")
@@ -545,7 +545,7 @@ struct diskexplorerview: View {
                             .font(.headline)
                         Spacer()
                     }
-                    
+
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
                             Text(days <= 7 ? "⚠️ Disk Full in ~\(days) Days!" : "Disk Full in ~\(days) Days")
@@ -556,7 +556,7 @@ struct diskexplorerview: View {
                         }
                         Spacer()
                     }
-                    
+
                     if manager.storageHistory.count >= 2 {
                         Chart {
                             ForEach(manager.storageHistory) { snap in
@@ -566,7 +566,7 @@ struct diskexplorerview: View {
                                 )
                                 .foregroundStyle(Color.accentColor)
                                 .interpolationMethod(.catmullRom)
-                                
+
                                 AreaMark(
                                     x: .value("Date", snap.timestamp, unit: .day),
                                     y: .value("Used Space (GB)", Double(snap.usedBytes) / 1_000_000_000.0)

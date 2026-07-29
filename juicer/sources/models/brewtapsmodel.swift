@@ -16,11 +16,11 @@ struct TapHealthStatus: Codable, Hashable {
         case missing = "Missing"
         case unknown = "Unknown"
     }
-    
+
     var status: Status
     var movedTo: String?
     var lastChecked: Date
-    
+
     var isStale: Bool {
         Date().timeIntervalSince(lastChecked) > 86400
     }
@@ -28,21 +28,21 @@ struct TapHealthStatus: Codable, Hashable {
 
 class BrewTapsManager: ObservableObject {
     static let shared = BrewTapsManager()
-    
+
     @Published var taps: [BrewTap] = []
     @Published var isLoading = false
     @Published var isCheckingHealth = false
-    
+
     private init() {
         loadCachedTaps()
     }
-    
+
     private var cacheURL: URL? {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
             .appendingPathComponent("Juicer", isDirectory: true)
             .appendingPathComponent("taps_cache.json")
     }
-    
+
     func loadCachedTaps() {
         guard let url = cacheURL, FileManager.default.fileExists(atPath: url.path) else { return }
         do {
@@ -53,7 +53,7 @@ class BrewTapsManager: ObservableObject {
             AppLogger.shared.log("Failed to load cached taps: \(error.localizedDescription)")
         }
     }
-    
+
     func saveCachedTaps() {
         guard let url = cacheURL else { return }
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -64,27 +64,27 @@ class BrewTapsManager: ObservableObject {
             AppLogger.shared.log("Failed to save cached taps: \(error.localizedDescription)")
         }
     }
-    
+
     func loadTaps() {
         guard let brew = BrewManager.brewPath else { return }
         self.isLoading = true
-        
+
         Task.detached(priority: .userInitiated) {
             var loadedTaps: [BrewTap] = []
-            
+
             // Query brew tap-info
             let process = Process()
             process.executableURL = URL(fileURLWithPath: brew)
             process.arguments = ["tap-info", "--json=v1", "--installed"]
-            
+
             let pipe = Pipe()
             process.standardOutput = pipe
             process.standardError = Pipe() // Silence errors
-            
+
             do {
                 try process.run()
                 process.waitUntilExit()
-                
+
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 if let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
                     for item in json {
@@ -96,7 +96,7 @@ class BrewTapsManager: ObservableObject {
             } catch {
                 AppLogger.shared.log("Failed to query tap-info: \(error.localizedDescription)")
             }
-            
+
             // Fallback to simple listing if json failed or empty
             if loadedTaps.isEmpty {
                 let process2 = Process()
@@ -118,7 +118,7 @@ class BrewTapsManager: ObservableObject {
                     }
                 }
             }
-            
+
             await MainActor.run {
                 // Keep cached health statuses if matching
                 for i in 0..<loadedTaps.count {
@@ -132,19 +132,19 @@ class BrewTapsManager: ObservableObject {
             }
         }
     }
-    
+
     func checkTapsHealth() {
         guard !taps.isEmpty else { return }
         self.isCheckingHealth = true
-        
+
         Task.detached(priority: .background) {
             var updatedTaps = self.taps
             let session = URLSession(configuration: .ephemeral)
-            
+
             for i in 0..<updatedTaps.count {
                 let tap = updatedTaps[i]
                 guard !tap.remote.isEmpty else { continue }
-                
+
                 // Convert git@github.com:User/Repo.git or https://github.com/User/Repo to API URL
                 var targetURLString = tap.remote
                 if targetURLString.hasPrefix("git@github.com:") {
@@ -153,17 +153,17 @@ class BrewTapsManager: ObservableObject {
                 if targetURLString.hasSuffix(".git") {
                     targetURLString = String(targetURLString.dropSuffix(".git"))
                 }
-                
+
                 let apiPath = targetURLString.replacingOccurrences(of: "https://github.com/", with: "https://api.github.com/repos/")
                 guard let apiURL = URL(string: apiPath) else { continue }
-                
+
                 var request = URLRequest(url: apiURL)
                 request.setValue("application/vnd.github.v3+json", forHTTPHeaderField: "Accept")
                 request.setValue("JuicerApp", forHTTPHeaderField: "User-Agent")
-                
+
                 var status = TapHealthStatus.Status.unknown
-                var movedTo: String? = nil
-                
+                var movedTo: String?
+
                 do {
                     let (data, response) = try await session.data(for: request)
                     if let httpResponse = response as? HTTPURLResponse {
@@ -186,10 +186,10 @@ class BrewTapsManager: ObservableObject {
                 } catch {
                     AppLogger.shared.log("Error checking tap health for \(tap.name): \(error.localizedDescription)")
                 }
-                
+
                 updatedTaps[i].healthStatus = TapHealthStatus(status: status, movedTo: movedTo, lastChecked: Date())
             }
-            
+
             await MainActor.run {
                 self.taps = updatedTaps
                 self.isCheckingHealth = false
@@ -197,25 +197,25 @@ class BrewTapsManager: ObservableObject {
             }
         }
     }
-    
+
     func addTap(name: String, completion: @escaping (Bool) -> Void) {
         guard let brew = BrewManager.brewPath else { return }
-        
+
         AppLogger.shared.log("Tapping repository \(name)...")
-        
+
         Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: brew)
             process.arguments = ["tap", name]
-            
+
             let pipe = Pipe()
             process.standardOutput = pipe
             process.standardError = pipe
-            
+
             do {
                 try process.run()
                 process.waitUntilExit()
-                
+
                 let exitStatus = process.terminationStatus
                 await MainActor.run {
                     if exitStatus == 0 {
@@ -235,25 +235,25 @@ class BrewTapsManager: ObservableObject {
             }
         }
     }
-    
+
     func removeTap(_ tap: BrewTap, completion: @escaping (Bool) -> Void) {
         guard let brew = BrewManager.brewPath else { return }
-        
+
         AppLogger.shared.log("Untapping repository \(tap.name)...")
-        
+
         Task.detached(priority: .userInitiated) {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: brew)
             process.arguments = ["untap", tap.name]
-            
+
             let pipe = Pipe()
             process.standardOutput = pipe
             process.standardError = pipe
-            
+
             do {
                 try process.run()
                 process.waitUntilExit()
-                
+
                 let exitStatus = process.terminationStatus
                 await MainActor.run {
                     if exitStatus == 0 {

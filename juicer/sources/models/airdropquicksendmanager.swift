@@ -18,10 +18,7 @@ final class AirDropQuickSendManager: ObservableObject {
             provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier, options: nil) { [weak self] item, error in
                 guard let self, error == nil else { return }
                 let url: URL?
-                if let value = item as? URL { url = value }
-                else if let value = item as? NSURL { url = value as URL }
-                else if let value = item as? Data { url = URL(dataRepresentation: value, relativeTo: nil) }
-                else { url = nil }
+                if let value = item as? URL { url = value } else if let value = item as? NSURL { url = value as URL } else if let value = item as? Data { url = URL(dataRepresentation: value, relativeTo: nil) } else { url = nil }
                 guard let url else { return }
                 Task { @MainActor in
                     if !self.files.contains(url) { self.files.append(url); self.message = "\(self.files.count) item(s) ready to send." }

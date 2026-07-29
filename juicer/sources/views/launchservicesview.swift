@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 struct launchservicesview: View {
     @StateObject private var manager = LaunchServicesManager()
     @State private var searchText = ""
-    
+
     var filteredAssociations: [GlobalAssociationItem] {
         if searchText.isEmpty {
             return manager.globalAssociations
@@ -16,18 +16,18 @@ struct launchservicesview: View {
             }
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             // Search / Filter Row
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 TextField("Search file extensions (e.g. .py, .rs, Xcode)...", text: $searchText)
                     .textFieldStyle(.plain)
-                
+
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
                         Image(systemName: "xmark.circle.fill")
@@ -38,7 +38,7 @@ struct launchservicesview: View {
             }
             .padding()
             .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-            
+
             // Global Associations list
             if manager.isUpdating && manager.globalAssociations.isEmpty {
                 loadingPlaceholder()
@@ -52,7 +52,7 @@ struct launchservicesview: View {
             manager.loadGlobalAssociations()
         }
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -66,7 +66,7 @@ struct launchservicesview: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            
+
             Button(action: { manager.loadGlobalAssociations() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -79,7 +79,7 @@ struct launchservicesview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Loading Indicator
     @ViewBuilder
     private func loadingPlaceholder() -> some View {
@@ -92,7 +92,7 @@ struct launchservicesview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Associations List UI
     @ViewBuilder
     private func associationsList() -> some View {
@@ -105,7 +105,7 @@ struct launchservicesview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Summary Bar
             HStack {
                 Text("Total indexed associations: \(manager.globalAssociations.count)")
@@ -117,7 +117,7 @@ struct launchservicesview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -136,7 +136,7 @@ struct launchservicesview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func associationRow(item: GlobalAssociationItem) -> some View {
         HStack {
@@ -144,14 +144,14 @@ struct launchservicesview: View {
                 .font(.system(.body, design: .monospaced))
                 .bold()
                 .frame(width: 100, alignment: .leading)
-            
+
             Text(item.uti)
                 .font(.system(.body, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
                 .frame(width: 250, alignment: .leading)
-            
+
             // Handler App Name + Icon
             HStack(spacing: 8) {
                 if let icon = item.handlerIcon {
@@ -164,14 +164,14 @@ struct launchservicesview: View {
                         .foregroundColor(.secondary)
                         .frame(width: 20, height: 20)
                 }
-                
+
                 Text(item.handlerAppName)
                     .bold()
                     .lineLimit(1)
             }
-            
+
             Spacer()
-            
+
             // Reassign action
             let compatibleApps = manager.getCompatibleApps(for: item.uti)
             Menu {
@@ -194,7 +194,7 @@ struct launchservicesview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     // MARK: - Actions
     private func selectAppForReassignment(for item: GlobalAssociationItem) {
         let panel = NSOpenPanel()
@@ -203,7 +203,7 @@ struct launchservicesview: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Choose Application"
-        
+
         if panel.runModal() == .OK, let url = panel.url {
             let app = AppInfo(path: url)
             _ = manager.setGlobalDefaultHandler(for: item, toApp: app.bundleIdentifier)

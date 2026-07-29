@@ -4,12 +4,12 @@ import AppKit
 struct logstreamview: View {
     @StateObject private var manager = LogStreamManager()
     @State private var searchText = ""
-    
+
     var filteredEntries: [LogEntry] {
         if searchText.isEmpty { return manager.logEntries }
         return manager.logEntries.filter { $0.message.localizedCaseInsensitiveContains(searchText) }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -22,9 +22,9 @@ struct logstreamview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     if manager.isStreaming {
                         manager.stopStreaming()
@@ -38,9 +38,9 @@ struct logstreamview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Search & Filter Toolbar
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -48,22 +48,22 @@ struct logstreamview: View {
                 TextField("Search logs...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 300)
-                
+
                 Spacer()
-                
+
                 Text("\(filteredEntries.count) entries")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                
+
                 Button("Clear Logs") {
                     manager.logEntries = []
                 }
                 .buttonStyle(.bordered)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Log Stream Table
             ScrollViewReader { proxy in
                 List(filteredEntries) { entry in
@@ -75,11 +75,11 @@ struct logstreamview: View {
                             .background(entry.level == "Error" || entry.level == "Fault" ? Color.red.opacity(0.2) : Color.blue.opacity(0.1))
                             .foregroundStyle(entry.level == "Error" || entry.level == "Fault" ? Color.red : Color.blue)
                             .cornerRadius(4)
-                        
+
                         Text(entry.message)
                             .font(.system(.caption, design: .monospaced))
                             .lineLimit(3)
-                        
+
                         Spacer()
                     }
                     .padding(.vertical, 2)

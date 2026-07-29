@@ -3,26 +3,26 @@ import SwiftUI
 struct portlistenerview: View {
     @StateObject private var manager = PortManager()
     @State private var searchText = ""
-    
+
     // UI Filters
     @State private var filterToDevPorts = true
     @State private var showGraphView = false
     @State private var showArgs = true
-    
+
     // Process Kill Confirmation Alert State
     @State private var selectedPort: ActivePort?
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
     @State private var isKilling = false
     @State private var statusMessage = ""
-    
+
     var filteredPorts: [ActivePort] {
         var list = manager.activePorts
-        
+
         if filterToDevPorts {
             list = list.filter { PortManager.devPorts.contains($0.port) }
         }
-        
+
         if !searchText.isEmpty {
             list = list.filter {
                 String($0.port).contains(searchText) ||
@@ -30,10 +30,10 @@ struct portlistenerview: View {
                 String($0.pid).contains(searchText)
             }
         }
-        
+
         return list
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Top Header Panel
@@ -47,7 +47,7 @@ struct portlistenerview: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                
+
                 if manager.isLoading {
                     ProgressView()
                         .controlSize(.small)
@@ -60,9 +60,9 @@ struct portlistenerview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Filters Toolbar
             HStack(spacing: 16) {
                 // View toggle
@@ -72,15 +72,15 @@ struct portlistenerview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 280)
-                
+
                 Toggle("Common Dev Ports", isOn: $filterToDevPorts)
                     .toggleStyle(.checkbox)
-                
+
                 Toggle("Show Arguments", isOn: $showArgs)
                     .toggleStyle(.checkbox)
-                
+
                 Spacer()
-                
+
                 // Search
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
@@ -89,9 +89,9 @@ struct portlistenerview: View {
                     .frame(width: 200)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Content Toggle
             if manager.isLoading {
                 VStack {
@@ -118,7 +118,7 @@ struct portlistenerview: View {
                     listViewContent()
                 }
             }
-            
+
             // Action status notification bar
             if !statusMessage.isEmpty {
                 HStack {
@@ -136,7 +136,7 @@ struct portlistenerview: View {
         }
         .onAppear {
             manager.loadPorts()
-            
+
             // Sync settings options default values
             let showArgsSaved = UserDefaults.standard.bool(forKey: "juicer.settings.showProcessArgs")
             let filterDevSaved = UserDefaults.standard.bool(forKey: "juicer.settings.defaultToDevPorts")
@@ -171,7 +171,7 @@ struct portlistenerview: View {
             }
         }
     }
-    
+
     // MARK: - Tabular List View
     @ViewBuilder
     private func listViewContent() -> some View {
@@ -192,9 +192,9 @@ struct portlistenerview: View {
             }
             .padding(.vertical, 8)
             .foregroundColor(.secondary)
-            
+
             Divider()
-            
+
             ForEach(filteredPorts) { item in
                 HStack(spacing: 0) {
                     // Port Badge
@@ -203,23 +203,23 @@ struct portlistenerview: View {
                         .bold()
                         .foregroundColor(.accentColor)
                         .frame(width: 80, alignment: .leading)
-                    
+
                     Text(item.protocolName)
                         .foregroundColor(.secondary)
                         .frame(width: 80, alignment: .leading)
-                    
+
                     Text(item.processName)
                         .bold()
                         .frame(width: 140, alignment: .leading)
-                    
+
                     Text(String(item.pid))
                         .font(.system(.body, design: .monospaced))
                         .frame(width: 80, alignment: .leading)
-                    
+
                     Text(item.parentPid != nil ? String(item.parentPid!) : "System")
                         .foregroundColor(.secondary)
                         .frame(width: 100, alignment: .leading)
-                    
+
                     if showArgs {
                         Text(item.commandLineArgs)
                             .foregroundColor(.secondary)
@@ -229,7 +229,7 @@ struct portlistenerview: View {
                     } else {
                         Spacer()
                     }
-                    
+
                     Button("Kill") {
                         self.selectedPort = item
                         self.showFirstAlert = true
@@ -245,7 +245,7 @@ struct portlistenerview: View {
         }
         .listStyle(.plain)
     }
-    
+
     // MARK: - Process Relation Graph View
     @ViewBuilder
     private func graphViewContent() -> some View {
@@ -253,11 +253,11 @@ struct portlistenerview: View {
             VStack(alignment: .leading, spacing: 30) {
                 // Group active ports by parent PID to show branches
                 let grouped = Dictionary(grouping: filteredPorts, by: { $0.parentPid ?? 0 })
-                
+
                 ForEach(grouped.keys.sorted(), id: \.self) { parentPid in
                     let ports = grouped[parentPid] ?? []
                     let parentName = ports.first?.parentPid == nil ? "System / launchd" : "Parent (PID: \(parentPid))"
-                    
+
                     VStack(alignment: .leading, spacing: 10) {
                         // Parent Node Card
                         HStack {
@@ -269,7 +269,7 @@ struct portlistenerview: View {
                         .padding(8)
                         .background(Color.orange.opacity(0.15))
                         .cornerRadius(6)
-                        
+
                         // Branches
                         HStack(alignment: .top, spacing: 40) {
                             // Visual branch line
@@ -279,7 +279,7 @@ struct portlistenerview: View {
                             }
                             .padding(.leading, 12)
                             .frame(width: 30)
-                            
+
                             // Children (Bound Processes)
                             VStack(alignment: .leading, spacing: 16) {
                                 ForEach(ports) { item in
@@ -300,11 +300,11 @@ struct portlistenerview: View {
                                             RoundedRectangle(cornerRadius: 8)
                                                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
                                         )
-                                        
+
                                         // Arrow connector
                                         Image(systemName: "arrow.right")
                                             .foregroundColor(.accentColor)
-                                        
+
                                         // Port Target Node
                                         HStack {
                                             Text("Port: \(item.port)")
@@ -315,7 +315,7 @@ struct portlistenerview: View {
                                         .padding(.vertical, 8)
                                         .background(Color.accentColor)
                                         .cornerRadius(8)
-                                        
+
                                         // Kill Shortcut button
                                         Button(action: {
                                             self.selectedPort = item
@@ -340,14 +340,14 @@ struct portlistenerview: View {
             .padding(20)
         }
     }
-    
+
     // MARK: - Actions
     private func executeProcessKill() {
         guard let port = selectedPort else { return }
-        
+
         self.isKilling = true
         self.statusMessage = "Sending termination signal to PID \(port.pid)..."
-        
+
         manager.killProcess(pid: port.pid) { success in
             self.isKilling = false
             self.selectedPort = nil

@@ -45,22 +45,22 @@ struct additionalfeaturecatalogview: View {
                 HStack(spacing: 10) {
                     TextField("Search features & shortcuts...", text: $query)
                         .textFieldStyle(.roundedBorder)
-                    
+
                     Picker("Category", selection: $category) {
                         ForEach(categories, id: \.self) { Text($0).tag($0) }
                     }
                     .frame(width: 140)
                 }
-                
+
                 HStack(spacing: 14) {
                     Toggle("Favorites only", isOn: $favoritesOnly)
                         .toggleStyle(.checkbox)
-                    
+
                     Toggle("Details", isOn: $showDetails)
                         .toggleStyle(.checkbox)
-                    
+
                     Spacer()
-                    
+
                     Picker("Layout", selection: $layout) {
                         Image(systemName: "list.bullet").tag("list")
                         Image(systemName: "square.grid.2x2").tag("grid")

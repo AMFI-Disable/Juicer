@@ -4,18 +4,18 @@ struct largefilesview: View {
     @StateObject private var manager = LargeFilesManager()
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
-    
+
     private let sizeOptions: [Double] = [50, 100, 250, 500, 1000]
     private let ageOptions: [Int] = [1, 3, 6, 12, 24]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
-            
+
             // Filters Selector Panel
             filtersPanel()
                 .padding()
-            
+
             // List of matching files
             if manager.isScanning && manager.largeFiles.isEmpty {
                 scanningPlaceholder()
@@ -49,7 +49,7 @@ struct largefilesview: View {
             Text("Are you absolutely sure you want to delete these files? This will clear up space but the files will be moved to the Trash.")
         }
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -67,7 +67,7 @@ struct largefilesview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Filters Panel UI
     @ViewBuilder
     private func filtersPanel() -> some View {
@@ -85,7 +85,7 @@ struct largefilesview: View {
                 .pickerStyle(.menu)
                 .frame(width: 120)
             }
-            
+
             // Age Threshold Selector
             HStack(spacing: 8) {
                 Text("Or Age Older Than:")
@@ -99,13 +99,13 @@ struct largefilesview: View {
                 .pickerStyle(.menu)
                 .frame(width: 130)
             }
-            
+
             Spacer()
 
             Button(action: addSearchDirectory) {
                 Label("Add Folder", systemImage: "folder.badge.plus")
             }
-            
+
             Button(action: { manager.startScan() }) {
                 HStack {
                     Image(systemName: "magnifyingglass")
@@ -128,7 +128,7 @@ struct largefilesview: View {
         panel.canChooseFiles = false
         if panel.runModal() == .OK, let url = panel.url { manager.addSearchDirectory(url) }
     }
-    
+
     // MARK: - Scanning Placeholder
     @ViewBuilder
     private func scanningPlaceholder() -> some View {
@@ -141,7 +141,7 @@ struct largefilesview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Empty State UI
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
@@ -161,7 +161,7 @@ struct largefilesview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Files List UI
     @ViewBuilder
     private func filesList() -> some View {
@@ -174,18 +174,18 @@ struct largefilesview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Bottom Operations Bar
             HStack {
                 let totalSize = manager.largeFiles.filter { $0.isSelected }.reduce(0) { $0 + $1.size }
                 let count = manager.largeFiles.filter { $0.isSelected }.count
-                
+
                 Text("\(count) files selected (\(formatBytes(totalSize)))")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 Button(action: trashSelected) {
                     if manager.isTrashing {
                         ProgressView()
@@ -203,7 +203,7 @@ struct largefilesview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -212,7 +212,7 @@ struct largefilesview: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
-            
+
             Text("File Name")
                 .bold()
                 .frame(width: 250, alignment: .leading)
@@ -231,7 +231,7 @@ struct largefilesview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func fileRow(item: LargeFileItem) -> some View {
         HStack {
@@ -244,7 +244,7 @@ struct largefilesview: View {
                 }
             ))
             .toggleStyle(.checkbox)
-            
+
             HStack(spacing: 8) {
                 Image(systemName: "doc.fill")
                     .foregroundColor(.secondary)
@@ -253,24 +253,24 @@ struct largefilesview: View {
                     .lineLimit(1)
             }
             .frame(width: 250, alignment: .leading)
-            
+
             Text(item.path)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
-            
+
             Spacer()
-            
+
             Text(formatDate(item.modificationDate))
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .frame(width: 140, alignment: .leading)
-            
+
             Text(formatBytes(item.size))
                 .font(.system(.body, design: .monospaced))
                 .frame(width: 100, alignment: .trailing)
-            
+
             Button("Reveal") {
                 NSWorkspace.shared.selectFile(item.path, inFileViewerRootedAtPath: "")
             }
@@ -280,12 +280,12 @@ struct largefilesview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     // MARK: - Actions
     private func trashSelected() {
         showFirstAlert = true
     }
-    
+
     private func executeTrash() {
         manager.trashSelectedItems { success in
             if success {
@@ -295,14 +295,14 @@ struct largefilesview: View {
             }
         }
     }
-    
+
     private func toggleAllSelection() {
         let allSelected = manager.largeFiles.allSatisfy { $0.isSelected }
         for index in manager.largeFiles.indices {
             manager.largeFiles[index].isSelected = !allSelected
         }
     }
-    
+
     private func allSelectedStateIcon() -> String {
         let selectedCount = manager.largeFiles.filter { $0.isSelected }.count
         if selectedCount == 0 {
@@ -313,13 +313,13 @@ struct largefilesview: View {
             return "minus.square.fill"
         }
     }
-    
+
     private func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
     }
-    
+
     private func formatMB(_ mb: Double) -> String {
         if mb >= 1000 {
             return String(format: "%.0f GB", mb / 1000.0)
@@ -327,7 +327,7 @@ struct largefilesview: View {
             return "\(Int(mb)) MB"
         }
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

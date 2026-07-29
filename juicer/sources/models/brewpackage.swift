@@ -7,13 +7,13 @@ struct BrewPackage: Identifiable, Hashable, Codable {
     let type: PackageType // "Formula" or "Cask"
     var isOutdated: Bool
     var latestVersion: String?
-    
+
     // Advanced properties
     var isPinned: Bool = false
     var isLinked: Bool = true
     var isLeaf: Bool = false
     var dependencies: [String] = []
-    
+
     enum PackageType: String, Codable {
         case formula = "Formula"
         case cask = "Cask"
