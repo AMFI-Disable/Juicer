@@ -18,7 +18,7 @@ struct deletionhistoryview: View {
             } else {
                 backupsList()
             }
-            
+
             Divider()
             footerDetailsBar()
         }
@@ -58,7 +58,7 @@ struct deletionhistoryview: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
-            
+
             if !undoManager.backups.isEmpty {
                 Button("Clear Cabinet Safely") {
                     for backup in undoManager.backups {

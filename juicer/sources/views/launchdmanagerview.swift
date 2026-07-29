@@ -7,7 +7,7 @@ struct launchdmanagerview: View {
     @State private var plistContent: String = ""
     @State private var isShowingEditor = false
     @State private var isCreatingNew = false
-    
+
     // Editor Form States
     @State private var editLabel = ""
     @State private var editProgramArguments = ""
@@ -17,16 +17,16 @@ struct launchdmanagerview: View {
     @State private var editStandardErrorPath = ""
     @State private var editPlistPath = ""
     @State private var editorValidationMessage = ""
-    
+
     // Detail View tab
     @State private var selectedDetailTab = 0
-    
+
     // Log Viewer states
     @State private var stdoutLog = ""
     @State private var stderrLog = ""
     @State private var unifiedLog = ""
     @State private var isLoadingLogs = false
-    
+
     var filteredServices: [LaunchdService] {
         if searchText.isEmpty {
             return manager.services
@@ -37,7 +37,7 @@ struct launchdmanagerview: View {
             }
         }
     }
-    
+
     var body: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
@@ -47,7 +47,7 @@ struct launchdmanagerview: View {
                         .foregroundColor(.secondary)
                     TextField("Search service...", text: $searchText)
                         .textFieldStyle(.plain)
-                    
+
                     if !searchText.isEmpty {
                         Button(action: { searchText = "" }) {
                             Image(systemName: "xmark.circle.fill")
@@ -55,7 +55,7 @@ struct launchdmanagerview: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    
+
                     Button(action: createNewService) {
                         Image(systemName: "plus")
                     }
@@ -64,7 +64,7 @@ struct launchdmanagerview: View {
                 }
                 .padding(10)
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-                
+
                 // List of launchd tasks
                 List(filteredServices, selection: $selectedService) { service in
                     NavigationLink(value: service) {
@@ -77,9 +77,9 @@ struct launchdmanagerview: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            
+
                             Spacer()
-                            
+
                             statusBadge(for: service)
                         }
                     }
@@ -122,7 +122,7 @@ struct launchdmanagerview: View {
             editorSheet()
         }
     }
-    
+
     // MARK: - Detail View UI
     @ViewBuilder
     private func detailView(for service: LaunchdService) -> some View {
@@ -137,9 +137,9 @@ struct launchdmanagerview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Control Buttons
                 HStack(spacing: 12) {
                     Button(service.pid != nil ? "Stop / Unload" : "Start / Load") {
@@ -151,12 +151,12 @@ struct launchdmanagerview: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(service.pid != nil ? .red : .accentColor)
-                    
+
                     Button("Edit...") {
                         openEditor(for: service)
                     }
                     .buttonStyle(.bordered)
-                    
+
                     Button(role: .destructive, action: { deleteService(service) }) {
                         Image(systemName: "trash")
                     }
@@ -166,7 +166,7 @@ struct launchdmanagerview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Picker("", selection: $selectedDetailTab) {
                 Text("Properties").tag(0)
                 Text("Raw Plist").tag(1)
@@ -176,9 +176,9 @@ struct launchdmanagerview: View {
             .padding(.horizontal)
 
             .padding(.bottom, 8)
-            
+
             Divider()
-            
+
             if selectedDetailTab == 0 {
                 propertiesTab(for: service)
             } else if selectedDetailTab == 1 {
@@ -188,7 +188,7 @@ struct launchdmanagerview: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func propertiesTab(for service: LaunchdService) -> some View {
         ScrollView {
@@ -207,7 +207,7 @@ struct launchdmanagerview: View {
                     .buttonStyle(.plain)
                     .help("Show in Finder")
                 }
-                
+
                 HStack {
                     Text("Command:")
                         .bold()
@@ -217,7 +217,7 @@ struct launchdmanagerview: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                
+
                 HStack {
                     Text("Standard Out Path:")
                         .bold()
@@ -227,7 +227,7 @@ struct launchdmanagerview: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                
+
                 HStack {
                     Text("Standard Error Path:")
                         .bold()
@@ -237,7 +237,7 @@ struct launchdmanagerview: View {
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
-                
+
                 HStack {
                     Text("Options:")
                         .bold()
@@ -260,7 +260,7 @@ struct launchdmanagerview: View {
             .padding()
         }
     }
-    
+
     @ViewBuilder
     private func plistSourceTab() -> some View {
         ScrollView {
@@ -271,7 +271,7 @@ struct launchdmanagerview: View {
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.1))
     }
-    
+
     @ViewBuilder
     private func logsTab(for service: LaunchdService) -> some View {
         VStack(spacing: 0) {
@@ -287,7 +287,7 @@ struct launchdmanagerview: View {
                 .disabled(isLoadingLogs)
             }
             .padding()
-            
+
             if isLoadingLogs {
                 VStack {
                     ProgressView("Tailing process logs...")
@@ -307,7 +307,7 @@ struct launchdmanagerview: View {
                                 .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
                                 .cornerRadius(6)
                         }
-                        
+
                         if !stderrLog.isEmpty {
                             Text("=== Standard Error ===")
                                 .bold()
@@ -318,7 +318,7 @@ struct launchdmanagerview: View {
                                 .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
                                 .cornerRadius(6)
                         }
-                        
+
                         if !unifiedLog.isEmpty {
                             Text("=== Unified Log Fallback (Last 1 hour) ===")
                                 .bold()
@@ -336,7 +336,7 @@ struct launchdmanagerview: View {
             }
         }
     }
-    
+
     // MARK: - Editor Sheet
     @ViewBuilder
     private func editorSheet() -> some View {
@@ -344,23 +344,23 @@ struct launchdmanagerview: View {
             Text(isCreatingNew ? "Create Launch Task" : "Edit Launch Task")
                 .font(.title2)
                 .bold()
-            
+
             Form {
                 TextField("Label (Unique ID):", text: $editLabel)
                     .disabled(!isCreatingNew)
-                
+
                 TextField("Program Arguments:", text: $editProgramArguments)
                     .help("Provide command arguments separated by spaces.")
-                
+
                 TextField("Standard Out Path (Optional):", text: $editStandardOutPath)
                     .help("Path to write stdout logs to.")
-                
+
                 TextField("Standard Error Path (Optional):", text: $editStandardErrorPath)
                     .help("Path to write stderr logs to.")
-                
+
                 Toggle("Run At Load", isOn: $editRunAtLoad)
                 Toggle("Keep Alive", isOn: $editKeepAlive)
-                
+
                 if isCreatingNew {
                     Picker("Save Destination:", selection: $editPlistPath) {
                         Text("User Agents (~/Library/LaunchAgents)").tag("user")
@@ -381,14 +381,14 @@ struct launchdmanagerview: View {
                     .foregroundStyle(.red)
                     .padding(.horizontal)
             }
-            
+
             HStack {
                 Spacer()
                 Button("Cancel") {
                     isShowingEditor = false
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button("Save") {
                     saveEditorChanges()
                 }
@@ -400,7 +400,7 @@ struct launchdmanagerview: View {
         .frame(width: 500, height: 460)
         .padding()
     }
-    
+
     // MARK: - Helper UI Components
     @ViewBuilder
     private func statusBadge(for service: LaunchdService) -> some View {
@@ -414,7 +414,7 @@ struct launchdmanagerview: View {
             .foregroundColor(isRunning ? .green : .secondary)
             .cornerRadius(8)
     }
-    
+
     // MARK: - Logic Helpers
     private func loadPlistContent(for service: LaunchdService) {
         if let content = try? String(contentsOf: service.plistURL, encoding: .utf8) {
@@ -423,13 +423,13 @@ struct launchdmanagerview: View {
             self.plistContent = "Could not load plist contents."
         }
     }
-    
+
     private func loadLogsContent(for service: LaunchdService) {
         self.isLoadingLogs = true
         self.stdoutLog = ""
         self.stderrLog = ""
         self.unifiedLog = ""
-        
+
         Task.detached(priority: .userInitiated) {
             let logs = LaunchdManager.loadLogs(for: service)
             await MainActor.run {
@@ -440,7 +440,7 @@ struct launchdmanagerview: View {
             }
         }
     }
-    
+
     private func openEditor(for service: LaunchdService) {
         self.isCreatingNew = false
         self.editLabel = service.label
@@ -453,7 +453,7 @@ struct launchdmanagerview: View {
         self.editorValidationMessage = ""
         self.isShowingEditor = true
     }
-    
+
     private func createNewService() {
         self.isCreatingNew = true
         self.editLabel = "com.user.launchtask"
@@ -466,7 +466,7 @@ struct launchdmanagerview: View {
         self.editorValidationMessage = ""
         self.isShowingEditor = true
     }
-    
+
     private func saveEditorChanges() {
         let trimmedLabel = editLabel.trimmingCharacters(in: .whitespacesAndNewlines)
         let args = editProgramArguments.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
@@ -486,11 +486,11 @@ struct launchdmanagerview: View {
 
         let plistURL: URL
         let type: String
-        
+
         if isCreatingNew {
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             let filename = "\(editLabel).plist"
-            
+
             switch editPlistPath {
             case "globalAgent":
                 plistURL = URL(fileURLWithPath: "/Library/LaunchAgents/\(filename)")
@@ -506,10 +506,10 @@ struct launchdmanagerview: View {
             plistURL = URL(fileURLWithPath: editPlistPath)
             type = selectedService?.type ?? "User Agent"
         }
-        
+
         let outPath = editStandardOutPath.trimmingCharacters(in: .whitespacesAndNewlines)
         let errPath = editStandardErrorPath.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         let service = LaunchdService(
             label: trimmedLabel,
             programArguments: args,
@@ -520,7 +520,7 @@ struct launchdmanagerview: View {
             plistURL: plistURL,
             type: type
         )
-        
+
         manager.saveService(service) { success in
             if success {
                 self.isShowingEditor = false
@@ -528,7 +528,7 @@ struct launchdmanagerview: View {
             }
         }
     }
-    
+
     private func deleteService(_ service: LaunchdService) {
         let alert = NSAlert()
         alert.messageText = "Delete Launch Task?"
@@ -536,7 +536,7 @@ struct launchdmanagerview: View {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Delete")
         alert.addButton(withTitle: "Cancel")
-        
+
         if alert.runModal() == .alertFirstButtonReturn {
             manager.deleteService(service) { success in
                 if success {

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juicer — Premium 14-Studio macOS Developer Workbench</title>
+  <meta name="description" content="The ultimate native macOS developer suite, system optimizer, offline converter, container workbench, and companion studio. Download Juicer for macOS.">
+  <link rel="icon" href="favicon.ico" type="image/x-icon">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0d0e12">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Header / Navigation -->
+  <header class="navbar">
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <div class="brand-icon">🍊</div>
+        <span class="brand-name">Juicer</span>
+        <span class="badge">v1.0.3-Alpha</span>
+      </a>
+      <nav class="nav-links">
+        <a href="#features">14 Studios</a>
+        <a href="#brew">Homebrew</a>
+        <a href="#creators">Creator's Studio</a>
+        <a href="https://github.com/amfi-disable/Juicer" target="_blank" rel="noopener" class="github-link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-glow"></div>
+    <div class="hero-content">
+      <div class="pill-badge">
+        <span class="dot"></span> 14 Specialized macOS Studios Ready
+      </div>
+      <h1>The Ultimate macOS <br><span class="gradient-text">Developer Workbench</span></h1>
+      <p class="subtitle">
+        System optimizer, container workbench, offline document/image converter, local AI monitor, API workbench, and macOS companion suite — all in one native app.
+      </p>
+
+      <div class="cta-group">
+        <a href="https://github.com/amfi-disable/Juicer/releases/download/V1.0.3-Alpha/Juicer.zip" class="btn btn-primary" id="download-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Download for macOS (Universal)
+        </a>
+        <div class="sha-badge">
+          <span class="sha-label">SHA-256 Verified:</span>
+          <code>78cf93dd...92026630</code>
+        </div>
+      </div>
+
+      <!-- Quick Homebrew Banner -->
+      <div class="brew-box" id="brew">
+        <span class="brew-tag">🍺 Homebrew Cask</span>
+        <code id="brew-cmd">brew install --cask juicer</code>
+        <button class="copy-btn" onclick="copyBrew()">
+          <span id="copy-text">Copy</span>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 Studios Grid Section -->
+  <section class="features-section" id="features">
+    <div class="section-header">
+      <h2>14 Specialized Workspaces</h2>
+      <p>Built exclusively for macOS Apple Silicon and Intel systems.</p>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon orange">🔄</div>
+        <h3>Juicer Converter Studio</h3>
+        <p>Offline conversion for Markdown, DOCX, PDF, HTML, HEIC/WebP images, JSON ➔ Swift Structs, and zip archives.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon purple">🐳</div>
+        <h3>Juicer Docker Studio</h3>
+        <p>Live container status, log streamer, compose manager, and 20GB–50GB+ disk space reclaimer.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon cyan">🦙</div>
+        <h3>Juicer AI Studio</h3>
+        <p>Local Ollama & LM Studio model monitor, developer prompt vault, and native error debugger chat.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon blue">🗄️</div>
+        <h3>Juicer Database Studio</h3>
+        <p>Postgres, MySQL, Redis, and Mongo daemon port scanner, local SQLite inspector, and SQL dump generator.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon teal">🛰️</div>
+        <h3>Juicer API Studio</h3>
+        <p>Native HTTP request workbench, status/latency timing tracker, cURL importer, and bearer header manager.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon orange">🌟</div>
+        <h3>Juicer Creator's Studio</h3>
+        <p>Direct 1-click Git clone to folder and Homebrew installer for all 10 amfi-disable repositories.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon purple">🌿</div>
+        <h3>Juicer Git Studio</h3>
+        <p>Visual repository workbench, commit branch analytics, status inspector, and diff viewer.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon blue">💻</div>
+        <h3>Juicer System Optimizer</h3>
+        <p>CPU, GPU, RAM, battery thermal monitor, swap manager, and system cache cleaner.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon teal">🌐</div>
+        <h3>Network & Wi-Fi Survey</h3>
+        <p>Port listener, speed tester, LAN discovery, DNS diagnostic tools, and hosts manager.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon red">🔒</div>
+        <h3>Security & TCC Audit</h3>
+        <p>TCC permissions audit, FileVault status, app lock, and privacy cabinet.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon orange">🔍</div>
+        <h3>Disk Space Lens</h3>
+        <p>Visual treemap space visualizer, developer cache cleaner, and duplicate finder.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon green">⚡</div>
+        <h3>Juicer Developer Studio</h3>
+        <p>SDK runtimes, script plugins, local web server, and code snippet manager.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon indigo">🛠️</div>
+        <h3>Juicer Configs & Tweaks</h3>
+        <p>App uninstaller, launch daemons manager, and macOS system tweaks.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon gray">🧰</div>
+        <h3>Juicer Utilities Studio</h3>
+        <p>Window tiler, clipboard manager, hot corners trigger, and desktop tools.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <p>Crafted by <a href="https://github.com/amfi-disable" target="_blank" rel="noopener">amfi-disable</a> • Open Source under MIT License</p>
+  </footer>
+
+  <script>
+    function copyBrew() {
+      const text = document.getElementById('brew-cmd').innerText;
+      navigator.clipboard.writeText(text);
+      const btnText = document.getElementById('copy-text');
+      btnText.innerText = 'Copied! ✓';
+      setTimeout(() => { btnText.innerText = 'Copy'; }, 2000);
+    }
+  </script>
+</body>
+</html>

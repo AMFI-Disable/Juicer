@@ -18,12 +18,12 @@ struct CreatorRepoItem: Identifiable {
 struct creatorecosystemview: View {
     @State private var searchText = ""
     @State private var selectedCategoryFilter = "All"
-    @State private var copiedRepo: String? = nil
-    @State private var cloningRepo: String? = nil
-    @State private var cloneStatusMessage: String? = nil
+    @State private var copiedRepo: String?
+    @State private var cloningRepo: String?
+    @State private var cloneStatusMessage: String?
     @State private var cloneStatusColor: Color = .green
-    @State private var lastClonedPath: String? = nil
-    
+    @State private var lastClonedPath: String?
+
     // Category expansion state
     @State private var expandedCategories: [String: Bool] = [
         "Apps": true,
@@ -32,7 +32,7 @@ struct creatorecosystemview: View {
         "Scripts": true,
         "Tooling": true
     ]
-    
+
     let allRepos: [CreatorRepoItem] = [
         // Apps
         CreatorRepoItem(
@@ -83,7 +83,7 @@ struct creatorecosystemview: View {
             starsCount: "Latest",
             brewCommand: nil
         ),
-        
+
         // Extensions
         CreatorRepoItem(
             name: "FMG_Free-MapGenie",
@@ -97,7 +97,7 @@ struct creatorecosystemview: View {
             starsCount: "v1.0",
             brewCommand: nil
         ),
-        
+
         // Meta
         CreatorRepoItem(
             name: "amfi-disable Profile",
@@ -111,7 +111,7 @@ struct creatorecosystemview: View {
             starsCount: "Org",
             brewCommand: nil
         ),
-        
+
         // Tooling
         CreatorRepoItem(
             name: "homebrew-juicer",
@@ -137,7 +137,7 @@ struct creatorecosystemview: View {
             starsCount: "Tap",
             brewCommand: "brew tap amfi-disable/tap"
         ),
-        
+
         // Scripts
         CreatorRepoItem(
             name: "GeoFS-V3.9_Core-Library",
@@ -308,11 +308,11 @@ struct creatorecosystemview: View {
             brewCommand: nil
         )
     ]
-    
+
     var categories: [String] {
         ["Apps", "Extensions", "Meta", "Scripts", "Tooling"]
     }
-    
+
     var filterOptions: [String] {
         ["All", "Apps", "Extensions", "Meta", "Scripts", "Tooling"]
     }
@@ -329,12 +329,12 @@ struct creatorecosystemview: View {
                         .font(.title)
                         .foregroundColor(.white)
                 }
-                
+
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 8) {
                         Text("Juicer Creator's Studio")
                             .font(.title2).bold()
-                        
+
                         Text("22 REPOSITORIES")
                             .font(.system(size: 9, weight: .black))
                             .padding(.horizontal, 7)
@@ -342,14 +342,14 @@ struct creatorecosystemview: View {
                             .background(Color.orange.opacity(0.18), in: Capsule())
                             .foregroundColor(.orange)
                     }
-                    
+
                     Text("Explore, clone, install Homebrew taps, and manage open-source software by amfi-disable")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 HStack(spacing: 10) {
                     Button(action: {
                         NSPasteboard.general.clearContents()
@@ -363,7 +363,7 @@ struct creatorecosystemview: View {
                         }
                     }
                     .buttonStyle(.bordered)
-                    
+
                     Button(action: {
                         if let url = URL(string: "https://github.com/amfi-disable") {
                             NSWorkspace.shared.open(url)
@@ -380,9 +380,9 @@ struct creatorecosystemview: View {
             }
             .padding(20)
             .background(Color(NSColor.controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Search & Category Filter Bar
             VStack(spacing: 10) {
                 HStack(spacing: 12) {
@@ -402,7 +402,7 @@ struct creatorecosystemview: View {
                     .padding(9)
                     .background(Color.secondary.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
                 }
-                
+
                 // Category Filter Pills
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -429,9 +429,9 @@ struct creatorecosystemview: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
             .background(Color(NSColor.windowBackgroundColor))
-            
+
             Divider()
-            
+
             // Live Status Notification Banner if Cloning or Copying
             if let msg = cloneStatusMessage {
                 HStack(spacing: 10) {
@@ -444,9 +444,9 @@ struct creatorecosystemview: View {
                     Text(msg)
                         .font(.caption.bold())
                         .foregroundColor(cloneStatusColor)
-                    
+
                     Spacer()
-                    
+
                     if let path = lastClonedPath {
                         Button("Show in Finder") {
                             NSWorkspace.shared.selectFile(path, inFileViewerRootedAtPath: "")
@@ -454,7 +454,7 @@ struct creatorecosystemview: View {
                         .buttonStyle(.bordered)
                         .controlSize(.small)
                     }
-                    
+
                     Button(action: { cloneStatusMessage = nil; lastClonedPath = nil }) {
                         Image(systemName: "xmark").font(.caption2)
                     }
@@ -465,14 +465,14 @@ struct creatorecosystemview: View {
                 .background(cloneStatusColor.opacity(0.12))
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
-            
+
             // Categorized Repositories List
             ScrollView {
                 VStack(spacing: 18) {
                     let activeCategories = categories.filter { cat in
                         selectedCategoryFilter == "All" || selectedCategoryFilter == cat
                     }
-                    
+
                     ForEach(activeCategories, id: \.self) { cat in
                         let catRepos = allRepos.filter { repo in
                             repo.category == cat &&
@@ -482,10 +482,10 @@ struct creatorecosystemview: View {
                              repo.language.localizedCaseInsensitiveContains(searchText) ||
                              (repo.tag?.localizedCaseInsensitiveContains(searchText) ?? false))
                         }
-                        
+
                         if !catRepos.isEmpty {
                             let isExpanded = expandedCategories[cat] ?? true
-                            
+
                             VStack(spacing: 0) {
                                 // Category Header Toggle Button
                                 Button(action: {
@@ -499,20 +499,20 @@ struct creatorecosystemview: View {
                                             .foregroundColor(categoryColor(for: cat))
                                             .frame(width: 26, height: 26)
                                             .background(categoryColor(for: cat).opacity(0.15), in: RoundedRectangle(cornerRadius: 6))
-                                        
+
                                         Text(cat)
                                             .font(.headline.bold())
                                             .foregroundColor(.primary)
-                                        
+
                                         Spacer()
-                                        
+
                                         Text("\(catRepos.count) \(catRepos.count == 1 ? "repo" : "repos")")
                                             .font(.caption2.bold())
                                             .padding(.horizontal, 8)
                                             .padding(.vertical, 3)
                                             .background(categoryColor(for: cat).opacity(0.14), in: Capsule())
                                             .foregroundColor(categoryColor(for: cat))
-                                        
+
                                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                                             .font(.caption.bold())
                                             .foregroundColor(.secondary)
@@ -520,10 +520,10 @@ struct creatorecosystemview: View {
                                     .padding(14)
                                 }
                                 .buttonStyle(.plain)
-                                
+
                                 if isExpanded {
                                     Divider().padding(.horizontal, 14)
-                                    
+
                                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 330, maximum: 460), spacing: 14)], spacing: 14) {
                                         ForEach(catRepos) { repo in
                                             repoCard(repo: repo)
@@ -542,7 +542,7 @@ struct creatorecosystemview: View {
         }
         .background(Color(NSColor.windowBackgroundColor))
     }
-    
+
     private func filterNameShort(_ filter: String) -> String {
         switch filter {
         case "Developer Tooling & Homebrew Taps": return "Developer Tools"
@@ -550,7 +550,7 @@ struct creatorecosystemview: View {
         default: return filter
         }
     }
-    
+
     @ViewBuilder
     private func repoCard(repo: CreatorRepoItem) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -560,14 +560,14 @@ struct creatorecosystemview: View {
                     .foregroundColor(repo.themeColor)
                     .frame(width: 36, height: 36)
                     .background(repo.themeColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 10))
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(repo.name)
                             .font(.headline.bold())
                             .foregroundColor(.primary)
                             .lineLimit(1)
-                        
+
                         if let tag = repo.tag {
                             Text(tag)
                                 .font(.system(size: 8, weight: .black))
@@ -577,29 +577,29 @@ struct creatorecosystemview: View {
                                 .foregroundColor(repo.themeColor)
                         }
                     }
-                    
+
                     Text(repo.repository)
                         .font(.caption2.monospaced())
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Text(repo.starsCount)
                     .font(.caption2.bold())
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
                     .background(Color.secondary.opacity(0.12), in: Capsule())
             }
-            
+
             Text(repo.description)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
-            
+
             Divider()
-            
+
             // Controls Footer Bar
             HStack {
                 HStack(spacing: 5) {
@@ -610,9 +610,9 @@ struct creatorecosystemview: View {
                         .font(.caption2.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 // Brew Install Shortcut Button if available
                 if let brew = repo.brewCommand {
                     Button(action: {
@@ -630,7 +630,7 @@ struct creatorecosystemview: View {
                     .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
-                
+
                 // Direct Git Clone to Directory
                 Button(action: {
                     cloneRepoToFolder(repo: repo)
@@ -644,7 +644,7 @@ struct creatorecosystemview: View {
                 .buttonStyle(.bordered)
                 .tint(repo.themeColor)
                 .disabled(cloningRepo == repo.repository)
-                
+
                 // Open on GitHub Web
                 Button(action: {
                     if let url = URL(string: "https://github.com/\(repo.repository)") {
@@ -666,31 +666,31 @@ struct creatorecosystemview: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(repo.themeColor.opacity(0.28), lineWidth: 1))
     }
-    
+
     private func cloneRepoToFolder(repo: CreatorRepoItem) {
         let panel = NSOpenPanel()
         panel.title = "Select Folder to Clone \(repo.name) Into"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-        
+
         if panel.runModal() == .OK, let targetDir = panel.url {
             cloningRepo = repo.repository
             cloneStatusMessage = "Cloning \(repo.repository) into \(targetDir.lastPathComponent)..."
             cloneStatusColor = .orange
-            
+
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
                 process.arguments = ["clone", "https://github.com/\(repo.repository).git"]
                 process.currentDirectoryURL = targetDir
-                
+
                 do {
                     try process.run()
                     process.waitUntilExit()
-                    
+
                     let clonedFolder = targetDir.appendingPathComponent(repo.name)
-                    
+
                     DispatchQueue.main.async {
                         self.cloningRepo = nil
                         if process.terminationStatus == 0 {
@@ -713,7 +713,7 @@ struct creatorecosystemview: View {
             }
         }
     }
-    
+
     private func categoryIcon(for category: String) -> String {
         switch category {
         case "Apps": return "laptopcomputer"
@@ -724,7 +724,7 @@ struct creatorecosystemview: View {
         default: return "network"
         }
     }
-    
+
     private func categoryColor(for category: String) -> Color {
         switch category {
         case "Apps": return .orange

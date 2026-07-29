@@ -11,7 +11,7 @@ struct apistudioview: View {
     @State private var benchmarkCount = "10"
     @State private var benchmarkResults = ""
     @State private var selectedTab = "Workbench"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             JuicerFeatureHeader(
@@ -23,9 +23,9 @@ struct apistudioview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             HStack {
                 Picker("", selection: $selectedTab) {
                     Text("REST Workbench").tag("Workbench")
@@ -33,13 +33,13 @@ struct apistudioview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 280)
-                
+
                 Spacer()
             }
             .padding()
-            
+
             Divider()
-            
+
             if selectedTab == "Workbench" {
                 workbenchView()
             } else {
@@ -48,7 +48,7 @@ struct apistudioview: View {
         }
         .allowWindowDragAndFit()
     }
-    
+
     @ViewBuilder
     private func workbenchView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -60,15 +60,15 @@ struct apistudioview: View {
                     Text("DELETE").tag("DELETE")
                 }
                 .frame(width: 90)
-                
+
                 TextField("https://api.example.com/v1/resource", text: $urlString)
                     .textFieldStyle(.roundedBorder)
-                
+
                 Button("Send Request") { sendRequest() }
                     .buttonStyle(.borderedProminent)
                     .disabled(isExecuting || urlString.isEmpty)
             }
-            
+
             if !statusCode.isEmpty {
                 HStack {
                     Text("Status: \(statusCode)").bold()
@@ -76,14 +76,14 @@ struct apistudioview: View {
                     Spacer()
                 }
             }
-            
+
             TextEditor(text: .constant(responseBody.isEmpty ? "Response body will appear here after sending request..." : responseBody))
                 .font(.system(.body, design: .monospaced))
                 .cornerRadius(8)
         }
         .padding()
     }
-    
+
     @ViewBuilder
     private func benchmarkView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -96,23 +96,23 @@ struct apistudioview: View {
                 Button("Run Benchmark") { runBenchmark() }
                     .buttonStyle(.borderedProminent)
             }
-            
+
             TextEditor(text: .constant(benchmarkResults.isEmpty ? "Benchmark latency and RPS statistics will appear here..." : benchmarkResults))
                 .font(.system(.body, design: .monospaced))
                 .cornerRadius(8)
         }
         .padding()
     }
-    
+
     private func sendRequest() {
         guard let url = URL(string: urlString) else { return }
         isExecuting = true
         responseBody = "Sending request..."
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = httpMethod
         request.setValue("Juicer-API-Studio/1.0", forHTTPHeaderField: "User-Agent")
-        
+
         URLSession.shared.dataTask(with: request) { data, response, error in
             DispatchQueue.main.async {
                 isExecuting = false
@@ -127,15 +127,15 @@ struct apistudioview: View {
             }
         }.resume()
     }
-    
+
     private func runBenchmark() {
         guard let count = Int(benchmarkCount), count > 0 else { return }
         isExecuting = true
         benchmarkResults = "Running \(count) concurrent requests to \(urlString)..."
-        
+
         let start = Date()
         let group = DispatchGroup()
-        
+
         for _ in 0..<count {
             group.enter()
             if let url = URL(string: urlString) {
@@ -148,7 +148,7 @@ struct apistudioview: View {
                 group.leave()
             }
         }
-        
+
         group.notify(queue: .main) {
             let elapsed = Date().timeIntervalSince(start)
             let rps = Double(count) / elapsed

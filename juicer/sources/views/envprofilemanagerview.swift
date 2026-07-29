@@ -11,11 +11,11 @@ struct envprofilemanagerview: View {
     @State private var newValue = ""
     @State private var isNewSecret = false
     @State private var copiedNotice = ""
-    
+
     var selectedProfile: EnvProfile? {
         manager.profiles.first(where: { $0.id == manager.selectedProfileID })
     }
-    
+
     var body: some View {
         NavigationSplitView {
             List(selection: $manager.selectedProfileID) {
@@ -65,12 +65,12 @@ struct envprofilemanagerview: View {
                                     .foregroundStyle(.secondary)
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         Toggle("Mask Secrets", isOn: $maskSecrets)
                             .toggleStyle(.switch)
-                        
+
                         Button(action: {
                             let str = manager.exportAsEnvString(profile: profile)
                             NSPasteboard.general.clearContents()
@@ -81,7 +81,7 @@ struct envprofilemanagerview: View {
                             Label("Copy .env", systemImage: "doc.on.doc")
                         }
                         .buttonStyle(.bordered)
-                        
+
                         Button(action: {
                             let str = manager.exportAsShellExport(profile: profile)
                             NSPasteboard.general.clearContents()
@@ -95,7 +95,7 @@ struct envprofilemanagerview: View {
                     }
                     .padding()
                     .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-                    
+
                     if !copiedNotice.isEmpty {
                         HStack {
                             Spacer()
@@ -108,9 +108,9 @@ struct envprofilemanagerview: View {
                         }
                         .background(Color.green.opacity(0.1))
                     }
-                    
+
                     Divider()
-                    
+
                     // Add Variable Row
                     HStack(spacing: 10) {
                         TextField("KEY_NAME", text: $newKey)
@@ -119,7 +119,7 @@ struct envprofilemanagerview: View {
                             .textFieldStyle(.roundedBorder)
                         Toggle("Secret", isOn: $isNewSecret)
                             .toggleStyle(.checkbox)
-                        
+
                         Button("Add Variable") {
                             guard !newKey.isEmpty else { return }
                             var updatedVars = profile.variables
@@ -134,9 +134,9 @@ struct envprofilemanagerview: View {
                         .disabled(newKey.trimmingCharacters(in: .whitespaces).isEmpty)
                     }
                     .padding()
-                    
+
                     Divider()
-                    
+
                     // Variables Table
                     List {
                         ForEach(profile.variables.indices, id: \.self) { idx in
@@ -146,21 +146,21 @@ struct envprofilemanagerview: View {
                                     .font(.system(.body, design: .monospaced))
                                     .bold()
                                     .frame(width: 200, alignment: .leading)
-                                
+
                                 Spacer()
-                                
+
                                 Text(maskSecrets && item.isSecret ? "••••••••••••••••" : item.value)
                                     .font(.system(.body, design: .monospaced))
                                     .foregroundStyle(item.isSecret ? Color.orange : Color.primary)
-                                
+
                                 Spacer()
-                                
+
                                 if item.isSecret {
                                     Image(systemName: "lock.fill")
                                         .font(.caption)
                                         .foregroundStyle(.orange)
                                 }
-                                
+
                                 Button(action: {
                                     var updatedVars = profile.variables
                                     updatedVars.remove(at: idx)
@@ -193,11 +193,11 @@ struct envprofilemanagerview: View {
             VStack(spacing: 16) {
                 Text("New Environment Profile")
                     .font(.headline)
-                
+
                 TextField("Profile Name (e.g. Staging Local)", text: $newProfileName)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 300)
-                
+
                 HStack {
                     Button("Cancel") { showAddProfileSheet = false }
                     Button("Create") {

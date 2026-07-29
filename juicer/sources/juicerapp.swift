@@ -9,7 +9,7 @@ struct juicerapp: App {
     init() {
         setenv("OS_ACTIVITY_MODE", "disable", 1)
     }
-    
+
     private func setupBackgroundScheduler() {
         let interval = UserDefaults.standard.double(forKey: "juicer.settings.backgroundInterval") > 0
             ? UserDefaults.standard.double(forKey: "juicer.settings.backgroundInterval")
@@ -20,7 +20,7 @@ struct juicerapp: App {
                   UserDefaults.standard.object(forKey: "juicer.settings.backgroundChecks") as? Bool ?? true else { return }
             self.performBackgroundScanAndAlert()
         }
-        
+
         // Also run a check 10 seconds after launch
         DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
             guard !(UserDefaults.standard.object(forKey: "juicer.settings.safeMode") as? Bool ?? false),
@@ -28,10 +28,10 @@ struct juicerapp: App {
             self.performBackgroundScanAndAlert()
         }
     }
-    
+
     private func performBackgroundScanAndAlert() {
         // 1. Disk usage warning
-        if (UserDefaults.standard.object(forKey: "juicer.settings.lowDiskAlerts") as? Bool ?? true),
+        if UserDefaults.standard.object(forKey: "juicer.settings.lowDiskAlerts") as? Bool ?? true,
            let attrs = try? FileManager.default.attributesOfFileSystem(forPath: "/"),
            let total = attrs[.systemSize] as? Int64,
            let free = attrs[.systemFreeSize] as? Int64 {
@@ -44,12 +44,12 @@ struct juicerapp: App {
                 )
             }
         }
-        
+
         // 2. Package updates check
         guard UserDefaults.standard.object(forKey: "juicer.settings.updateAlerts") as? Bool ?? true else { return }
         let manager = AppUpdateManager.shared
         manager.checkForUpdates()
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 15) {
             if !manager.updates.isEmpty {
                 NotificationManager.shared.sendNotification(
@@ -59,7 +59,7 @@ struct juicerapp: App {
             }
         }
     }
-    
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -102,7 +102,7 @@ struct juicerapp: App {
 
             // Sidebar toggle command (native macOS sidebar control)
             SidebarCommands()
-            
+
             // Custom File Commands
             CommandGroup(replacing: .newItem) {
                 Button("Add Bookmark...") {
@@ -110,7 +110,7 @@ struct juicerapp: App {
                 }
                 .keyboardShortcut("b", modifiers: [.command, .shift])
             }
-            
+
             // Custom View Commands
             CommandGroup(before: .sidebar) {
                 Button("Refresh Selected Tool") {
@@ -122,92 +122,92 @@ struct juicerapp: App {
                     NotificationCenter.default.post(name: NSNotification.Name("juicer.action.commandPalette"), object: nil)
                 }
                 .keyboardShortcut("k", modifiers: [.command])
-                
+
                 Divider()
-                
+
                 Menu("Navigation") {
                     Button("Go to Dashboard") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.dashboard"), object: nil)
                     }
                     .keyboardShortcut("1", modifiers: [.command])
-                    
+
                     Button("Go to App Uninstaller") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.uninstaller"), object: nil)
                     }
                     .keyboardShortcut("2", modifiers: [.command])
-                    
+
                     Button("Go to Orphan Finder") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.orphans"), object: nil)
                     }
                     .keyboardShortcut("3", modifiers: [.command])
-                    
+
                     Button("Go to Developer Caches") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.caches"), object: nil)
                     }
                     .keyboardShortcut("4", modifiers: [.command])
-                    
+
                     Button("Go to Large & Old Files") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.largeFiles"), object: nil)
                     }
                     .keyboardShortcut("5", modifiers: [.command])
-                    
+
                     Button("Go to Hidden File Explorer") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.hiddenFiles"), object: nil)
                     }
                     .keyboardShortcut("6", modifiers: [.command])
-                    
+
                     Button("Go to Homebrew Explorer") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.brewExplorer"), object: nil)
                     }
                     .keyboardShortcut("7", modifiers: [.command])
-                    
+
                     Button("Go to Service Manager") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.serviceManager"), object: nil)
                     }
                     .keyboardShortcut("8", modifiers: [.command])
-                    
+
                     Button("Go to System Tweaks") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.systemTweaks"), object: nil)
                     }
                     .keyboardShortcut("9", modifiers: [.command])
-                    
+
                     Divider()
-                    
+
                     Button("Go to Software Center") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.appStore"), object: nil)
                     }
                     .keyboardShortcut("a", modifiers: [.command, .shift])
-                    
+
                     Button("Go to Diagnostic Snapshots") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.snapshots"), object: nil)
                     }
                     .keyboardShortcut("d", modifiers: [.command, .shift])
-                    
+
                     Button("Go to Script Console") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.scriptConsole"), object: nil)
                     }
                     .keyboardShortcut("c", modifiers: [.command, .shift])
-                    
+
                     Button("Go to Utilities Settings") {
                         NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.utilities"), object: nil)
                     }
                     .keyboardShortcut("u", modifiers: [.command, .shift])
                 }
             }
-            
+
             // Custom Help Commands
             CommandGroup(replacing: .help) {
                 Button("Juicer Help Manual") {
                     NotificationCenter.default.post(name: NSNotification.Name("juicer.action.showGuide"), object: nil)
                 }
                 .keyboardShortcut("?", modifiers: [.command])
-                
+
                 Button("Submit Feedback...") {
                     if let url = URL(string: "https://github.com/amfi-disable/Juicer/issues") {
                         NSWorkspace.shared.open(url)
                     }
                 }
-                
+
                 Button("View Online Documentation") {
                     if let url = URL(string: "https://github.com/amfi-disable/Juicer") {
                         NSWorkspace.shared.open(url)
@@ -215,7 +215,7 @@ struct juicerapp: App {
                 }
             }
         }
-        
+
         Settings {
             settingsview()
         }

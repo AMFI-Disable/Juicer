@@ -13,11 +13,11 @@ class DatabaseStudioManager: ObservableObject {
     @Published var isScanning = false
     @Published var sqlitePath = ""
     @Published var sqliteTables: [String] = []
-    
+
     init() {
         self.scanDaemons()
     }
-    
+
     func scanDaemons() {
         self.isScanning = true
         Task.detached(priority: .userInitiated) {
@@ -25,21 +25,21 @@ class DatabaseStudioManager: ObservableObject {
             let mysqlRunning = self.checkPort(3306)
             let redisRunning = self.checkPort(6379)
             let mongoRunning = self.checkPort(27017)
-            
+
             let list = [
                 DatabaseDaemonItem(name: "PostgreSQL", port: 5432, isRunning: pgRunning),
                 DatabaseDaemonItem(name: "MySQL / MariaDB", port: 3306, isRunning: mysqlRunning),
                 DatabaseDaemonItem(name: "Redis Cache", port: 6379, isRunning: redisRunning),
                 DatabaseDaemonItem(name: "MongoDB", port: 27017, isRunning: mongoRunning)
             ]
-            
+
             await MainActor.run {
                 self.daemons = list
                 self.isScanning = false
             }
         }
     }
-    
+
     func openSQLiteFile(path: String) {
         self.sqlitePath = path
         Task.detached(priority: .userInitiated) {
@@ -50,7 +50,7 @@ class DatabaseStudioManager: ObservableObject {
             }
         }
     }
-    
+
     private func checkPort(_ port: Int) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/nc")
@@ -59,7 +59,7 @@ class DatabaseStudioManager: ObservableObject {
         process.waitUntilExit()
         return process.terminationStatus == 0
     }
-    
+
     private func runShellCommand(_ cmd: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -79,7 +79,7 @@ class DatabaseStudioManager: ObservableObject {
 struct databasestudioview: View {
     @StateObject private var manager = DatabaseStudioManager()
     @State private var selectedTab = "Daemons"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             JuicerFeatureHeader(
@@ -91,9 +91,9 @@ struct databasestudioview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             HStack {
                 Picker("", selection: $selectedTab) {
                     Text("Local DB Daemons").tag("Daemons")
@@ -101,13 +101,13 @@ struct databasestudioview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 280)
-                
+
                 Spacer()
             }
             .padding()
-            
+
             Divider()
-            
+
             if selectedTab == "Daemons" {
                 daemonsView()
             } else {
@@ -116,7 +116,7 @@ struct databasestudioview: View {
         }
         .allowWindowDragAndFit()
     }
-    
+
     @ViewBuilder
     private func daemonsView() -> some View {
         List(manager.daemons) { daemon in
@@ -124,14 +124,14 @@ struct databasestudioview: View {
                 Circle()
                     .fill(daemon.isRunning ? Color.green : Color.gray)
                     .frame(width: 10, height: 10)
-                
+
                 VStack(alignment: .leading) {
                     Text(daemon.name).bold()
                     Text("Port \(daemon.port)").font(.caption.monospaced()).foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Text(daemon.isRunning ? "Active (Port \(daemon.port))" : "Offline")
                     .font(.caption).bold()
                     .foregroundStyle(daemon.isRunning ? Color.green : Color.secondary)
@@ -140,7 +140,7 @@ struct databasestudioview: View {
         }
         .listStyle(.inset)
     }
-    
+
     @ViewBuilder
     private func sqliteView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -155,7 +155,7 @@ struct databasestudioview: View {
                     }
                 }
             }
-            
+
             if !manager.sqliteTables.isEmpty {
                 Text("Tables Found (\(manager.sqliteTables.count)):").font(.headline)
                 List(manager.sqliteTables, id: \.self) { table in

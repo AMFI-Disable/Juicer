@@ -4,39 +4,39 @@ struct brewmanagerview: View {
     @StateObject private var manager = BrewManager.shared
     @State private var searchText = ""
     @State private var selectedTab: Int
-    
+
     init(selectedTab: Int = 0) {
         _selectedTab = State(initialValue: selectedTab)
     }
-    
+
     @State private var typeFilter = 0 // 0: All, 1: Formulae, 2: Casks
     @State private var stateFilter = 0 // 0: All, 1: Pinned, 2: Linked, 3: Unlinked, 4: Outdated, 5: Leaf/Intentional
     @State private var isProcessing = false
     @State private var statusMessage = ""
-    
+
     @State private var selectedPackageForInfo: BrewPackage?
     @State private var detailedInfoText = ""
     @State private var isLoadingInfo = false
-    
+
     // Dependency Tree Sheet state
     @State private var selectedPackageForTree: BrewPackage?
-    
+
     // Diagnostics State
     @State private var dryRunOutput = ""
     @State private var isRunningDryRun = false
     @State private var autoremoveOutput = ""
     @State private var isRunningAutoremove = false
-    
+
     var filteredPackages: [BrewPackage] {
         var list = manager.packages
-        
+
         // Type filter
         if typeFilter == 1 {
             list = list.filter { $0.type == .formula }
         } else if typeFilter == 2 {
             list = list.filter { $0.type == .cask }
         }
-        
+
         // State filter
         if stateFilter == 1 {
             list = list.filter { $0.isPinned }
@@ -49,15 +49,15 @@ struct brewmanagerview: View {
         } else if stateFilter == 5 {
             list = list.filter { $0.isLeaf }
         }
-        
+
         // Search text
         if !searchText.isEmpty {
             list = list.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
-        
+
         return list
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             if BrewManager.brewPath == nil {
@@ -87,9 +87,9 @@ struct brewmanagerview: View {
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 600)
-                    
+
                     Spacer()
-                    
+
                     if selectedTab == 0 {
                         if manager.isLoading {
                             ProgressView().controlSize(.small)
@@ -104,9 +104,9 @@ struct brewmanagerview: View {
                 }
                 .padding()
                 .background(Color(NSColor.windowBackgroundColor).opacity(0.3))
-                
+
                 Divider()
-                
+
                 // Tab Router
                 switch selectedTab {
                 case 0:
@@ -122,7 +122,7 @@ struct brewmanagerview: View {
                 default:
                     EmptyView()
                 }
-                
+
                 // Status message bar
                 if !statusMessage.isEmpty {
                     HStack {
@@ -153,7 +153,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     // MARK: - Packages View Tab
     @ViewBuilder
     private func packagesTab() -> some View {
@@ -166,7 +166,7 @@ struct brewmanagerview: View {
                     Text("Casks").tag(2)
                 }
                 .frame(width: 160)
-                
+
                 Picker("State", selection: $stateFilter) {
                     Text("All States").tag(0)
                     Text("Pinned").tag(1)
@@ -176,9 +176,9 @@ struct brewmanagerview: View {
                     Text("Leaf/Intentional").tag(5)
                 }
                 .frame(width: 180)
-                
+
                 Spacer()
-                
+
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
                 TextField("Search package...", text: $searchText)
@@ -187,9 +187,9 @@ struct brewmanagerview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.1))
-            
+
             Divider()
-            
+
             // List / Table view
             if manager.isLoading {
                 VStack {
@@ -213,24 +213,24 @@ struct brewmanagerview: View {
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(package.type == .cask ? Color.blue.opacity(0.15) : Color.orange.opacity(0.15))
                                 .frame(width: 36, height: 36)
-                            
+
                             Image(systemName: package.type == .cask ? "macwindow" : "terminal.fill")
                                 .font(.system(size: 16))
                                 .foregroundStyle(package.type == .cask ? Color.blue : Color.orange)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 4) {
                             HStack(spacing: 8) {
                                 Text(package.name)
                                     .font(.headline)
-                                
+
                                 Button(action: { self.selectedPackageForInfo = package }) {
                                     Image(systemName: "info.circle")
                                         .foregroundColor(.accentColor)
                                 }
                                 .buttonStyle(.plain)
                                 .help("View Package Details")
-                                
+
                                 // Tag badges
                                 if package.isPinned {
                                     Label("Pinned", systemImage: "pin.fill")
@@ -241,7 +241,7 @@ struct brewmanagerview: View {
                                         .foregroundColor(.red)
                                         .cornerRadius(4)
                                 }
-                                
+
                                 if !package.isLinked {
                                     Label("Unlinked", systemImage: "link.badge.plus")
                                         .font(.system(size: 9, weight: .bold))
@@ -251,7 +251,7 @@ struct brewmanagerview: View {
                                         .foregroundColor(.gray)
                                         .cornerRadius(4)
                                 }
-                                
+
                                 if package.isLeaf {
                                     Label("Leaf / Intentional", systemImage: "leaf.fill")
                                         .font(.system(size: 9, weight: .bold))
@@ -262,12 +262,12 @@ struct brewmanagerview: View {
                                         .cornerRadius(4)
                                 }
                             }
-                            
+
                             HStack(spacing: 8) {
                                 Text("Installed: \(package.version)")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
-                                
+
                                 if package.isOutdated, let latest = package.latestVersion {
                                     Image(systemName: "arrow.right")
                                         .font(.caption2)
@@ -279,9 +279,9 @@ struct brewmanagerview: View {
                                 }
                             }
                         }
-                        
+
                         Spacer()
-                        
+
                         // Action buttons
                         HStack(spacing: 8) {
                             if package.isOutdated {
@@ -292,7 +292,7 @@ struct brewmanagerview: View {
                                 .tint(.green)
                                 .disabled(isProcessing)
                             }
-                            
+
                             // Context actions menu
                             Menu {
                                 if package.type == .formula {
@@ -301,13 +301,13 @@ struct brewmanagerview: View {
                                     } else {
                                         Button("Pin Version") { pinPackage(package) }
                                     }
-                                    
+
                                     if package.isLinked {
                                         Button("Unlink Binary Paths") { unlinkPackage(package) }
                                     } else {
                                         Button("Link Binary Paths") { linkPackage(package) }
                                     }
-                                    
+
                                     if !package.dependencies.isEmpty {
                                         Button("View Dependency Tree...") {
                                              selectedPackageForTree = package
@@ -353,7 +353,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     // MARK: - Maintenance Tab View
     @ViewBuilder
     private func maintenanceTab() -> some View {
@@ -379,7 +379,7 @@ struct brewmanagerview: View {
                             .buttonStyle(.bordered)
                         }
                     }
-                    
+
                     ScrollView {
                         Text(manager.doctorOutput.isEmpty ? "Check your Homebrew configuration health." : manager.doctorOutput)
                             .font(.system(.caption, design: .monospaced))
@@ -394,7 +394,7 @@ struct brewmanagerview: View {
                     )
                 }
                 .frame(maxHeight: .infinity)
-                
+
                 // Autoremove Card
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -414,7 +414,7 @@ struct brewmanagerview: View {
                             .buttonStyle(.bordered)
                         }
                     }
-                    
+
                     ScrollView {
                         Text(autoremoveOutput.isEmpty ? "Prune orphaned packages installed automatically as sub-dependencies but no longer needed by any active tools." : autoremoveOutput)
                             .font(.system(.caption, design: .monospaced))
@@ -430,7 +430,7 @@ struct brewmanagerview: View {
                 }
                 .frame(maxHeight: .infinity)
             }
-            
+
             // Right column: Dry Run Cleanup
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
@@ -441,7 +441,7 @@ struct brewmanagerview: View {
                         .font(.headline)
                         .bold()
                     Spacer()
-                    
+
                     HStack(spacing: 8) {
                         if isRunningDryRun {
                             ProgressView().controlSize(.small)
@@ -451,7 +451,7 @@ struct brewmanagerview: View {
                             }
                             .buttonStyle(.bordered)
                         }
-                        
+
                         if manager.isRunningCleanup {
                             ProgressView().controlSize(.small)
                         } else {
@@ -463,7 +463,7 @@ struct brewmanagerview: View {
                         }
                     }
                 }
-                
+
                 ScrollView {
                     Text(dryRunOutput.isEmpty ? "Estimate cached download file capacities and old logs that can be swept. Running 'Confirm' purges Homebrew downloads." : dryRunOutput)
                         .font(.system(.caption, design: .monospaced))
@@ -481,7 +481,7 @@ struct brewmanagerview: View {
         }
         .padding()
     }
-    
+
     // MARK: - Package Info Sheet
     @ViewBuilder
     private func packageInfoSheet(_ package: BrewPackage) -> some View {
@@ -505,9 +505,9 @@ struct brewmanagerview: View {
                 .buttonStyle(.borderedProminent)
             }
             .padding(.bottom, 8)
-            
+
             Divider()
-            
+
             if isLoadingInfo {
                 HStack {
                     Spacer()
@@ -535,7 +535,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     // MARK: - Package Actions execution
     private func upgradePackage(_ package: BrewPackage) {
         self.isProcessing = true
@@ -549,7 +549,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func uninstallPackage(_ package: BrewPackage) {
         let alert = NSAlert()
         alert.messageText = "Uninstall Package?"
@@ -557,7 +557,7 @@ struct brewmanagerview: View {
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Uninstall")
         alert.addButton(withTitle: "Cancel")
-        
+
         if alert.runModal() == .alertFirstButtonReturn {
             self.isProcessing = true
             self.statusMessage = "Uninstalling \(package.name)..."
@@ -571,7 +571,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func pinPackage(_ package: BrewPackage) {
         manager.pinPackage(package) { success in
             if success {
@@ -581,7 +581,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func unpinPackage(_ package: BrewPackage) {
         manager.unpinPackage(package) { success in
             if success {
@@ -591,7 +591,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func linkPackage(_ package: BrewPackage) {
         manager.linkPackage(package) { success in
             if success {
@@ -601,7 +601,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func unlinkPackage(_ package: BrewPackage) {
         manager.unlinkPackage(package) { success in
             if success {
@@ -611,7 +611,7 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func runAutoremove() {
         self.isRunningAutoremove = true
         self.autoremoveOutput = "Auditing and removing orphaned dependencies..."
@@ -625,28 +625,28 @@ struct brewmanagerview: View {
             }
         }
     }
-    
+
     private func runDryRunCleanup() {
         self.isRunningDryRun = true
         self.dryRunOutput = "Scanning cache files that can be cleaned up..."
-        
+
         guard let brew = BrewManager.brewPath else { return }
         Task.detached(priority: .userInitiated) {
             do {
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: brew)
                 process.arguments = ["cleanup", "-n"]
-                
+
                 let pipe = Pipe()
                 process.standardOutput = pipe
                 process.standardError = Pipe()
-                
+
                 try process.run()
                 process.waitUntilExit()
-                
+
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8) ?? ""
-                
+
                 await MainActor.run {
                     self.dryRunOutput = output.isEmpty ? "No temporary caches found to reclaim." : output
                     self.isRunningDryRun = false
@@ -667,7 +667,7 @@ struct DependencyTreeView: View {
     let packages: [BrewPackage]
     let onDismiss: () -> Void
     @State private var expandedNodes: Set<String> = []
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -683,9 +683,9 @@ struct DependencyTreeView: View {
                 }
                 .buttonStyle(.borderedProminent)
             }
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
                     DependencyNodeView(name: packageName, depth: 0, packages: packages, expandedNodes: $expandedNodes)
@@ -708,15 +708,15 @@ struct DependencyNodeView: View {
     let depth: Int
     let packages: [BrewPackage]
     @Binding var expandedNodes: Set<String>
-    
+
     var body: some View {
         let package = packages.first(where: { $0.name == name })
         let deps = package?.dependencies ?? []
-        
+
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Spacer().frame(width: CGFloat(depth) * 16)
-                
+
                 if !deps.isEmpty {
                     Button(action: {
                         if expandedNodes.contains(name) {
@@ -737,22 +737,22 @@ struct DependencyNodeView: View {
                         .foregroundColor(.secondary.opacity(0.5))
                         .frame(width: 9, height: 9)
                 }
-                
+
                 Image(systemName: (package?.type == .cask) ? "macwindow" : "terminal.fill")
                     .font(.caption)
                     .foregroundColor((package?.type == .cask) ? .blue : .orange)
-                
+
                 Text(name)
                     .font(.system(.body, design: .monospaced))
                     .bold(depth == 0)
-                
+
                 if let ver = package?.version {
                     Text("v\(ver)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             if expandedNodes.contains(name) {
                 ForEach(deps, id: \.self) { dep in
                     DependencyNodeView(name: dep, depth: depth + 1, packages: packages, expandedNodes: $expandedNodes)

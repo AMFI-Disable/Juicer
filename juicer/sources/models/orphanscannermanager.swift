@@ -5,9 +5,9 @@ class OrphanScannerManager: ObservableObject {
     @Published var orphans: [LeftoverItem] = []
     @Published var isScanning = false
     @Published var isTrashing = false
-    
+
     private let fileManager = FileManager.default
-    
+
     // System directories that should never be flagged as orphans
     private let systemSkipList = Set([
         "com.apple.appstore",
@@ -32,7 +32,7 @@ class OrphanScannerManager: ObservableObject {
         "microsoft", // Microsoft Shared / standard components
         "adobe"
     ])
-    
+
     private func sanitize(_ string: String) -> String {
         return string.lowercased()
             .replacingOccurrences(of: " ", with: "")
@@ -40,13 +40,13 @@ class OrphanScannerManager: ObservableObject {
             .replacingOccurrences(of: "-", with: "")
             .replacingOccurrences(of: "_", with: "")
     }
-    
+
     func scanOrphans() {
         self.orphans = []
         self.isScanning = true
-        
+
         AppLogger.shared.log("Starting passive orphan scanner...")
-        
+
         Task.detached(priority: .userInitiated) {
             // Step 1: Scan all installed apps to collect active names and bundle identifiers
             let appDirs = [
@@ -54,28 +54,28 @@ class OrphanScannerManager: ObservableObject {
                 "/System/Applications",
                 "\(FileManager.default.homeDirectoryForCurrentUser.path)/Applications"
             ]
-            
+
             var activeAppNames = Set<String>()
             var activeBundleIds = Set<String>()
             var sanitizedSignatures = Set<String>()
-            
+
             for appDir in appDirs {
                 guard let contents = try? FileManager.default.contentsOfDirectory(atPath: appDir) else {
                     continue
                 }
-                
+
                 for item in contents where item.hasSuffix(".app") {
                     let appPath = URL(fileURLWithPath: appDir).appendingPathComponent(item)
                     let info = AppInfo(path: appPath)
-                    
+
                     activeAppNames.insert(info.appName.lowercased())
                     activeBundleIds.insert(info.bundleIdentifier.lowercased())
-                    
+
                     // Add sanitized name signatures
                     sanitizedSignatures.insert(self.sanitize(info.appName))
                     let rawAppName = item.replacingOccurrences(of: ".app", with: "")
                     sanitizedSignatures.insert(self.sanitize(rawAppName))
-                    
+
                     // Also insert last component of bundle ID as an active signifier
                     let bundleParts = info.bundleIdentifier.split(separator: ".").map { String($0).lowercased() }
                     if let lastPart = bundleParts.last {
@@ -84,40 +84,40 @@ class OrphanScannerManager: ObservableObject {
                     }
                 }
             }
-            
+
             // Step 2: Scan library subdirectories
             let home = FileManager.default.homeDirectoryForCurrentUser.path
             let libraryPaths = [
                 (category: "Application Support", path: "\(home)/Library/Application Support"),
                 (category: "Containers", path: "\(home)/Library/Containers")
             ]
-            
+
             var detectedOrphans: [LeftoverItem] = []
-            
+
             for library in libraryPaths {
                 guard let contents = try? FileManager.default.contentsOfDirectory(atPath: library.path) else {
                     continue
                 }
-                
+
                 for item in contents {
                     let itemLower = item.lowercased()
                     let sanitizedItem = self.sanitize(item)
-                    
+
                     // Skip system skip lists and macOS internal files
                     if item.hasPrefix(".") || item.hasPrefix("com.apple.") || self.systemSkipList.contains(itemLower) {
                         continue
                     }
-                    
+
                     let fullPath = URL(fileURLWithPath: library.path).appendingPathComponent(item)
-                    
+
                     // Match check: Is this directory related to any installed application?
                     var matchesAnyApp = false
-                    
+
                     // Check direct bundle ID matches
                     if activeBundleIds.contains(itemLower) {
                         matchesAnyApp = true
                     }
-                    
+
                     // Check contains app names or bundle ID subcomponents
                     if !matchesAnyApp {
                         for appName in activeAppNames {
@@ -127,7 +127,7 @@ class OrphanScannerManager: ObservableObject {
                             }
                         }
                     }
-                    
+
                     // Check fuzzy sanitized signatures
                     if !matchesAnyApp {
                         for signature in sanitizedSignatures {
@@ -137,7 +137,7 @@ class OrphanScannerManager: ObservableObject {
                             }
                         }
                     }
-                    
+
                     // If no match was found, we have found an orphan!
                     if !matchesAnyApp {
                         let size = self.getPathSize(fullPath)
@@ -153,7 +153,7 @@ class OrphanScannerManager: ObservableObject {
                     }
                 }
             }
-            
+
             await MainActor.run {
                 self.orphans = detectedOrphans.sorted(by: { $0.size > $1.size })
                 self.isScanning = false
@@ -161,16 +161,16 @@ class OrphanScannerManager: ObservableObject {
             }
         }
     }
-    
+
     func trashSelectedOrphans(completion: @escaping (Bool) -> Void) {
         self.isTrashing = true
         let itemsToTrash = orphans.filter { $0.isSelected }
-        
+
         AppLogger.shared.log("Moving \(itemsToTrash.count) orphaned folders to the Trash...")
-        
+
         Task.detached(priority: .userInitiated) {
             var success = true
-            
+
             for item in itemsToTrash {
                 do {
                     if FileManager.default.fileExists(atPath: item.path) {
@@ -182,7 +182,7 @@ class OrphanScannerManager: ObservableObject {
                     success = false
                 }
             }
-            
+
             await MainActor.run {
                 self.orphans.removeAll { $0.isSelected }
                 self.isTrashing = false
@@ -191,13 +191,13 @@ class OrphanScannerManager: ObservableObject {
             }
         }
     }
-    
+
     private func getPathSize(_ url: URL) -> Int64 {
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
             return 0
         }
-        
+
         if isDirectory.boolValue {
             var size: Int64 = 0
             guard let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles]) else {

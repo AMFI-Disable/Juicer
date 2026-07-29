@@ -3,8 +3,8 @@ import AppKit
 
 struct tccviewerview: View {
     @StateObject private var manager = TCCViewerManager.shared
-    @State private var filterService: String? = nil
-    @State private var selectedItem: TCCPermissionItem? = nil
+    @State private var filterService: String?
+    @State private var selectedItem: TCCPermissionItem?
     @State private var showConfirmReset = false
     @State private var showConfirmResetAll = false
     @State private var resultMessage: String = ""
@@ -38,7 +38,7 @@ struct tccviewerview: View {
             Button("Cancel", role: .cancel) {}
             Button("Revoke", role: .destructive) {
                 if let item = selectedItem {
-                    manager.resetPermission(for: item) { success, msg in
+                    manager.resetPermission(for: item) { _, msg in
                         resultMessage = msg
                         showResult = true
                         selectedItem = nil
@@ -54,7 +54,7 @@ struct tccviewerview: View {
             Button("Cancel", role: .cancel) {}
             Button("Revoke All", role: .destructive) {
                 if let item = selectedItem {
-                    manager.resetAllPermissions(forBundle: item.client) { success, msg in
+                    manager.resetAllPermissions(forBundle: item.client) { _, msg in
                         resultMessage = msg
                         showResult = true
                         selectedItem = nil
@@ -93,7 +93,7 @@ struct tccviewerview: View {
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
-            
+
             Button(action: { manager.scanPermissions() }) {
                 Image(systemName: "arrow.clockwise")
             }
@@ -108,7 +108,7 @@ struct tccviewerview: View {
     @ViewBuilder
     private func filterBar() -> some View {
         let services = Array(Set(manager.permissions.map { $0.service })).sorted()
-        
+
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 Button(action: { filterService = nil }) {
@@ -140,7 +140,7 @@ struct tccviewerview: View {
     @ViewBuilder
     private func permissionsList() -> some View {
         let filtered = filterService == nil ? manager.permissions : manager.permissions.filter { $0.service == filterService }
-        
+
         List(filtered) { item in
             HStack(spacing: 12) {
                 ZStack {
@@ -167,7 +167,7 @@ struct tccviewerview: View {
                             .padding(.horizontal, 5).padding(.vertical, 1)
                             .background(serviceColor(item.service).opacity(0.15))
                             .foregroundStyle(serviceColor(item.service)).cornerRadius(3)
-                        
+
                         Text(item.isAllowed ? "ALLOWED" : "DENIED")
                             .font(.system(size: 8, weight: .bold))
                             .padding(.horizontal, 5).padding(.vertical, 1)
@@ -195,7 +195,7 @@ struct tccviewerview: View {
                     Text("Bundle ID: \(item.client)").font(.caption2).foregroundColor(.secondary)
                 }
                 Spacer()
-                
+
                 Button("Revoke Selected") {
                     showConfirmReset = true
                 }

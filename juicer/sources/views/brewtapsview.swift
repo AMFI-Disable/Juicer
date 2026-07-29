@@ -7,14 +7,14 @@ struct brewtapsview: View {
     @State private var statusMessage = ""
     @State private var showStatusAlert = false
     @State private var isTapping = false
-    
+
     var filteredTaps: [BrewTap] {
         if searchText.isEmpty {
             return manager.taps
         }
         return manager.taps.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header panel
@@ -28,7 +28,7 @@ struct brewtapsview: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                
+
                 if manager.isCheckingHealth {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
@@ -43,7 +43,7 @@ struct brewtapsview: View {
                     .buttonStyle(.bordered)
                     .help("Runs GitHub API repository verification checks")
                 }
-                
+
                 if manager.isLoading {
                     ProgressView().controlSize(.small)
                 } else {
@@ -56,14 +56,14 @@ struct brewtapsview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Add Tap Section
             HStack(spacing: 12) {
                 TextField("Enter repository to tap (e.g. homebrew/cask-fonts or full URL)...", text: $newTapName)
                     .textFieldStyle(.roundedBorder)
-                
+
                 if isTapping {
                     ProgressView().controlSize(.small)
                 } else {
@@ -76,9 +76,9 @@ struct brewtapsview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.2))
-            
+
             Divider()
-            
+
             // Search toolbar
             HStack {
                 Spacer()
@@ -92,9 +92,9 @@ struct brewtapsview: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
-            
+
             Divider()
-            
+
             // List of taps
             if filteredTaps.isEmpty {
                 VStack(spacing: 16) {
@@ -126,7 +126,7 @@ struct brewtapsview: View {
             Text(statusMessage)
         }
     }
-    
+
     // Row Builder
     @ViewBuilder
     private func tapRow(_ tap: BrewTap) -> some View {
@@ -136,22 +136,22 @@ struct brewtapsview: View {
                     Text(tap.name)
                         .font(.headline)
                         .bold()
-                    
+
                     // Health status badge
                     if let health = tap.healthStatus {
                         healthBadge(health)
                     }
                 }
-                
+
                 if !tap.remote.isEmpty {
                     Text(tap.remote)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
+
             // Untap Button
             Button("Untap", role: .destructive) {
                 removeTap(tap)
@@ -164,7 +164,7 @@ struct brewtapsview: View {
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(8)
     }
-    
+
     // Health Badge builder
     @ViewBuilder
     private func healthBadge(_ health: TapHealthStatus) -> some View {
@@ -172,7 +172,7 @@ struct brewtapsview: View {
             Circle()
                 .fill(healthBadgeColor(health.status))
                 .frame(width: 6, height: 6)
-            
+
             Text(health.status.rawValue)
                 .font(.system(size: 10, weight: .bold))
         }
@@ -183,7 +183,7 @@ struct brewtapsview: View {
         .cornerRadius(4)
         .help(healthTooltip(health))
     }
-    
+
     private func healthBadgeColor(_ status: TapHealthStatus.Status) -> Color {
         switch status {
         case .active: return .green
@@ -194,7 +194,7 @@ struct brewtapsview: View {
         case .unknown: return .primary
         }
     }
-    
+
     private func healthTooltip(_ health: TapHealthStatus) -> String {
         switch health.status {
         case .active: return "Repository is active on GitHub. Checked on \(formatDate(health.lastChecked))."
@@ -205,22 +205,22 @@ struct brewtapsview: View {
         case .unknown: return "Health not validated yet."
         }
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
         formatter.timeStyle = .short
         return formatter.string(from: date)
     }
-    
+
     // Action methods
     private func tapRepository() {
         let cleaned = newTapName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
-        
+
         isTapping = true
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
-        
+
         manager.addTap(name: cleaned) { success in
             isTapping = false
             if success {
@@ -232,7 +232,7 @@ struct brewtapsview: View {
             showStatusAlert = true
         }
     }
-    
+
     private func removeTap(_ tap: BrewTap) {
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
         manager.removeTap(tap) { success in

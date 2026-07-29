@@ -15,7 +15,7 @@ struct bottomterminalview: View {
     ]
     @State private var commandHistory: [String] = []
     @State private var historyIndex = -1
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header with title and collapse button
@@ -40,9 +40,9 @@ struct bottomterminalview: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color(NSColor.controlBackgroundColor))
-            
+
             Divider()
-            
+
             // Terminal Output ScrollView
             ScrollViewReader { proxy in
                 ScrollView {
@@ -64,15 +64,15 @@ struct bottomterminalview: View {
                     }
                 }
             }
-            
+
             Divider()
-            
+
             // Terminal Input Prompt
             HStack(spacing: 4) {
                 Text("\(promptPath()) $")
                     .font(.system(.body, design: .monospaced))
                     .foregroundColor(.green)
-                
+
                 TextField("", text: $commandInput)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
@@ -85,7 +85,7 @@ struct bottomterminalview: View {
         }
         .frame(height: 180)
     }
-    
+
     private func promptPath() -> String {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         if dirManager.currentDirectory == home {
@@ -95,29 +95,29 @@ struct bottomterminalview: View {
         }
         return dirManager.currentDirectory
     }
-    
+
     private func executeCommand() {
         let trimmed = commandInput.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
+
         terminalLines.append(TerminalLine(text: "\(promptPath()) $ \(trimmed)", isCommand: true))
         commandHistory.append(trimmed)
         historyIndex = commandHistory.count
         commandInput = ""
-        
+
         let args = trimmed.components(separatedBy: .whitespaces)
         let cmd = args[0]
-        
+
         if cmd == "clear" {
             terminalLines = []
             return
         }
-        
+
         if cmd == "help" {
             terminalLines.append(TerminalLine(text: "available commands: cd, clear, pwd, git, ls, echo, help or any shell command.", isCommand: false))
             return
         }
-        
+
         if cmd == "cd" {
             let target: String
             if args.count > 1 {
@@ -132,7 +132,7 @@ struct bottomterminalview: View {
             } else {
                 target = FileManager.default.homeDirectoryForCurrentUser.path
             }
-            
+
             var isDir: ObjCBool = false
             if FileManager.default.fileExists(atPath: target, isDirectory: &isDir), isDir.boolValue {
                 dirManager.currentDirectory = target
@@ -141,39 +141,20 @@ struct bottomterminalview: View {
             }
             return
         }
-        
+
         // Execute arbitrary command via zsh
         DispatchQueue.global(qos: .userInitiated).async {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-            process.arguments = ["-c", "source ~/.zshrc; " + trimmed]
-            process.currentDirectoryURL = URL(fileURLWithPath: dirManager.currentDirectory)
-            
-            let outputPipe = Pipe()
-            let errorPipe = Pipe()
-            process.standardOutput = outputPipe
-            process.standardError = errorPipe
-            
-            do {
-                try process.run()
-                let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
-                let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
-                process.waitUntilExit()
-                
-                let output = String(data: outputData, encoding: .utf8) ?? ""
-                let error = String(data: errorData, encoding: .utf8) ?? ""
-                
-                DispatchQueue.main.async {
-                    if !output.isEmpty {
-                        self.terminalLines.append(TerminalLine(text: output.trimmingCharacters(in: .whitespacesAndNewlines), isCommand: false))
-                    }
-                    if !error.isEmpty {
-                        self.terminalLines.append(TerminalLine(text: error.trimmingCharacters(in: .whitespacesAndNewlines), isCommand: false))
-                    }
-                }
-            } catch {
-                DispatchQueue.main.async {
-                    self.terminalLines.append(TerminalLine(text: "error executing command: \(error.localizedDescription)", isCommand: false))
+            let output = SystemMetricsSupport.runCombined(
+                "/bin/zsh",
+                ["-c", "source ~/.zshrc; " + trimmed],
+                currentDirectoryURL: URL(fileURLWithPath: dirManager.currentDirectory),
+                timeout: 30
+            ) ?? "command timed out or could not be started"
+
+            DispatchQueue.main.async {
+                let cleanOutput = output.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !cleanOutput.isEmpty {
+                    self.terminalLines.append(TerminalLine(text: cleanOutput, isCommand: false))
                 }
             }
         }
