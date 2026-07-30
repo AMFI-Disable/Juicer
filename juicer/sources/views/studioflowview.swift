@@ -20,6 +20,12 @@ enum studioflowcatalog {
                 ("System defense", "Inspect quarantine, sandbox, and hardware access", [.antiKeylogger, .quarantinedFiles, .sandboxInspector, .usbDeviceGuard, .permissionCenter]),
                 ("Security diagnostics", "Audit deeper system security surfaces", [.zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector])
             ]
+        case .disk:
+            return [
+                ("Explore & measure", "Understand what is using your storage", [.diskExplorer, .diskVisualizer, .storageSnapshots, .diskVerification, .diskImageMounter]),
+                ("Clean safely", "Find reclaimable space before removing anything", [.cacheCleaner, .devCaches, .largeFiles, .duplicateFiles, .emptyFolders]),
+                ("File utilities", "Organize, inspect, and protect files", [.undoHistory, .downloadOrganizer, .archiveUtility, .diskImages, .fileTypeConverter, .symbolicLinks, .diskSpacePredictor, .backupTrigger])
+            ]
         default:
             return []
         }
@@ -29,6 +35,7 @@ enum studioflowcatalog {
         switch workspace {
         case .network: return [.speedTest, .dnsDiagnostics, .portListener]
         case .security: return [.tccViewer, .privacyScanner, .fileVault]
+        case .disk: return [.diskExplorer, .cacheCleaner, .largeFiles]
         default: return []
         }
     }
