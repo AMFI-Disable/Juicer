@@ -2,6 +2,7 @@ import SwiftUI
 
 struct sidebarminiappview: View {
     let app: sidebarminiapp
+    let onSelect: (sidebarminiapp) -> Void
 
     var body: some View {
         VStack(spacing: 0) {
@@ -16,6 +17,17 @@ struct sidebarminiappview: View {
                     Text(app.subtitle).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Menu {
+                    ForEach(sidebarminiapp.all(for: app.workspace).filter { $0.id != app.id }) { related in
+                        Button { onSelect(related) } label: {
+                            Label(related.title, systemImage: related.icon)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.triangle.branch")
+                }
+                .menuStyle(.borderlessButton)
+                .help("Open a related mini-app")
             }
             .padding(.horizontal, 24)
             .padding(.top, 20)

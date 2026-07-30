@@ -230,7 +230,10 @@ struct mainsidebarview: View {
                     .navigationSplitViewColumnWidth(min: compactNavigation ? 56 : 220, ideal: compactNavigation ? 64 : CGFloat(sidebarWidth), max: 360)
                 } detail: {
                     if let miniApp = selectedMiniApp {
-                        sidebarminiappview(app: miniApp)
+                        sidebarminiappview(app: miniApp) { related in
+                            selectedMiniApp = related
+                            selectedItem = related.primary
+                        }
                     } else if let item = selectedItem {
                         switch item {
                         case .featureCatalog:   additionalfeaturecatalogview()
