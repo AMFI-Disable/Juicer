@@ -35,6 +35,12 @@ enum studioflowcatalog {
             return [
                 ("Repository workbench", "Open, inspect, and operate on repositories", [.juicerGit, .gitExtras, .developerAccounts]),
             ]
+        case .containers:
+            return [
+                ("Container workbench", "Inspect and operate on running containers", [.dockerDashboard, .dockerLogs]),
+                ("Storage & cleanup", "Recover local container disk space", [.dockerPurge, .dockerBuildCachePurge]),
+                ("Compose", "Launch and manage local application stacks", [.dockerCompose])
+            ]
         default:
             return []
         }
@@ -47,6 +53,7 @@ enum studioflowcatalog {
         case .disk: return [.diskExplorer, .cacheCleaner, .largeFiles]
         case .developer: return [.sdkSwitcher, .envProfiles, .scriptConsole]
         case .git: return [.juicerGit, .gitExtras, .developerAccounts]
+        case .containers: return [.dockerDashboard, .dockerLogs, .dockerCompose]
         default: return []
         }
     }
