@@ -31,6 +31,10 @@ enum studioflowcatalog {
                 ("Runtimes & scripts", "Set up environments and run repeatable work", [.sdkSwitcher, .scriptPlugins, .scriptConsole, .localWebServer]),
                 ("Code & tooling", "Transform, inspect, and reuse developer content", [.codeSnippets, .envProfiles, .ocrScreenGrabber, .logStream, .nlToCommand, .imageConverter, .appLanguageStripper])
             ]
+        case .git:
+            return [
+                ("Repository workbench", "Open, inspect, and operate on repositories", [.juicerGit, .gitExtras, .developerAccounts]),
+            ]
         default:
             return []
         }
@@ -42,6 +46,7 @@ enum studioflowcatalog {
         case .security: return [.tccViewer, .privacyScanner, .fileVault]
         case .disk: return [.diskExplorer, .cacheCleaner, .largeFiles]
         case .developer: return [.sdkSwitcher, .envProfiles, .scriptConsole]
+        case .git: return [.juicerGit, .gitExtras, .developerAccounts]
         default: return []
         }
     }
