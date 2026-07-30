@@ -74,7 +74,7 @@ struct systemcontrolcenterview: View {
                 ForEach(items) { item in
                     Button { onSelect(item) } label: {
                         HStack(spacing: 10) {
-                            Image(systemName: item.iconName)
+                            JuicerSymbol(name: item.iconName, fallback: "square.grid.2x2")
                                 .frame(width: 22)
                                 .foregroundStyle(JuicerWorkspace.system.themeColor)
                             Text(item.title)
