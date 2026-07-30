@@ -36,6 +36,7 @@ enum UnifiedStoreItem: String, CaseIterable, Identifiable {
 struct mainsidebarview: View {
     @State private var currentWorkspace: JuicerWorkspace = .hub
     @State private var selectedItem: NavigationItem?
+    @State private var selectedMiniApp: sidebarminiapp?
     @State private var selectedStoreItem: UnifiedStoreItem = .allCasks
     @State private var isShowingGuide = false
     @State private var isShowingCommandPalette = false
@@ -141,15 +142,16 @@ struct mainsidebarview: View {
                         .pickerStyle(.segmented)
                         .padding(.horizontal, 4)
 
-                        // Dynamically filtered workspace items
-                        let items = NavigationItem.allCases.filter { item in
-                            let matchesScope: Bool = (sidebarScope == "favorites") ? navigationPreferences.isFavorite(item) : true
-                            return item.workspace == currentWorkspace && matchesScope && (sidebarSearch.isEmpty || item.title.localizedCaseInsensitiveContains(sidebarSearch))
+                        // Dynamically filtered workflow mini-apps
+                        let miniApps = sidebarminiapp.all(for: currentWorkspace).filter { app in
+                            let matchesScope = sidebarScope == "all" || app.items.contains(where: navigationPreferences.isFavorite)
+                            let searchable = ([app.title, app.subtitle] + app.items.map(\.title)).joined(separator: " ")
+                            return matchesScope && (sidebarSearch.isEmpty || searchable.localizedCaseInsensitiveContains(sidebarSearch))
                         }
 
                         // Workspace Header & Controls
                         HStack(spacing: 6) {
-                            Image(systemName: currentWorkspace.iconName)
+                            JuicerSymbol(name: currentWorkspace.iconName, fallback: "square.grid.2x2")
                                 .font(.caption.bold())
                                 .foregroundColor(currentWorkspace.themeColor)
                             Text(currentWorkspace.title)
@@ -157,7 +159,7 @@ struct mainsidebarview: View {
                                 .foregroundStyle(.secondary)
                             Spacer()
                             if !compactNavigation {
-                                Text("\(items.count)")
+                                Text("\(miniApps.count)")
                                     .font(.caption2.bold())
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -175,21 +177,9 @@ struct mainsidebarview: View {
                             }
                         }
 
-                        // Group tools by their purpose so the sidebar remains scannable.
-                        let categories = Array(Set(items.map { $0.subcategory })).sorted()
-                        ForEach(categories, id: \.self) { category in
-                            let categoryItems = items.filter { $0.subcategory == category }
-                                .sorted { item1, item2 in
-                                    if item1 == .brewGhost { return true }
-                                    if item2 == .brewGhost { return false }
-                                    return item1.title < item2.title
-                                }
-                            if !categoryItems.isEmpty {
-                                Section(category) {
-                                    ForEach(categoryItems) { item in
-                                        sidebarLink(for: item)
-                                    }
-                                }
+                        Section("Mini Apps") {
+                            ForEach(miniApps) { app in
+                                sidebarMiniAppLink(for: app)
                             }
                         }
 
@@ -239,7 +229,9 @@ struct mainsidebarview: View {
                     .searchable(text: $sidebarSearch, placement: .sidebar, prompt: compactNavigation ? "Search" : "Search workspace tools")
                     .navigationSplitViewColumnWidth(min: compactNavigation ? 56 : 220, ideal: compactNavigation ? 64 : CGFloat(sidebarWidth), max: 360)
                 } detail: {
-                    if let item = selectedItem {
+                    if let miniApp = selectedMiniApp {
+                        sidebarminiappview(app: miniApp)
+                    } else if let item = selectedItem {
                         switch item {
                         case .featureCatalog:   additionalfeaturecatalogview()
                         case .actionHistory:   actionhistoryview()
@@ -511,6 +503,9 @@ struct mainsidebarview: View {
             isShowingCommandPalette = true
         }
         .onChange(of: selectedItem) { _, item in
+            if selectedMiniApp?.primary != item {
+                selectedMiniApp = nil
+            }
             if let item {
                 navigationPreferences.record(item)
                 currentWorkspace = item.workspace
@@ -551,6 +546,7 @@ struct mainsidebarview: View {
         }
         .sheet(isPresented: $isShowingCommandPalette) {
             commandpaletteview { item in
+                selectedMiniApp = nil
                 currentWorkspace = item.workspace
                 selectedItem = item
             }
@@ -749,6 +745,41 @@ struct mainsidebarview: View {
         .onHover { hovering in
             if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
+    }
+
+    @ViewBuilder
+    private func sidebarMiniAppLink(for app: sidebarminiapp) -> some View {
+        Button {
+            selectedMiniApp = app
+            selectedItem = app.primary
+        } label: {
+            HStack(spacing: compactNavigation ? 0 : 10) {
+                JuicerSymbol(name: app.icon, fallback: "square.grid.2x2")
+                    .font(.body)
+                    .frame(width: 18, alignment: .center)
+                    .foregroundStyle(currentWorkspace.themeColor)
+                if !compactNavigation || !sidebarSearch.isEmpty {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(app.title)
+                            .font(.body.weight(.medium))
+                            .lineLimit(1)
+                        if !compactNavigation {
+                            Text(app.subtitle)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    Spacer(minLength: 4)
+                    Text("\(app.items.count)")
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 5)
+        .help("Open \(app.title): \(app.subtitle)")
     }
 
     @ViewBuilder
