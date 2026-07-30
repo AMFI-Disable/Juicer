@@ -72,6 +72,12 @@ enum studioflowcatalog {
                 ("Services & tweaks", "Manage launch behavior and system preferences", [.serviceManager, .systemTweaks, .launchServices, .autoUpdateChecker, .logRotator]),
                 ("Permissions & attributes", "Review metadata and file-level controls", [.permissionRepair, .extendedAttributes, .metadataEditor, .quarantineStripper, .dnsEditor])
             ]
+        case .utilities:
+            return [
+                ("Desktop & windows", "Shape the way macOS feels and behaves", [.windowSnapping, .menuBarCustomizer, .desktopIcons, .hotCorners, .keyboardShortcuts, .displayProfiles, .nightShift, .keyboardBacklight, .trackpadGestures]),
+                ("Text & capture", "Work faster with text, screens, and symbols", [.clipboardManager, .snippetExpander, .textCaseConverter, .characterCounter, .qrCode, .colorPicker, .screenRuler, .screenLoupe, .screenshotAnnotation]),
+                ("Documents & helpers", "Handle everyday files and system tasks", [.printerQueue, .pdfToolbox, .markdownPreviewer, .japaneseKana, .emojiPicker, .unicodeInspector, .shortcutRunner, .systemInfoExporter, .softwareInventory, .snapshots, .soundVolumeMixer])
+            ]
         default:
             return []
         }
@@ -90,6 +96,7 @@ enum studioflowcatalog {
         case .api: return [.apiWorkbench, .apiBenchmark, .apiHistory]
         case .converter: return [.docConverter, .imageConverterStudio, .codeSchemaConverter]
         case .configs: return [.appUninstaller, .orphanScanner, .systemOptimizer]
+        case .utilities: return [.clipboardManager, .windowSnapping, .systemInfoExporter]
         default: return []
         }
     }
