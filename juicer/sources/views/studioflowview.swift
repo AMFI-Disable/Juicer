@@ -41,6 +41,12 @@ enum studioflowcatalog {
                 ("Storage & cleanup", "Recover local container disk space", [.dockerPurge, .dockerBuildCachePurge]),
                 ("Compose", "Launch and manage local application stacks", [.dockerCompose])
             ]
+        case .ai:
+            return [
+                ("Models", "Check local runtimes and benchmark readiness", [.aiWorkbench, .localLLMBenchmark]),
+                ("Prompts & chat", "Build, save, and test AI-assisted workflows", [.aiPromptVault, .aiChat]),
+                ("Credentials", "Manage local AI provider profiles", [.aiKeyManager])
+            ]
         default:
             return []
         }
@@ -54,6 +60,7 @@ enum studioflowcatalog {
         case .developer: return [.sdkSwitcher, .envProfiles, .scriptConsole]
         case .git: return [.juicerGit, .gitExtras, .developerAccounts]
         case .containers: return [.dockerDashboard, .dockerLogs, .dockerCompose]
+        case .ai: return [.aiWorkbench, .aiChat, .aiKeyManager]
         default: return []
         }
     }
