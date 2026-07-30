@@ -694,7 +694,7 @@ struct mainsidebarview: View {
         }) {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 12) {
-                    Image(systemName: workspace.iconName)
+                    JuicerSymbol(name: workspace.iconName, fallback: "square.grid.2x2")
                         .font(.title2)
                         .foregroundColor(workspace.themeColor)
                         .frame(width: 38, height: 38)
@@ -755,7 +755,7 @@ struct mainsidebarview: View {
     private func sidebarLink(for item: NavigationItem) -> some View {
         NavigationLink(value: item) {
             HStack(spacing: compactNavigation ? 0 : 10) {
-                Image(systemName: item.iconName)
+                JuicerSymbol(name: item.iconName, fallback: "square.grid.2x2")
                     .font(.body)
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(item == .brewGhost ? .purple : .primary)
@@ -833,7 +833,7 @@ struct mainsidebarview: View {
             selectedStoreItem = item
         }) {
             HStack(spacing: 10) {
-                Image(systemName: item.iconName)
+                JuicerSymbol(name: item.iconName, fallback: "shippingbox.fill")
                     .font(.body)
                     .frame(width: 18, alignment: .center)
                     .foregroundColor(selectedStoreItem == item ? .accentColor : .primary)

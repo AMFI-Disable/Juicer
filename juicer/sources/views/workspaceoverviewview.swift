@@ -72,7 +72,7 @@ struct workspaceoverviewview: View {
             ForEach(items) { item in
                 Button { onSelect(item) } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: item.iconName)
+                        JuicerSymbol(name: item.iconName, fallback: "square.grid.2x2")
                             .frame(width: 22)
                             .foregroundStyle(workspace.themeColor)
                         Text(item.title)
