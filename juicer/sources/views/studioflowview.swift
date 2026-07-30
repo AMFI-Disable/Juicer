@@ -59,6 +59,13 @@ enum studioflowcatalog {
                 ("Performance", "Measure endpoint latency and load", [.apiBenchmark, .apiLoadTester]),
                 ("History", "Reuse previous requests and presets", [.apiHistory])
             ]
+        case .converter:
+            return [
+                ("Documents", "Convert text and document formats", [.docConverter]),
+                ("Images", "Batch convert graphic assets", [.imageConverterStudio]),
+                ("Code & schemas", "Transform structured developer data", [.codeSchemaConverter]),
+                ("Archives", "Compress and extract packages", [.archiveConverter])
+            ]
         default:
             return []
         }
@@ -75,6 +82,7 @@ enum studioflowcatalog {
         case .ai: return [.aiWorkbench, .aiChat, .aiKeyManager]
         case .database: return [.dbDaemonMonitor, .sqliteInspector, .dbBackupTool]
         case .api: return [.apiWorkbench, .apiBenchmark, .apiHistory]
+        case .converter: return [.docConverter, .imageConverterStudio, .codeSchemaConverter]
         default: return []
         }
     }
