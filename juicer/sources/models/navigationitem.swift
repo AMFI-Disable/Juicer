@@ -86,7 +86,7 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
     }
 }
 
-enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
+enum NavigationItem: String, CaseIterable, Identifiable, Equatable, Hashable {
     case dashboard, workflowCenter
     case featureCatalog
     case actionHistory
@@ -501,8 +501,6 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .speedTest: return "speedometer"
         case .dnsDiagnostics: return "network.badge.shield.half.filled"
         case .hostsFile: return "list.bullet.rectangle"
-        case .blocklistUpdater: return "shield.checkered"
-        case .appLocker: return "lock.app.dashed"
         case .fileVaultAutoLock: return "lock.display"
         case .japaneseKana: return "character.book.closed"
         case .emojiPicker: return "face.smiling"
@@ -524,7 +522,6 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .networkLimiter: return "gauge.with.dots.needle.33percent"
         case .diskImageMounter: return "externaldrive.badge.plus"
         case .soundVolumeMixer: return "speaker.wave.2"
-        default: return "gearshape.fill"
         }
     }
 
