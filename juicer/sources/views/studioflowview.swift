@@ -78,6 +78,10 @@ enum studioflowcatalog {
                 ("Text & capture", "Work faster with text, screens, and symbols", [.clipboardManager, .snippetExpander, .textCaseConverter, .characterCounter, .qrCode, .colorPicker, .screenRuler, .screenLoupe, .screenshotAnnotation]),
                 ("Documents & helpers", "Handle everyday files and system tasks", [.printerQueue, .pdfToolbox, .markdownPreviewer, .japaneseKana, .emojiPicker, .unicodeInspector, .shortcutRunner, .systemInfoExporter, .softwareInventory, .snapshots, .soundVolumeMixer])
             ]
+        case .creator:
+            return [
+                ("Discover", "Explore open-source projects and their capabilities", [.creatorRepos])
+            ]
         default:
             return []
         }
@@ -97,6 +101,7 @@ enum studioflowcatalog {
         case .converter: return [.docConverter, .imageConverterStudio, .codeSchemaConverter]
         case .configs: return [.appUninstaller, .orphanScanner, .systemOptimizer]
         case .utilities: return [.clipboardManager, .windowSnapping, .systemInfoExporter]
+        case .creator: return [.creatorRepos]
         default: return []
         }
     }
