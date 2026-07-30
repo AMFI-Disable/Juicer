@@ -44,7 +44,7 @@ struct commandpaletteview: View {
                     dismiss()
                 } label: {
                     HStack(spacing: 12) {
-                        Image(systemName: item.iconName)
+                        JuicerSymbol(name: item.iconName, fallback: "square.grid.2x2")
                             .frame(width: 24)
                             .foregroundStyle(.tint)
                         VStack(alignment: .leading, spacing: 2) {

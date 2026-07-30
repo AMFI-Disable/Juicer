@@ -3,17 +3,17 @@ import SwiftUI
 struct utilitiesview: View {
     @StateObject private var manager = UtilitiesManager.shared
     @AppStorage("scratchpad.text") private var scratchpadText = ""
-    
+
     // For overlay state visibility
     @State private var showClipboardSheet = false
     @State private var showCmdTabSheet = false
     @State private var showLoupeSheet = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerSection()
             Divider()
-            
+
             ScrollView {
                 VStack(spacing: 20) {
                     // BetterCmdTab
@@ -23,7 +23,7 @@ struct utilitiesview: View {
                         isEnabled: $manager.betterCmdTabEnabled,
                         hotkey: "⌥ + Tab"
                     )
-                    
+
                     // Clipboard Historian
                     VStack(alignment: .leading, spacing: 0) {
                         utilityCard(
@@ -32,7 +32,7 @@ struct utilitiesview: View {
                             isEnabled: $manager.clipboardEnabled,
                             hotkey: "⌘ + ⌥ + V"
                         )
-                        
+
                         if manager.clipboardEnabled {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Recent Clipboard Copy Items").font(.caption).bold().foregroundStyle(.secondary)
@@ -59,7 +59,7 @@ struct utilitiesview: View {
                     }
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
                     .cornerRadius(12)
-                    
+
                     // Window Tiler
                     utilityCard(
                         title: "Window Tiler (Tiling Manager)",
@@ -67,7 +67,7 @@ struct utilitiesview: View {
                         isEnabled: $manager.tilerEnabled,
                         hotkey: "⌃ + ⌥ + Left / Right"
                     )
-                    
+
                     // Quick Notes Scratchpad
                     VStack(alignment: .leading, spacing: 0) {
                         utilityCard(
@@ -76,7 +76,7 @@ struct utilitiesview: View {
                             isEnabled: $manager.scratchpadEnabled,
                             hotkey: "Local Persistent Card"
                         )
-                        
+
                         if manager.scratchpadEnabled {
                             VStack(spacing: 8) {
                                 TextEditor(text: $scratchpadText)
@@ -86,7 +86,7 @@ struct utilitiesview: View {
                                     .background(Color(NSColor.textBackgroundColor))
                                     .cornerRadius(6)
                                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.secondary.opacity(0.2), lineWidth: 1))
-                                
+
                                 HStack {
                                     Text("Saved to local storage automatically.")
                                         .font(.caption2).foregroundStyle(.secondary)
@@ -105,7 +105,7 @@ struct utilitiesview: View {
                     }
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
                     .cornerRadius(12)
-                    
+
                     // Screen Color Loupe
                     utilityCard(
                         title: "Screen Color Loupe",
@@ -119,7 +119,7 @@ struct utilitiesview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(NSColor.windowBackgroundColor))
-        
+
         // Modal Sheet Overlays to simulate active tools inside app frame
         .sheet(isPresented: $showClipboardSheet) {
             clipboardOverlay()
@@ -137,7 +137,7 @@ struct utilitiesview: View {
             showLoupeSheet = true
         }
     }
-    
+
     // MARK: - Header
     @ViewBuilder
     private func headerSection() -> some View {
@@ -153,7 +153,7 @@ struct utilitiesview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Card Component
     @ViewBuilder
     private func utilityCard(title: String, description: String, isEnabled: Binding<Bool>, hotkey: String) -> some View {
@@ -183,7 +183,7 @@ struct utilitiesview: View {
         .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
         .cornerRadius(12)
     }
-    
+
     // MARK: - Simulated Overlays
     @ViewBuilder
     private func clipboardOverlay() -> some View {
@@ -194,7 +194,7 @@ struct utilitiesview: View {
                 Button("Done") { showClipboardSheet = false }.buttonStyle(.bordered)
             }
             .padding(.bottom, 8)
-            
+
             if manager.clipboardHistory.isEmpty {
                 Text("Clipboard is empty.").font(.subheadline).foregroundStyle(.secondary)
             } else {
@@ -218,7 +218,7 @@ struct utilitiesview: View {
         .padding()
         .frame(width: 400, height: 300)
     }
-    
+
     @ViewBuilder
     private func cmdTabOverlay() -> some View {
         VStack(spacing: 16) {
@@ -227,10 +227,10 @@ struct utilitiesview: View {
                 Spacer()
                 Button("Dismiss") { showCmdTabSheet = false }.buttonStyle(.bordered)
             }
-            
+
             Text("Switch between running app instances:")
                 .font(.subheadline).foregroundStyle(.secondary)
-            
+
             let apps = NSWorkspace.shared.runningApplications.filter { $0.activationPolicy == .regular }
             ScrollView(.horizontal) {
                 HStack(spacing: 15) {
@@ -262,7 +262,7 @@ struct utilitiesview: View {
         .padding()
         .frame(width: 500, height: 220)
     }
-    
+
     @ViewBuilder
     private func loupeOverlay() -> some View {
         VStack(spacing: 16) {
@@ -271,15 +271,15 @@ struct utilitiesview: View {
                 Spacer()
                 Button("Close") { showLoupeSheet = false }.buttonStyle(.bordered)
             }
-            
+
             Circle()
                 .fill(Color.orange)
                 .frame(width: 72, height: 72)
                 .overlay(Circle().stroke(Color.primary, lineWidth: 2))
-            
+
             Text("Color HEX: #F37021")
                 .font(.title3).bold()
-            
+
             Button("Copy Color Code") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString("#F37021", forType: .string)

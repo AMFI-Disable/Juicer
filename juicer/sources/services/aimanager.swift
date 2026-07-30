@@ -26,7 +26,7 @@ struct AIChatMessage: Identifiable {
 
 final class AIManager: ObservableObject {
     static let shared = AIManager()
-    
+
     @Published var isOllamaActive = false
     @Published var isLMStudioActive = false
     @Published var localModels: [AIModel] = []
@@ -35,7 +35,7 @@ final class AIManager: ObservableObject {
         AIChatMessage(isUser: false, text: "Hello! I am your Juicer AI Assistant. Select a model or prompt template from the vault to start debugging code or analyzing stack traces.")
     ]
     @Published var isGenerating = false
-    
+
     @Published var promptVault: [AIPromptSnippet] = [
         AIPromptSnippet(
             title: "🔍 Security & Code Review",
@@ -62,25 +62,25 @@ final class AIManager: ObservableObject {
             tags: ["Docs", "Comments"]
         )
     ]
-    
+
     private init() {
         checkLocalServices()
     }
-    
+
     func checkLocalServices() {
         isRefreshing = true
-        
+
         let group = DispatchGroup()
         var models: [AIModel] = []
         var ollamaOk = false
         var lmStudioOk = false
-        
+
         // 1. Query Ollama (http://localhost:11434/api/tags)
         group.enter()
         if let url = URL(string: "http://localhost:11434/api/tags") {
             var request = URLRequest(url: url)
             request.timeoutInterval = 2.5
-            URLSession.shared.dataTask(with: request) { data, response, _ in
+            URLSession.shared.dataTask(with: request) { data, _, _ in
                 defer { group.leave() }
                 if let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -95,13 +95,13 @@ final class AIManager: ObservableObject {
                 }
             }.resume()
         } else { group.leave() }
-        
+
         // 2. Query LM Studio (http://localhost:1234/v1/models)
         group.enter()
         if let url = URL(string: "http://localhost:1234/v1/models") {
             var request = URLRequest(url: url)
             request.timeoutInterval = 2.5
-            URLSession.shared.dataTask(with: request) { data, response, _ in
+            URLSession.shared.dataTask(with: request) { data, _, _ in
                 defer { group.leave() }
                 if let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -114,7 +114,7 @@ final class AIManager: ObservableObject {
                 }
             }.resume()
         } else { group.leave() }
-        
+
         group.notify(queue: .main) { [weak self] in
             guard let self = self else { return }
             self.isOllamaActive = ollamaOk
@@ -123,16 +123,16 @@ final class AIManager: ObservableObject {
             self.isRefreshing = false
         }
     }
-    
+
     func sendMessage(_ userText: String, model: String? = nil) {
         guard !userText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
+
         let userMsg = AIChatMessage(isUser: true, text: userText)
         chatMessages.append(userMsg)
         isGenerating = true
-        
+
         let selectedModel = model ?? localModels.first?.name ?? "llama3"
-        
+
         // Dispatch generation request to Ollama endpoint if available
         if isOllamaActive, let url = URL(string: "http://localhost:11434/api/generate") {
             var request = URLRequest(url: url)
@@ -144,8 +144,8 @@ final class AIManager: ObservableObject {
                 "stream": false
             ]
             request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-            
-            URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+
+            URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
                 DispatchQueue.main.async {
                     self?.isGenerating = false
                     if let data = data,

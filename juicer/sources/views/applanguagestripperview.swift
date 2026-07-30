@@ -5,7 +5,7 @@ struct applanguagestripperview: View {
     @StateObject private var manager = AppLanguageStripperManager()
     @State private var searchText = ""
     @State private var showConfirmAlert = false
-    
+
     var filteredBundles: [AppLanguageBundle] {
         if searchText.isEmpty { return manager.foundBundles }
         return manager.foundBundles.filter {
@@ -13,11 +13,11 @@ struct applanguagestripperview: View {
             $0.languageCode.localizedCaseInsensitiveContains(searchText)
         }
     }
-    
+
     var selectedSize: Int64 {
         manager.foundBundles.filter { $0.isSelected }.reduce(0) { $0 + $1.size }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -30,9 +30,9 @@ struct applanguagestripperview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 if manager.isScanning {
                     ProgressView()
                         .controlSize(.small)
@@ -45,9 +45,9 @@ struct applanguagestripperview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Search & Action Toolbar
             HStack {
                 Image(systemName: "magnifyingglass")
@@ -55,14 +55,14 @@ struct applanguagestripperview: View {
                 TextField("Search App Name or Language...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 250)
-                
+
                 Spacer()
-                
+
                 Text("Selected: \(ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file))")
                     .font(.callout)
                     .bold()
                     .foregroundStyle(.secondary)
-                
+
                 Button(action: { showConfirmAlert = true }) {
                     Label("Strip Selected", systemImage: "scissors")
                 }
@@ -70,9 +70,9 @@ struct applanguagestripperview: View {
                 .disabled(selectedSize == 0 || manager.isStripping)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Results List
             if manager.isScanning {
                 VStack(spacing: 12) {
@@ -103,7 +103,7 @@ struct applanguagestripperview: View {
                                 }
                             ))
                             .labelsHidden()
-                            
+
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(bundle.appName)
                                     .font(.headline)
@@ -111,9 +111,9 @@ struct applanguagestripperview: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
-                            
+
                             Spacer()
-                            
+
                             Text(ByteCountFormatter.string(fromByteCount: bundle.size, countStyle: .file))
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundStyle(.secondary)

@@ -33,3 +33,5 @@ galleries/
 
 # keep public documentation under docs/
 # keep project.yml, source files, legal files, and readme.md tracked
+.vercel
+.env*

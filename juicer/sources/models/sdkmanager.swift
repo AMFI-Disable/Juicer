@@ -6,7 +6,7 @@ struct SDKRuntime: Identifiable, Hashable, Codable {
     let type: RuntimeType
     var installedVersions: [String]
     var activeVersion: String
-    
+
     enum RuntimeType: String, Codable {
         case nodeNvm = "Node.js (nvm)"
         case nodeFnm = "Node.js (fnm)"
@@ -21,15 +21,15 @@ struct SDKRuntime: Identifiable, Hashable, Codable {
 class SDKManager: ObservableObject {
     @Published var runtimes: [SDKRuntime] = []
     @Published var isLoading = false
-    
+
     func loadRuntimes() {
         self.isLoading = true
         self.runtimes = []
-        
+
         Task.detached(priority: .userInitiated) {
             var discovered: [SDKRuntime] = []
             let home = FileManager.default.homeDirectoryForCurrentUser.path
-            
+
             // 1. Node.js (nvm)
             let nvmDir = "\(home)/.nvm/versions/node"
             if FileManager.default.fileExists(atPath: nvmDir),
@@ -45,7 +45,7 @@ class SDKManager: ObservableObject {
                     ))
                 }
             }
-            
+
             // 2. Node.js (fnm)
             let fnmDir = "\(home)/Library/Application Support/fnm/aliases"
             let fnmStateDir = "\(home)/.local/state/fnm/downloads"
@@ -65,7 +65,7 @@ class SDKManager: ObservableObject {
                     activeVersion: active.isEmpty ? "default" : active
                 ))
             }
-            
+
             // 3. Python (pyenv)
             let pyenvDir = "\(home)/.pyenv/versions"
             if FileManager.default.fileExists(atPath: pyenvDir),
@@ -81,7 +81,7 @@ class SDKManager: ObservableObject {
                     ))
                 }
             }
-            
+
             // 4. Ruby (rbenv)
             let rbenvDir = "\(home)/.rbenv/versions"
             if FileManager.default.fileExists(atPath: rbenvDir),
@@ -97,7 +97,7 @@ class SDKManager: ObservableObject {
                     ))
                 }
             }
-            
+
             // 5. Ruby (rvm)
             let rvmDir = "\(home)/.rvm/rubies"
             if FileManager.default.fileExists(atPath: rvmDir),
@@ -113,7 +113,7 @@ class SDKManager: ObservableObject {
                     ))
                 }
             }
-            
+
             // 6. Rust (rustup)
             let rustupDir = "\(home)/.rustup/toolchains"
             if FileManager.default.fileExists(atPath: rustupDir),
@@ -130,7 +130,7 @@ class SDKManager: ObservableObject {
                     ))
                 }
             }
-            
+
             // 7. Homebrew Runtimes (e.g. node@18, node@20, python@3.10)
             let brewOptDir = "/opt/homebrew/opt"
             let brewIntelOptDir = "/usr/local/opt"
@@ -153,17 +153,17 @@ class SDKManager: ObservableObject {
                     activeVersion: "Link Managed"
                 ))
             }
-            
+
             await MainActor.run {
                 self.runtimes = discovered
                 self.isLoading = false
             }
         }
     }
-    
+
     func switchVersion(for runtime: SDKRuntime, to version: String, completion: @escaping (Bool) -> Void) {
         AppLogger.shared.log("Switching \(runtime.name) active version to \(version)...")
-        
+
         Task.detached(priority: .userInitiated) {
             let cmd: String
             switch runtime.type {
@@ -188,28 +188,28 @@ class SDKManager: ObservableObject {
                     cmd = "brew link --overwrite \(version)"
                 }
             }
-            
+
             let output = Self.runShellCommand(cmd)
             AppLogger.shared.log("Switch output: \(output)")
-            
+
             await MainActor.run {
                 self.loadRuntimes()
                 completion(true)
             }
         }
     }
-    
+
     // Command runner in login interactive context
     private static func runShellCommand(_ command: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
         // Load shell configurations to initialize PATH for pyenv/nvm/rbenv/cargo
         process.arguments = ["-l", "-c", command]
-        
+
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
-        
+
         do {
             try process.run()
             process.waitUntilExit()

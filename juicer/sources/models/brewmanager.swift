@@ -9,9 +9,9 @@ class BrewManager: ObservableObject {
     @Published var isRunningDoctor = false
     @Published var cleanupOutput = ""
     @Published var isRunningCleanup = false
-    
+
     private let fileManager = FileManager.default
-    
+
     // Find brew binary path
     static var brewPath: String? {
         let paths = [
@@ -27,20 +27,20 @@ class BrewManager: ObservableObject {
         }
         return nil
     }
-    
+
     func loadPackages() {
         guard let brew = Self.brewPath else {
             AppLogger.shared.log("Homebrew not found on this system.")
             return
         }
-        
+
         self.isLoading = true
         self.packages = []
-        
+
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             var loadedPackages: [BrewPackage] = []
-            
+
             // 1. Run lightweight list --versions for fast initial rendering (takes ~0.2s)
             var formulaVersions: [String: String] = [:]
             if let formulaOutput = try? Self.runCommand(brew, arguments: ["list", "--formula", "--versions"]) {
@@ -52,7 +52,7 @@ class BrewManager: ObservableObject {
                     loadedPackages.append(BrewPackage(name: parts[0], version: parts[1], type: .formula, isOutdated: false, latestVersion: nil))
                 }
             }
-            
+
             var caskVersions: [String: String] = [:]
             if let caskOutput = try? Self.runCommand(brew, arguments: ["list", "--cask", "--versions"]) {
                 let lines = caskOutput.components(separatedBy: "\n")
@@ -63,32 +63,32 @@ class BrewManager: ObservableObject {
                     loadedPackages.append(BrewPackage(name: parts[0], version: parts[1], type: .cask, isOutdated: false, latestVersion: nil))
                 }
             }
-            
+
             let initialSorted = loadedPackages.sorted(by: { $0.name.lowercased() < $1.name.lowercased() })
-            
+
             // Update UI instantly with fast list!
             await MainActor.run {
                 self.packages = initialSorted
                 self.isLoading = false
                 AppLogger.shared.log("Fast loaded \(self.packages.count) Homebrew packages. Fetching metadata in the background...")
             }
-            
+
             // 2. Asynchronously enrich leaf/outdated status in background (does not block UI loading)
             var leafNames = Set<String>()
             if let leavesOutput = try? Self.runCommand(brew, arguments: ["leaves"]) {
                 leafNames = Set(leavesOutput.components(separatedBy: "\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
             }
-            
+
             // Query detailed info and outdated status
             if let infoJSON = try? Self.runCommand(brew, arguments: ["info", "--json=v2", "--installed"]) {
                 if let data = infoJSON.data(using: .utf8),
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                    
+
                     var enrichedMap: [String: BrewPackage] = [:]
                     for pkg in loadedPackages {
                         enrichedMap[pkg.name + "_" + pkg.type.rawValue] = pkg
                     }
-                    
+
                     if let formulaeList = json["formulae"] as? [[String: Any]] {
                         for item in formulaeList {
                             let name = (item["name"] as? String) ?? ""
@@ -104,7 +104,7 @@ class BrewManager: ObservableObject {
                             }
                         }
                     }
-                    
+
                     if let casksList = json["casks"] as? [[String: Any]] {
                         for item in casksList {
                             let name = (item["token"] as? String) ?? ""
@@ -115,12 +115,12 @@ class BrewManager: ObservableObject {
                             }
                         }
                     }
-                    
+
                     // Mark outdated in background
                     if let outdatedJSON = try? Self.runCommand(brew, arguments: ["outdated", "--json"]) {
                         if let oData = outdatedJSON.data(using: .utf8),
                            let oJson = try? JSONSerialization.jsonObject(with: oData) as? [String: Any] {
-                            
+
                             if let formulaeList = oJson["formulae"] as? [[String: Any]] {
                                 for item in formulaeList {
                                     if let name = item["name"] as? String,
@@ -134,7 +134,7 @@ class BrewManager: ObservableObject {
                                     }
                                 }
                             }
-                            
+
                             if let casksList = oJson["casks"] as? [[String: Any]] {
                                 for item in casksList {
                                     if let name = item["name"] as? String,
@@ -150,7 +150,7 @@ class BrewManager: ObservableObject {
                             }
                         }
                     }
-                    
+
                     let finalSorted = Array(enrichedMap.values).sorted(by: { $0.name.lowercased() < $1.name.lowercased() })
                     await MainActor.run {
                         self.packages = finalSorted
@@ -160,12 +160,12 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func upgradePackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
-        
+
         AppLogger.shared.log("Upgrading Homebrew package \(package.name)...")
-        
+
         Task.detached(priority: .userInitiated) {
             do {
                 _ = try Self.runCommand(brew, arguments: ["upgrade", package.name])
@@ -181,12 +181,12 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func uninstallPackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
-        
+
         AppLogger.shared.log("Uninstalling Homebrew package \(package.name)...")
-        
+
         Task.detached(priority: .userInitiated) {
             do {
                 _ = try Self.runCommand(brew, arguments: ["uninstall", package.name])
@@ -202,9 +202,9 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Advanced package actions
-    
+
     func pinPackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Pinning Homebrew package \(package.name)...")
@@ -221,7 +221,7 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func unpinPackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Unpinning Homebrew package \(package.name)...")
@@ -238,7 +238,7 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func linkPackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Linking Homebrew package \(package.name)...")
@@ -255,7 +255,7 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func unlinkPackage(_ package: BrewPackage, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Unlinking Homebrew package \(package.name)...")
@@ -272,9 +272,9 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     // MARK: - Autoremove and Brewfile backup operations
-    
+
     func runAutoremove(completion: @escaping (Bool, String) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Running brew autoremove...")
@@ -292,7 +292,7 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func exportBrewfile(to url: URL, completion: @escaping (Bool) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Exporting Brewfile to \(url.path)...")
@@ -308,7 +308,7 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func importBrewfile(from url: URL, completion: @escaping (Bool, String) -> Void) {
         guard let brew = Self.brewPath else { return }
         AppLogger.shared.log("Importing Brewfile from \(url.path)...")
@@ -326,13 +326,13 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func runDoctor() {
         guard let brew = Self.brewPath else { return }
-        
+
         self.isRunningDoctor = true
         self.doctorOutput = "Running brew doctor..."
-        
+
         Task.detached(priority: .userInitiated) {
             do {
                 let output = try Self.runCommand(brew, arguments: ["doctor"])
@@ -348,13 +348,13 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func runCleanup() {
         guard let brew = Self.brewPath else { return }
-        
+
         self.isRunningCleanup = true
         self.cleanupOutput = "Running brew cleanup..."
-        
+
         Task.detached(priority: .userInitiated) {
             do {
                 let output = try Self.runCommand(brew, arguments: ["cleanup"])
@@ -371,13 +371,13 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     func fetchPackageInfo(name: String, completion: @escaping (String) -> Void) {
         guard let brew = Self.brewPath else {
             completion("Homebrew not found on this system.")
             return
         }
-        
+
         Task.detached(priority: .userInitiated) {
             let output = (try? Self.runCommand(brew, arguments: ["info", name])) ?? "No information found."
             await MainActor.run {
@@ -385,20 +385,20 @@ class BrewManager: ObservableObject {
             }
         }
     }
-    
+
     // Command runner helper
     private static func runCommand(_ executable: String, arguments: [String]) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
-        
+
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
-        
+
         try process.run()
         process.waitUntilExit()
-        
+
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }

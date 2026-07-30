@@ -7,9 +7,9 @@ struct appuninstallerview: View {
     @State private var isDragging = false
     @State private var isShowingTerminationAlert = false
     @State private var selectedLeftoverForInfo: LeftoverItem?
-    
+
     // Status notifications for app care actions
-    @State private var careMessage: String? = nil
+    @State private var careMessage: String?
     @State private var isCareSuccess = true
     @State private var showMoreInfo = false
 
@@ -23,7 +23,7 @@ struct appuninstallerview: View {
             }
         }
     }
-    
+
     var body: some View {
         NavigationSplitView {
             VStack(spacing: 0) {
@@ -32,14 +32,14 @@ struct appuninstallerview: View {
                     Image(systemName: "magnifyingglass").foregroundColor(.secondary)
                     TextField("Search installed apps...", text: $searchText)
                         .textFieldStyle(.plain)
-                    
+
                     if !searchText.isEmpty {
                         Button(action: { searchText = "" }) {
                             Image(systemName: "xmark.circle.fill").foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
                     }
-                    
+
                     Button(action: selectAppManually) {
                         Image(systemName: "plus")
                     }
@@ -48,7 +48,7 @@ struct appuninstallerview: View {
                 }
                 .padding(10)
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.3))
-                
+
                 // List of Apps (App Store-style rows)
                 List(filteredApps, selection: $manager.appInfo) { app in
                     HStack(spacing: 12) {
@@ -56,16 +56,16 @@ struct appuninstallerview: View {
                             .resizable()
                             .aspectRatio(contentMode: .fit)
                             .frame(width: 36, height: 36)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(app.appName)
                                 .font(.headline).lineLimit(1)
                             Text("v\(app.version)")
                                 .font(.caption2).foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         // Small "UNINSTALL" button on the right
                         Button("UNINSTALL") {
                             manager.appInfo = app
@@ -105,7 +105,7 @@ struct appuninstallerview: View {
             }
         }
     }
-    
+
     // MARK: - App Store Style Product Details
     @ViewBuilder
     private func appStoreProductPage(app: AppInfo) -> some View {
@@ -117,7 +117,7 @@ struct appuninstallerview: View {
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 72, height: 72)
-                        
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text(app.appName)
                             .font(.title).bold()
@@ -127,9 +127,9 @@ struct appuninstallerview: View {
                             .font(.caption2).foregroundStyle(.tertiary)
                             .lineLimit(1).truncationMode(.middle)
                     }
-                    
+
                     Spacer()
-                    
+
                     // Unified Main Actions
                     HStack(spacing: 8) {
                         Button("OPEN APP") {
@@ -137,7 +137,7 @@ struct appuninstallerview: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.regular)
-                        
+
                         Button("UNINSTALL") {
                             trashSelected()
                         }
@@ -147,9 +147,9 @@ struct appuninstallerview: View {
                         .disabled(manager.isTrashing || manager.isRunning)
                     }
                 }
-                
+
                 Divider()
-                
+
                 // Status Indicators
                 if let msg = careMessage {
                     HStack {
@@ -205,14 +205,14 @@ struct appuninstallerview: View {
                     metadataStats(label: "CATEGORY", value: app.path.path.hasPrefix("/System") ? "macOS System" : "User App")
                 }
                 .padding(.vertical, 8)
-                
+
                 // Companion Diagnostics & Care tools
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Diagnostics & App Care Companion")
                         .font(.headline)
                     Text("Troubleshoot launch issues or clear space without deleting the application binary.")
                         .font(.caption).foregroundStyle(.secondary)
-                    
+
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                         careActionCard(
                             title: "Reset Settings",
@@ -225,7 +225,7 @@ struct appuninstallerview: View {
                                 careMessage = success ? "Preferences reset successfully." : "Failed to remove preference files."
                             }
                         }
-                        
+
                         careActionCard(
                             title: "Clear App Caches",
                             desc: "Purges cached logs and network storage items to reclaim storage.",
@@ -251,7 +251,7 @@ struct appuninstallerview: View {
                         }
                     }
                 }
-                
+
                 // File Breakdown Drawer (What will be deleted)
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
@@ -264,7 +264,7 @@ struct appuninstallerview: View {
                             }
                         }
                         .buttonStyle(.bordered)
-                        
+
                         if showMoreInfo {
                             Button(action: toggleAllSelection) {
                                 Text(manager.leftovers.allSatisfy { $0.isSelected } ? "Deselect All" : "Select All")
@@ -323,7 +323,7 @@ struct appuninstallerview: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
-            
+
             // Drag and Drop Area
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(isDragging ? Color.accentColor : Color.secondary.opacity(0.3), style: StrokeStyle(lineWidth: 1, dash: [4]))
@@ -337,7 +337,7 @@ struct appuninstallerview: View {
                 )
                 .onDrop(of: [.fileURL], isTargeted: $isDragging) { providers in
                     guard let provider = providers.first else { return false }
-                    _ = provider.loadObject(ofClass: URL.self) { url, error in
+                    _ = provider.loadObject(ofClass: URL.self) { url, _ in
                         guard let url = url, url.pathExtension.lowercased() == "app" else { return }
                         DispatchQueue.main.async {
                             let app = AppInfo(path: url)
@@ -397,20 +397,20 @@ struct appuninstallerview: View {
                 }
             ))
             .toggleStyle(.checkbox)
-            
+
             Image(systemName: item.category == "Application Bundle" ? "app" : "folder.fill")
                 .foregroundColor(item.category == "Application Bundle" ? .accentColor : .orange)
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name).font(.subheadline).bold()
                 Text(item.path).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
-            
+
             Spacer()
-            
+
             Text(item.category).font(.caption).foregroundStyle(.tertiary)
             Text(formatBytes(item.size)).font(.caption).bold().foregroundStyle(.secondary).frame(width: 80, alignment: .trailing)
-            
+
             // "Information button" to open popover details
             Button(action: {
                 selectedLeftoverForInfo = item
@@ -427,17 +427,17 @@ struct appuninstallerview: View {
                 Text("Leftover Breakdown Info")
                     .font(.headline).bold()
                 Divider()
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Name").font(.caption).bold().foregroundStyle(.secondary)
                     Text(infoItem.name).font(.subheadline)
-                    
+
                     Text("Category").font(.caption).bold().foregroundStyle(.secondary)
                     Text(infoItem.category).font(.subheadline).foregroundColor(.orange)
-                    
+
                     Text("Size on Disk").font(.caption).bold().foregroundStyle(.secondary)
                     Text(formatBytes(infoItem.size)).font(.subheadline)
-                    
+
                     Text("Full Directory Path").font(.caption).bold().foregroundStyle(.secondary)
                     Text(infoItem.path)
                         .font(.system(.caption2, design: .monospaced))
@@ -446,17 +446,17 @@ struct appuninstallerview: View {
                         .background(Color.secondary.opacity(0.08))
                         .cornerRadius(6)
                 }
-                
+
                 Divider()
-                
+
                 HStack {
                     Button("Reveal in Finder") {
                         NSWorkspace.shared.selectFile(infoItem.path, inFileViewerRootedAtPath: "")
                     }
                     .buttonStyle(.borderedProminent)
-                    
+
                     Spacer()
-                    
+
                     Button("Dismiss") {
                         selectedLeftoverForInfo = nil
                     }
@@ -467,7 +467,7 @@ struct appuninstallerview: View {
             .frame(width: 400)
         }
     }
-    
+
     // MARK: - Actions
     private func selectAppManually() {
         let panel = NSOpenPanel()
@@ -476,13 +476,13 @@ struct appuninstallerview: View {
         panel.canChooseDirectories = false
         panel.allowsMultipleSelection = false
         panel.prompt = "Select App"
-        
+
         if panel.runModal() == .OK, let url = panel.url {
             let app = AppInfo(path: url)
             manager.appInfo = app
         }
     }
-    
+
     private func trashSelected() {
         manager.trashSelectedLeftovers { success in
             if success {
@@ -501,14 +501,14 @@ struct appuninstallerview: View {
             }
         }
     }
-    
+
     private func toggleAllSelection() {
         let allSelected = manager.leftovers.allSatisfy { $0.isSelected }
         for index in manager.leftovers.indices {
             manager.leftovers[index].isSelected = !allSelected
         }
     }
-    
+
     private func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

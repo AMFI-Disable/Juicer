@@ -16,7 +16,7 @@ class ImageConverterManager: ObservableObject {
     @Published var compressionQuality: Double = 0.8
     @Published var isConverting: Bool = false
     @Published var completionMessage: String = ""
-    
+
     func addFiles(_ urls: [URL]) {
         for url in urls {
             let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
@@ -25,7 +25,7 @@ class ImageConverterManager: ObservableObject {
             }
         }
     }
-    
+
     func convertBatch() {
         guard !items.isEmpty else { return }
         isConverting = true
@@ -33,10 +33,10 @@ class ImageConverterManager: ObservableObject {
         let format = selectedFormat.lowercased()
         let quality = compressionQuality
         let currentItems = items
-        
+
         Task.detached(priority: .userInitiated) {
             var updated: [ImageConvertItem] = []
-            
+
             for var item in currentItems {
                 guard let image = NSImage(contentsOf: item.url),
                       let tiffData = image.tiffRepresentation,
@@ -45,10 +45,10 @@ class ImageConverterManager: ObservableObject {
                     updated.append(item)
                     continue
                 }
-                
+
                 let outURL = item.url.deletingPathExtension().appendingPathExtension(format)
-                var convertData: Data? = nil
-                
+                var convertData: Data?
+
                 if format == "jpeg" || format == "jpg" {
                     convertData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: quality])
                 } else if format == "png" {
@@ -57,7 +57,7 @@ class ImageConverterManager: ObservableObject {
                     // Default fallback to JPEG / PNG output for WebP/AVIF using native bitmap compression
                     convertData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: quality])
                 }
-                
+
                 if let data = convertData {
                     do {
                         try data.write(to: outURL)
@@ -67,10 +67,10 @@ class ImageConverterManager: ObservableObject {
                         item.status = "Write Error"
                     }
                 }
-                
+
                 updated.append(item)
             }
-            
+
             await MainActor.run {
                 self.items = updated
                 self.isConverting = false

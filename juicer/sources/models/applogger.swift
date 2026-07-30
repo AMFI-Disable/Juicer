@@ -3,12 +3,12 @@ import Combine
 
 class AppLogger: ObservableObject {
     static let shared = AppLogger()
-    
+
     @Published var logs: [String] = []
     @Published var latestLog: String = "Application initialized."
-    
+
     private init() {}
-    
+
     func log(_ message: String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss"
@@ -17,11 +17,11 @@ class AppLogger: ObservableObject {
             ? maskSensitiveValues(message)
             : message
         let formattedMessage = "[\(timestamp)] \(value)"
-        
+
         DispatchQueue.main.async {
             self.logs.append(formattedMessage)
             self.latestLog = value
-            
+
             // Limit stored log size to prevent memory bloat
             if self.logs.count > 1000 {
                 self.logs.removeFirst()
@@ -38,7 +38,7 @@ class AppLogger: ObservableObject {
         }
         return result
     }
-    
+
     func clear() {
         DispatchQueue.main.async {
             self.logs.removeAll()

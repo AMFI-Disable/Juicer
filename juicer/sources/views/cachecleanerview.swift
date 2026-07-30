@@ -3,7 +3,7 @@ import SwiftUI
 struct cachecleanerview: View {
     @StateObject private var manager = CacheCleanerManager()
     @State private var activeTab: InsightsTab = .insights
-    @State private var filterCategory: InsightItem.InsightCategory? = nil
+    @State private var filterCategory: InsightItem.InsightCategory?
     @State private var projectRootInput: String = ""
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
@@ -410,8 +410,7 @@ struct cachecleanerview: View {
 
             Button(action: { showProjectFirstAlert = true }) {
                 HStack {
-                    if manager.isCleaning { ProgressView().controlSize(.small) }
-                    else { Image(systemName: "trash.fill") }
+                    if manager.isCleaning { ProgressView().controlSize(.small) } else { Image(systemName: "trash.fill") }
                     Text("Clean Selected")
                 }
             }
@@ -534,7 +533,7 @@ struct cachecleanerview: View {
             }
             .padding()
             .background(Color(NSColor.controlBackgroundColor).opacity(0.15))
-            
+
             Divider()
 
             if manager.backups.isEmpty {
@@ -551,18 +550,18 @@ struct cachecleanerview: View {
                     HStack(spacing: 16) {
                         Image(systemName: "folder.badge.gearshape")
                             .font(.title2).foregroundColor(.orange)
-                        
+
                         VStack(alignment: .leading, spacing: 3) {
                             Text(backup.name).font(.headline)
                             Text("Original: \(backup.originalPath)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
                             Text("Backed Up: \(formatDate(backup.timestamp))").font(.caption2).foregroundStyle(.tertiary)
                         }
-                        
+
                         Spacer()
-                        
+
                         Text(CacheCleanerManager.formatBytes(backup.sizeBytes))
                             .font(.subheadline).bold().foregroundColor(.secondary)
-                        
+
                         Button("Restore Rollback") {
                             manager.restoreBackup(backup)
                             manager.loadBackups() // Refresh view
@@ -591,13 +590,13 @@ struct cachecleanerview: View {
 struct ConfettiView: View {
     @Binding var isPresented: Bool
     @State private var animate = false
-    
+
     private let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .pink]
-    
+
     var body: some View {
         ZStack {
             if isPresented {
-                ForEach(0..<60, id: \.self) { i in
+                ForEach(0..<60, id: \.self) { _ in
                     let size = CGFloat.random(in: 6...12)
                     let color = colors.randomElement()!
                     let xOffset = CGFloat.random(in: (-400)...400)
@@ -605,7 +604,7 @@ struct ConfettiView: View {
                     let yOffsetEnd = CGFloat.random(in: 300...500)
                     let rotation = Double.random(in: 0...360)
                     let duration = Double.random(in: 1.5...2.5)
-                    
+
                     Rectangle()
                         .fill(color)
                         .frame(width: size, height: size)

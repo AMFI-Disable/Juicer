@@ -2,16 +2,16 @@ import SwiftUI
 
 struct snapshotsview: View {
     @State private var snapshots: [DiagnosticSnapshot] = []
-    @State private var firstSelected: DiagnosticSnapshot? = nil
-    @State private var secondSelected: DiagnosticSnapshot? = nil
+    @State private var firstSelected: DiagnosticSnapshot?
+    @State private var secondSelected: DiagnosticSnapshot?
     @State private var diffResults: [SnapshotDiff] = []
     @State private var isDiffing = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             headerBar()
             Divider()
-            
+
             HSplitView {
                 // Left Column: List of Snapshots
                 VStack(alignment: .leading, spacing: 0) {
@@ -25,9 +25,9 @@ struct snapshotsview: View {
                     }
                     .padding()
                     .background(Color(NSColor.controlBackgroundColor).opacity(0.15))
-                    
+
                     Divider()
-                    
+
                     if snapshots.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "camera.viewfinder").font(.system(size: 36)).foregroundStyle(.secondary)
@@ -44,7 +44,7 @@ struct snapshotsview: View {
                     }
                 }
                 .frame(minWidth: 320, idealWidth: 360, maxWidth: 400)
-                
+
                 // Right Column: Diff Inspector
                 VStack(spacing: 0) {
                     if let first = firstSelected, let second = secondSelected {
@@ -62,7 +62,7 @@ struct snapshotsview: View {
             loadSnapshots()
         }
     }
-    
+
     @ViewBuilder
     private func headerBar() -> some View {
         HStack {
@@ -76,7 +76,7 @@ struct snapshotsview: View {
         }
         .padding()
     }
-    
+
     @ViewBuilder
     private func snapshotRow(snap: DiagnosticSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -88,13 +88,13 @@ struct snapshotsview: View {
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                
+
                 Button(action: { deleteSnapshot(snap) }) {
                     Image(systemName: "trash").foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
             }
-            
+
             HStack(spacing: 8) {
                 Button(action: {
                     firstSelected = snap
@@ -111,7 +111,7 @@ struct snapshotsview: View {
                     .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                
+
                 Button(action: {
                     secondSelected = snap
                     calculateDiff()
@@ -131,14 +131,14 @@ struct snapshotsview: View {
         }
         .padding(.vertical, 6)
     }
-    
+
     @ViewBuilder
     private func diffPanel(current: DiagnosticSnapshot, older: DiagnosticSnapshot) -> some View {
         VStack(spacing: 0) {
             // Diff Header
             VStack(alignment: .leading, spacing: 10) {
                 Text("System Changes Comparison").font(.headline)
-                
+
                 HStack(spacing: 12) {
                     VStack(alignment: .leading) {
                         Text("Current State:").font(.caption).bold().foregroundStyle(.blue)
@@ -154,9 +154,9 @@ struct snapshotsview: View {
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
-            
+
             Divider()
-            
+
             // Diff Table List
             if diffResults.isEmpty {
                 VStack(spacing: 12) {
@@ -175,7 +175,7 @@ struct snapshotsview: View {
                             .background(item.action == "Added" ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
                             .foregroundColor(item.action == "Added" ? .green : .red)
                             .cornerRadius(4)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.detail).font(.system(.body, design: .monospaced)).lineLimit(1)
                             Text(item.category).font(.caption2).foregroundStyle(.secondary)
@@ -188,7 +188,7 @@ struct snapshotsview: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func diffSelectionPlaceholder() -> some View {
         VStack(spacing: 16) {
@@ -201,20 +201,20 @@ struct snapshotsview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Actions
-    
+
     private func loadSnapshots() {
         snapshots = DiagnosticSnapshot.loadAll()
     }
-    
+
     private func takeSnapshot() {
         let snap = DiagnosticSnapshot.captureCurrentState()
         snap.save()
         loadSnapshots()
         AppLogger.shared.log("Recorded diagnostic state snapshot.")
     }
-    
+
     private func deleteSnapshot(_ snap: DiagnosticSnapshot) {
         DiagnosticSnapshot.delete(snap)
         if firstSelected?.id == snap.id { firstSelected = nil }
@@ -222,7 +222,7 @@ struct snapshotsview: View {
         loadSnapshots()
         calculateDiff()
     }
-    
+
     private func calculateDiff() {
         guard let first = firstSelected, let second = secondSelected else {
             diffResults = []
@@ -230,7 +230,7 @@ struct snapshotsview: View {
         }
         diffResults = first.diff(against: second)
     }
-    
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium

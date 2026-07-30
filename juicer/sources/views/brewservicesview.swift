@@ -3,21 +3,21 @@ import SwiftUI
 struct brewservicesview: View {
     @StateObject private var manager = BrewServicesManager.shared
     @State private var searchText = ""
-    @State private var showingLinkManager: BrewService? = nil
+    @State private var showingLinkManager: BrewService?
     @State private var statusMessage = ""
     @State private var showStatusAlert = false
-    
+
     // Custom Link state
     @State private var customLinkLabel = ""
     @State private var customLinkURL = ""
-    
+
     var filteredServices: [BrewService] {
         if searchText.isEmpty {
             return manager.services
         }
         return manager.services.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header panel
@@ -31,7 +31,7 @@ struct brewservicesview: View {
                         .foregroundColor(.secondary)
                 }
                 Spacer()
-                
+
                 // Domain Selector
                 Picker("Domain", selection: $manager.isSystemDomain) {
                     Text("User Services").tag(false)
@@ -42,7 +42,7 @@ struct brewservicesview: View {
                 .onChange(of: manager.isSystemDomain) { _ in
                     manager.loadServices()
                 }
-                
+
                 if manager.isLoading {
                     ProgressView().controlSize(.small)
                 } else {
@@ -55,9 +55,9 @@ struct brewservicesview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Bulk controls & Search
             HStack {
                 HStack(spacing: 12) {
@@ -66,16 +66,16 @@ struct brewservicesview: View {
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.green)
-                    
+
                     Button(action: { runBulkAction("stop") }) {
                         Label("Stop All", systemImage: "stop.fill")
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.red)
                 }
-                
+
                 Spacer()
-                
+
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
@@ -86,9 +86,9 @@ struct brewservicesview: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 10)
-            
+
             Divider()
-            
+
             // Services List
             if filteredServices.isEmpty {
                 VStack(spacing: 16) {
@@ -128,7 +128,7 @@ struct brewservicesview: View {
             linkManagerSheet(service)
         }
     }
-    
+
     // Row Builder
     @ViewBuilder
     private func serviceRow(_ service: BrewService) -> some View {
@@ -138,13 +138,13 @@ struct brewservicesview: View {
                 .fill(statusColor(service.status))
                 .frame(width: 10, height: 10)
                 .shadow(color: statusColor(service.status).opacity(0.5), radius: 3)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
                     Text(service.name)
                         .font(.headline)
                         .bold()
-                    
+
                     // Web Interface Quick link icons
                     ForEach(service.customLinks) { link in
                         Button(action: { launchURL(link.urlString) }) {
@@ -155,7 +155,7 @@ struct brewservicesview: View {
                         .help("Open \(link.label): \(link.urlString)")
                     }
                 }
-                
+
                 HStack(spacing: 16) {
                     Text(service.status.rawValue.capitalized)
                         .font(.caption)
@@ -164,13 +164,13 @@ struct brewservicesview: View {
                         .padding(.vertical, 2)
                         .background(statusColor(service.status).opacity(0.15))
                         .cornerRadius(4)
-                    
+
                     if let user = service.user {
                         Text("User: \(user)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     if !service.ports.isEmpty {
                         Text("Ports: \(service.ports.map(String.init).joined(separator: ", "))")
                             .font(.caption)
@@ -179,9 +179,9 @@ struct brewservicesview: View {
                     }
                 }
             }
-            
+
             Spacer()
-            
+
             // Plist Location (compact)
             if let path = service.plistPath, !path.isEmpty {
                 Text(URL(fileURLWithPath: path).lastPathComponent)
@@ -191,7 +191,7 @@ struct brewservicesview: View {
                     .frame(maxWidth: 150, alignment: .trailing)
                     .help(path)
             }
-            
+
             // Actions
             HStack(spacing: 8) {
                 if service.status == .started {
@@ -201,7 +201,7 @@ struct brewservicesview: View {
                     }
                     .buttonStyle(.bordered)
                     .help("Stop Service")
-                    
+
                     Button(action: { restartService(service) }) {
                         Image(systemName: "arrow.clockwise")
                             .foregroundColor(.orange)
@@ -216,7 +216,7 @@ struct brewservicesview: View {
                     .buttonStyle(.bordered)
                     .help("Start Service")
                 }
-                
+
                 Button(action: { showingLinkManager = service }) {
                     Image(systemName: "link")
                 }
@@ -228,7 +228,7 @@ struct brewservicesview: View {
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(8)
     }
-    
+
     // Status colors helper
     private func statusColor(_ status: BrewService.ServiceStatus) -> Color {
         switch status {
@@ -238,7 +238,7 @@ struct brewservicesview: View {
         case .unknown: return .orange
         }
     }
-    
+
     // Actions Execution
     private func startService(_ service: BrewService) {
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
@@ -249,7 +249,7 @@ struct brewservicesview: View {
             }
         }
     }
-    
+
     private func stopService(_ service: BrewService) {
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
         manager.stopService(service) { success in
@@ -259,7 +259,7 @@ struct brewservicesview: View {
             }
         }
     }
-    
+
     private func restartService(_ service: BrewService) {
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
         manager.restartService(service) { success in
@@ -269,16 +269,16 @@ struct brewservicesview: View {
             }
         }
     }
-    
+
     private func runBulkAction(_ action: String) {
         let targets = filteredServices.filter {
             action == "start" ? ($0.status != .started) : ($0.status == .started)
         }
         guard !targets.isEmpty else { return }
-        
+
         let dispatchGroup = DispatchGroup()
         var failedCount = 0
-        
+
         for service in targets {
             dispatchGroup.enter()
             if action == "start" {
@@ -293,7 +293,7 @@ struct brewservicesview: View {
                 }
             }
         }
-        
+
         dispatchGroup.notify(queue: .main) {
             if failedCount > 0 {
                 statusMessage = "Bulk \(action) finished. \(failedCount) services failed to transition."
@@ -302,7 +302,7 @@ struct brewservicesview: View {
             manager.loadServices()
         }
     }
-    
+
     // Link Manager Sheet
     @ViewBuilder
     private func linkManagerSheet(_ service: BrewService) -> some View {
@@ -310,7 +310,7 @@ struct brewservicesview: View {
             Text("Web Interface Links for \(service.name)")
                 .font(.headline)
                 .bold()
-            
+
             // Add form
             VStack(alignment: .leading, spacing: 8) {
                 Text("Add Custom Link").font(.subheadline).bold()
@@ -325,7 +325,7 @@ struct brewservicesview: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(customLinkLabel.isEmpty || customLinkURL.isEmpty)
                 }
-                
+
                 // Suggestions based on ports
                 if !service.ports.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
@@ -347,7 +347,7 @@ struct brewservicesview: View {
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.4))
             .cornerRadius(8)
-            
+
             // Existing links list
             List {
                 if service.customLinks.isEmpty {
@@ -371,7 +371,7 @@ struct brewservicesview: View {
                 }
             }
             .frame(height: 180)
-            
+
             HStack {
                 Spacer()
                 Button("Done") {
@@ -385,7 +385,7 @@ struct brewservicesview: View {
         .padding()
         .frame(width: 500, height: 420)
     }
-    
+
     private func addCustomLink(for service: BrewService) {
         var currentLinks = service.customLinks
         let newLink = ServiceLink(label: customLinkLabel, urlString: customLinkURL)
@@ -398,7 +398,7 @@ struct brewservicesview: View {
             showingLinkManager = manager.services[idx]
         }
     }
-    
+
     private func removeCustomLink(_ link: ServiceLink, for service: BrewService) {
         let updated = service.customLinks.filter { $0.id != link.id }
         manager.saveCustomLinks(for: service.name, links: updated)
@@ -406,7 +406,7 @@ struct brewservicesview: View {
             showingLinkManager = manager.services[idx]
         }
     }
-    
+
     private func launchURL(_ urlString: String) {
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)

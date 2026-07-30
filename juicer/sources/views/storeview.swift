@@ -4,37 +4,37 @@ enum StoreFilterType: String, CaseIterable, Identifiable {
     case all = "All Apps"
     case installed = "Installed"
     case updates = "Updates"
-    
+
     var id: String { rawValue }
 }
 
 struct storeview: View {
     let isCask: Bool
     let filterType: StoreFilterType
-    
+
     init(isCask: Bool = true, filterType: StoreFilterType = .all) {
         self.isCask = isCask
         self.filterType = filterType
     }
-    
+
     @StateObject private var manager = StoreManager()
     @State private var searchText = ""
-    @State private var selectedCategory: AppCategory? = nil
-    @State private var selectedPricing: StoreApp.PricingTag? = nil
-    
+    @State private var selectedCategory: AppCategory?
+    @State private var selectedPricing: StoreApp.PricingTag?
+
     // Pagination
     @State private var currentPage = 1
     private let itemsPerPage = 30
-    
+
     // Selection for Detail Sheet
-    @State private var selectedApp: StoreApp? = nil
+    @State private var selectedApp: StoreApp?
     @State private var showLogs = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Top Controls: Search and Filters
             filterHeader()
-            
+
             if manager.isLoading {
                 loadingPlaceholder()
             } else if filteredApps.isEmpty {
@@ -48,11 +48,11 @@ struct storeview: View {
                                 .padding(.horizontal)
                                 .padding(.top)
                         }
-                        
+
                         // 2. Apps List / Grid
                         appsGridView()
                             .padding(.horizontal)
-                        
+
                         // 3. Pagination Controls
                         paginationControls()
                             .padding()
@@ -69,11 +69,11 @@ struct storeview: View {
             manager.loadStore()
         }
     }
-    
+
     // MARK: - Filtering Logic
     private var filteredApps: [StoreApp] {
         var list: [StoreApp] = []
-        
+
         switch filterType {
         case .all:
             list = manager.apps.filter { $0.isCask == isCask }
@@ -82,26 +82,26 @@ struct storeview: View {
         case .updates:
             list = manager.outdatedApps.filter { $0.isCask == isCask }
         }
-        
+
         // Search filter
         if !searchText.isEmpty {
             let q = searchText.lowercased()
             list = list.filter { $0.name.lowercased().contains(q) || $0.id.lowercased().contains(q) || $0.desc.lowercased().contains(q) }
         }
-        
+
         // Category filter
         if let category = selectedCategory {
             list = list.filter { $0.category == category }
         }
-        
+
         // Pricing filter
         if let pricing = selectedPricing {
             list = list.filter { $0.pricing == pricing }
         }
-        
+
         return list
     }
-    
+
     private var paginatedApps: [StoreApp] {
         let allFiltered = filteredApps
         let startIndex = (currentPage - 1) * itemsPerPage
@@ -109,13 +109,13 @@ struct storeview: View {
         let endIndex = min(startIndex + itemsPerPage, allFiltered.count)
         return Array(allFiltered[startIndex..<endIndex])
     }
-    
+
     private var totalPages: Int {
         let count = filteredApps.count
         if count == 0 { return 1 }
         return Int(ceil(Double(count) / Double(itemsPerPage)))
     }
-    
+
     // MARK: - Filters Header
     @ViewBuilder
     private func filterHeader() -> some View {
@@ -142,7 +142,7 @@ struct storeview: View {
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.5))
                 .cornerRadius(8)
                 .frame(maxWidth: 320)
-                
+
                 // Pricing Tags Filter
                 Picker("Pricing:", selection: Binding(
                     get: { selectedPricing },
@@ -158,9 +158,9 @@ struct storeview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 280)
-                
+
                 Spacer()
-                
+
                 // Reload Button
                 Button(action: { manager.loadStore(forceRefresh: true) }) {
                     Label("Sync Database", systemImage: "arrow.clockwise")
@@ -168,12 +168,12 @@ struct storeview: View {
                 .buttonStyle(.bordered)
             }
             .padding([.horizontal, .top])
-            
+
             // Categories Selector Row
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     categoryTabButton(title: "All Categories", category: nil)
-                    
+
                     ForEach(AppCategory.allCases) { cat in
                         categoryTabButton(title: cat.rawValue, category: cat)
                     }
@@ -181,12 +181,12 @@ struct storeview: View {
                 .padding(.horizontal)
                 .padding(.bottom, 8)
             }
-            
+
             Divider()
         }
         .background(Color(NSColor.windowBackgroundColor).opacity(0.8))
     }
-    
+
     @ViewBuilder
     private func categoryTabButton(title: String, category: AppCategory?) -> some View {
         Button(action: {
@@ -203,7 +203,7 @@ struct storeview: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Featured App Hero Banner
     @ViewBuilder
     private func featuredHeroSection() -> some View {
@@ -213,7 +213,7 @@ struct storeview: View {
                 Text("Featured Applications")
                     .font(.title2).bold()
                     .foregroundColor(.primary)
-                
+
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 16) {
                         ForEach(featured.prefix(4)) { app in
@@ -224,7 +224,7 @@ struct storeview: View {
             }
         }
     }
-    
+
     @ViewBuilder
     private func featuredCard(app: StoreApp) -> some View {
         Button(action: { selectedApp = app }) {
@@ -236,7 +236,7 @@ struct storeview: View {
                         .frame(width: 48, height: 48)
                         .background(Color.accentColor.opacity(0.12))
                         .cornerRadius(10)
-                    
+
                     VStack(alignment: .leading, spacing: 4) {
                         Text(app.name)
                             .font(.headline)
@@ -246,9 +246,9 @@ struct storeview: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     // Pricing Badge
                     Text(app.pricing.rawValue)
                         .font(.caption2).bold()
@@ -258,21 +258,21 @@ struct storeview: View {
                         .foregroundColor(app.pricing == .free ? .green : (app.pricing == .freemium ? .orange : .blue))
                         .cornerRadius(6)
                 }
-                
+
                 Text(app.desc)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .frame(height: 36, alignment: .topLeading)
-                
+
                 HStack {
                     Text("Version \(app.version)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    
+
                     Spacer()
-                    
+
                     Text(app.status == .notInstalled ? "Get" : "Installed")
                         .font(.caption2).bold()
                         .padding(.horizontal, 10)
@@ -290,7 +290,7 @@ struct storeview: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Apps Grid View
     @ViewBuilder
     private func appsGridView() -> some View {
@@ -299,14 +299,14 @@ struct storeview: View {
             GridItem(.flexible(), spacing: 16),
             GridItem(.flexible(), spacing: 16)
         ]
-        
+
         LazyVGrid(columns: columns, spacing: 16) {
             ForEach(paginatedApps) { app in
                 appRowCard(app: app)
             }
         }
     }
-    
+
     @ViewBuilder
     private func appRowCard(app: StoreApp) -> some View {
         Button(action: { selectedApp = app }) {
@@ -317,29 +317,29 @@ struct storeview: View {
                     .frame(width: 42, height: 42)
                     .background(Color.accentColor.opacity(0.1))
                     .cornerRadius(8)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     HStack {
                         Text(app.name)
                             .font(.body).bold()
                             .lineLimit(1)
                             .foregroundColor(.primary)
-                        
+
                         if app.isFeatured {
                             Image(systemName: "star.fill")
                                 .font(.caption2)
                                 .foregroundColor(.yellow)
                         }
                     }
-                    
+
                     Text(app.desc)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     Text(app.pricing.rawValue)
                         .font(.system(size: 9)).bold()
@@ -348,7 +348,7 @@ struct storeview: View {
                         .background(app.pricing == .free ? Color.green.opacity(0.12) : (app.pricing == .freemium ? Color.orange.opacity(0.12) : Color.blue.opacity(0.12)))
                         .foregroundColor(app.pricing == .free ? .green : (app.pricing == .freemium ? .orange : .blue))
                         .cornerRadius(4)
-                    
+
                     Text(app.status == .notInstalled ? "Get" : (app.status == .installedViaHomebrew ? "Installed" : "External"))
                         .font(.system(size: 9)).bold()
                         .padding(.horizontal, 6)
@@ -365,7 +365,7 @@ struct storeview: View {
         }
         .buttonStyle(.plain)
     }
-    
+
     // MARK: - Pagination Footer
     @ViewBuilder
     private func paginationControls() -> some View {
@@ -373,9 +373,9 @@ struct storeview: View {
             Text("Showing \((currentPage - 1) * itemsPerPage + 1) - \(min(currentPage * itemsPerPage, filteredApps.count)) of \(filteredApps.count) apps")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             HStack(spacing: 12) {
                 Button(action: {
                     if currentPage > 1 { currentPage -= 1 }
@@ -383,10 +383,10 @@ struct storeview: View {
                     Image(systemName: "chevron.left")
                 }
                 .disabled(currentPage == 1)
-                
+
                 Text("Page \(currentPage) of \(totalPages)")
                     .font(.subheadline)
-                
+
                 Button(action: {
                     if currentPage < totalPages { currentPage += 1 }
                 }) {
@@ -396,7 +396,7 @@ struct storeview: View {
             }
         }
     }
-    
+
     // MARK: - Loading / Empty Views
     @ViewBuilder
     private func loadingPlaceholder() -> some View {
@@ -409,7 +409,7 @@ struct storeview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
         VStack(spacing: 12) {
@@ -424,7 +424,7 @@ struct storeview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - App Detail Sheet
     @ViewBuilder
     private func appDetailSheet(app: StoreApp) -> some View {
@@ -437,7 +437,7 @@ struct storeview: View {
                     .frame(width: 60, height: 60)
                     .background(Color.accentColor.opacity(0.12))
                     .cornerRadius(12)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     Text(app.name)
                         .font(.title2).bold()
@@ -445,18 +445,18 @@ struct storeview: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button("Close") {
                     selectedApp = nil
                 }
                 .buttonStyle(.bordered)
             }
             .padding()
-            
+
             Divider()
-            
+
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     // Metadata tags
@@ -465,14 +465,14 @@ struct storeview: View {
                         detailTag(title: "Pricing", value: app.pricing.rawValue, icon: "dollarsign.circle")
                         detailTag(title: "Status", value: app.status.rawValue, icon: "checkmark.circle")
                     }
-                    
+
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Description")
                             .font(.headline)
                         Text(app.desc.isEmpty ? "No description provided." : app.desc)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     if !app.homepage.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Links")
@@ -487,9 +487,9 @@ struct storeview: View {
                             }
                         }
                     }
-                    
+
                     Divider()
-                    
+
                     // Action triggers
                     HStack(spacing: 12) {
                         if app.status == .notInstalled {
@@ -512,7 +512,7 @@ struct storeview: View {
                             .tint(.red)
                             .disabled(manager.isRunningAction)
                         }
-                        
+
                         // Updates tab upgrade
                         if filterType == .updates {
                             Button(action: {
@@ -526,13 +526,13 @@ struct storeview: View {
                             .disabled(manager.isRunningAction)
                         }
                     }
-                    
+
                     // Console logs output
                     if showLogs || manager.isRunningAction {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Homebrew Operations Console")
                                 .font(.headline)
-                            
+
                             ScrollView {
                                 Text(manager.progressLog)
                                     .font(.system(.caption, design: .monospaced))
@@ -551,7 +551,7 @@ struct storeview: View {
         }
         .frame(width: 550, height: 480)
     }
-    
+
     @ViewBuilder
     private func detailTag(title: String, value: String, icon: String) -> some View {
         HStack(spacing: 8) {

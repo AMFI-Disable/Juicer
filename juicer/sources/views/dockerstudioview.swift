@@ -17,17 +17,17 @@ class DockerStudioManager: ObservableObject {
     @Published var isScanning = false
     @Published var selectedContainerLogs = ""
     @Published var statusMessage = ""
-    
+
     init() {
         self.checkDockerState()
     }
-    
+
     func checkDockerState() {
         self.isScanning = true
         Task.detached(priority: .userInitiated) {
             let output = self.runShellCommand("docker ps -a --format \"{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.Ports}}\"")
             let isRunning = !output.isEmpty || FileManager.default.fileExists(atPath: "/var/run/docker.sock")
-            
+
             var items: [DockerContainerItem] = []
             let lines = output.components(separatedBy: "\n")
             for line in lines {
@@ -42,7 +42,7 @@ class DockerStudioManager: ObservableObject {
                     items.append(DockerContainerItem(containerId: id, name: name, image: image, status: status, ports: ports, isRunning: running))
                 }
             }
-            
+
             await MainActor.run {
                 self.containers = items
                 self.isDockerRunning = isRunning
@@ -55,15 +55,15 @@ class DockerStudioManager: ObservableObject {
             }
         }
     }
-    
+
     func startContainer(id: String) {
         runShellAsync("docker start \(id)") { self.checkDockerState() }
     }
-    
+
     func stopContainer(id: String) {
         runShellAsync("docker stop \(id)") { self.checkDockerState() }
     }
-    
+
     func fetchLogs(id: String) {
         Task.detached(priority: .userInitiated) {
             let logs = self.runShellCommand("docker logs --tail 100 \(id)")
@@ -72,11 +72,11 @@ class DockerStudioManager: ObservableObject {
             }
         }
     }
-    
+
     func pruneSystem() {
         runShellAsync("docker system prune -f") { self.checkDockerState() }
     }
-    
+
     private func runShellCommand(_ cmd: String) -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
@@ -91,7 +91,7 @@ class DockerStudioManager: ObservableObject {
             return String(data: data, encoding: .utf8) ?? ""
         } catch { return "" }
     }
-    
+
     private func runShellAsync(_ cmd: String, completion: @escaping () -> Void) {
         Task.detached(priority: .userInitiated) {
             _ = self.runShellCommand(cmd)
@@ -103,7 +103,7 @@ class DockerStudioManager: ObservableObject {
 struct dockerstudioview: View {
     @StateObject private var manager = DockerStudioManager()
     @State private var selectedTab = "Containers"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             JuicerFeatureHeader(
@@ -115,9 +115,9 @@ struct dockerstudioview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             HStack {
                 Picker("", selection: $selectedTab) {
                     Text("Containers (\(manager.containers.count))").tag("Containers")
@@ -126,17 +126,17 @@ struct dockerstudioview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 320)
-                
+
                 Spacer()
-                
+
                 Text(manager.statusMessage)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .padding()
-            
+
             Divider()
-            
+
             if selectedTab == "Containers" {
                 containersListView()
             } else if selectedTab == "Logs" {
@@ -147,7 +147,7 @@ struct dockerstudioview: View {
         }
         .allowWindowDragAndFit()
     }
-    
+
     @ViewBuilder
     private func containersListView() -> some View {
         if manager.containers.isEmpty {
@@ -168,7 +168,7 @@ struct dockerstudioview: View {
                     Circle()
                         .fill(item.isRunning ? Color.green : Color.gray)
                         .frame(width: 10, height: 10)
-                    
+
                     VStack(alignment: .leading, spacing: 2) {
                         HStack {
                             Text(item.name).bold()
@@ -178,15 +178,15 @@ struct dockerstudioview: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     Button("Logs") {
                         manager.fetchLogs(id: item.containerId)
                         selectedTab = "Logs"
                     }
                     .buttonStyle(.bordered)
-                    
+
                     if item.isRunning {
                         Button("Stop") { manager.stopContainer(id: item.containerId) }
                             .buttonStyle(.bordered)
@@ -201,7 +201,7 @@ struct dockerstudioview: View {
             .listStyle(.inset)
         }
     }
-    
+
     @ViewBuilder
     private func logsView() -> some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -212,7 +212,7 @@ struct dockerstudioview: View {
         }
         .padding()
     }
-    
+
     @ViewBuilder
     private func pruneView() -> some View {
         VStack(spacing: 16) {
@@ -225,7 +225,7 @@ struct dockerstudioview: View {
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: 450)
-            
+
             Button("Execute Docker System Prune") {
                 manager.pruneSystem()
             }

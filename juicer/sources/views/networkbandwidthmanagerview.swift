@@ -4,7 +4,7 @@ import AppKit
 struct networkbandwidthmanagerview: View {
     @StateObject private var manager = NetworkBandwidthManager()
     @State private var searchText = ""
-    
+
     var filteredStats: [ProcessNetworkStat] {
         if searchText.isEmpty {
             return manager.processStats
@@ -14,7 +14,7 @@ struct networkbandwidthmanagerview: View {
             String($0.pid).contains(searchText)
         }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -27,9 +27,9 @@ struct networkbandwidthmanagerview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 VStack(alignment: .trailing, spacing: 4) {
                     HStack(spacing: 12) {
                         Label(String(format: "↓ %.1f KB/s", manager.totalDownloadSpeed), systemImage: "arrow.down.circle.fill")
@@ -43,18 +43,18 @@ struct networkbandwidthmanagerview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Search Bar
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                 TextField("Search Process Name or PID...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
-                
+
                 Spacer()
-                
+
                 Button(action: {
                     if manager.isMonitoring {
                         manager.stopMonitoring()
@@ -67,9 +67,9 @@ struct networkbandwidthmanagerview: View {
                 .buttonStyle(.bordered)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Stats List
             List {
                 ForEach(filteredStats) { stat in
@@ -77,7 +77,7 @@ struct networkbandwidthmanagerview: View {
                         Image(systemName: "network")
                             .foregroundStyle(Color.accentColor)
                             .frame(width: 24)
-                        
+
                         VStack(alignment: .leading, spacing: 2) {
                             Text(stat.processName)
                                 .font(.headline)
@@ -85,9 +85,9 @@ struct networkbandwidthmanagerview: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
-                        
+
                         Spacer()
-                        
+
                         HStack(spacing: 20) {
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(String(format: "↓ %.1f KB/s", stat.rateIn))
@@ -98,7 +98,7 @@ struct networkbandwidthmanagerview: View {
                                     .foregroundStyle(.secondary)
                             }
                             .frame(width: 120, alignment: .trailing)
-                            
+
                             VStack(alignment: .trailing, spacing: 2) {
                                 Text(String(format: "↑ %.1f KB/s", stat.rateOut))
                                     .font(.system(.body, design: .monospaced))
@@ -122,7 +122,7 @@ struct networkbandwidthmanagerview: View {
             manager.stopMonitoring()
         }
     }
-    
+
     private func formattedBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useAll]

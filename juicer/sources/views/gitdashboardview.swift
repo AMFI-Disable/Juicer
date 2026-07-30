@@ -8,7 +8,7 @@ struct gitdashboardview: View {
     @State private var showNewBranchSheet = false
     @State private var newBranchName = ""
     @State private var selectedTab = "Staging"
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar & Repo Selector
@@ -22,16 +22,16 @@ struct gitdashboardview: View {
                             .font(.title2)
                             .bold()
                     }
-                    
+
                     if !manager.repoPath.isEmpty {
                         Text(manager.repoPath)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
-                
+
                 Spacer()
-                
+
                 // Current Branch Badge & Switcher
                 Menu {
                     Section("Branches") {
@@ -53,7 +53,7 @@ struct gitdashboardview: View {
                 }
                 .menuStyle(.borderlessButton)
                 .buttonStyle(.bordered)
-                
+
                 Button("Open Repo...") {
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
@@ -64,7 +64,7 @@ struct gitdashboardview: View {
                     }
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button(action: { manager.loadRepositoryState() }) {
                     Image(systemName: "arrow.clockwise")
                 }
@@ -73,9 +73,9 @@ struct gitdashboardview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // View Mode Switcher Toolbar
             HStack {
                 Picker("", selection: $selectedTab) {
@@ -85,13 +85,13 @@ struct gitdashboardview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 380)
-                
+
                 Spacer()
             }
             .padding()
-            
+
             Divider()
-            
+
             // Main Workspace View
             if manager.repoPath.isEmpty || !manager.errorMessage.isEmpty {
                 VStack(spacing: 12) {
@@ -154,7 +154,7 @@ struct gitdashboardview: View {
             }
         }
     }
-    
+
     // MARK: - Staging Workbench
     @ViewBuilder
     private func stagingWorkbenchView() -> some View {
@@ -173,9 +173,9 @@ struct gitdashboardview: View {
                         .font(.caption)
                 }
                 .padding()
-                
+
                 Divider()
-                
+
                 if manager.statusFiles.isEmpty {
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle.fill")
@@ -200,16 +200,16 @@ struct gitdashboardview: View {
                                 }
                             ))
                             .labelsHidden()
-                            
+
                             Text(file.isUntracked ? "?" : (file.statusX != "." ? file.statusX : file.statusY))
                                 .font(.caption.monospaced().bold())
                                 .foregroundStyle(file.isUntracked ? Color.blue : (file.isStaged ? Color.green : Color.orange))
                                 .frame(width: 20)
-                            
+
                             Text(file.path)
                                 .font(.system(.body, design: .monospaced))
                                 .lineLimit(1)
-                            
+
                             Spacer()
                         }
                         .padding(.vertical, 2)
@@ -218,12 +218,12 @@ struct gitdashboardview: View {
                 }
             }
             .frame(minWidth: 320)
-            
+
             // Right: Commit Studio
             VStack(alignment: .leading, spacing: 12) {
                 Text("Commit Changes")
                     .font(.headline)
-                
+
                 HStack {
                     Picker("Type:", selection: $conventionalPrefix) {
                         Text("feat:").tag("feat")
@@ -234,11 +234,11 @@ struct gitdashboardview: View {
                         Text("chore:").tag("chore")
                     }
                     .frame(width: 130)
-                    
+
                     TextField("Summary message...", text: $commitMessage)
                         .textFieldStyle(.roundedBorder)
                 }
-                
+
                 HStack {
                     Spacer()
                     Button("Commit (\(manager.statusFiles.filter { $0.isStaged }.count) staged)") {
@@ -250,14 +250,14 @@ struct gitdashboardview: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(commitMessage.trimmingCharacters(in: .whitespaces).isEmpty || manager.statusFiles.filter { $0.isStaged }.isEmpty)
                 }
-                
+
                 Spacer()
             }
             .padding()
             .frame(minWidth: 300)
         }
     }
-    
+
     // MARK: - Commit History View
     @ViewBuilder
     private func commitHistoryView() -> some View {
@@ -267,7 +267,7 @@ struct gitdashboardview: View {
                     .font(.caption)
                     .foregroundStyle(commit.isHead ? Color.accentColor : Color.secondary)
                     .padding(.top, 4)
-                
+
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(commit.message)
@@ -280,7 +280,7 @@ struct gitdashboardview: View {
                             .background(Color.secondary.opacity(0.15))
                             .cornerRadius(4)
                     }
-                    
+
                     HStack(spacing: 12) {
                         Text(commit.author)
                             .font(.caption)
@@ -298,7 +298,7 @@ struct gitdashboardview: View {
         }
         .listStyle(.inset)
     }
-    
+
     // MARK: - Branches View
     @ViewBuilder
     private func branchesListView() -> some View {
@@ -307,11 +307,11 @@ struct gitdashboardview: View {
                 Image(systemName: branch.isRemote ? "cloud" : "arrow.triangle.branch")
                     .foregroundStyle(branch.isCurrent ? Color.accentColor : Color.secondary)
                     .frame(width: 24)
-                
+
                 Text(branch.name)
                     .font(.headline)
                     .foregroundStyle(branch.isCurrent ? Color.accentColor : Color.primary)
-                
+
                 if branch.isCurrent {
                     Text("HEAD")
                         .font(.caption2.bold())
@@ -321,15 +321,15 @@ struct gitdashboardview: View {
                         .foregroundStyle(Color.accentColor)
                         .cornerRadius(4)
                 }
-                
+
                 Spacer()
-                
+
                 if let upstream = branch.upstream {
                     Text("tracking \(upstream)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 if !branch.isCurrent {
                     Button("Checkout") {
                         manager.checkoutBranch(name: branch.name)

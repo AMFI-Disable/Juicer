@@ -11,7 +11,7 @@ struct QuickLink: Identifiable, Codable, Hashable {
 class QuickLinksManager: ObservableObject {
     @Published var links: [QuickLink] = []
     private let storageKey = "juicer.quicklinks"
-    
+
     init() {
         loadLinks()
         if links.isEmpty {
@@ -24,20 +24,20 @@ class QuickLinksManager: ObservableObject {
             saveLinks()
         }
     }
-    
+
     func loadLinks() {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) {
             self.links = decoded
         }
     }
-    
+
     func saveLinks() {
         if let data = try? JSONEncoder().encode(links) {
             UserDefaults.standard.set(data, forKey: storageKey)
         }
     }
-    
+
     func addLink(name: String, path: String) {
         let expanded = NSString(string: path).expandingTildeInPath
         var isDir: ObjCBool = false
@@ -48,7 +48,7 @@ class QuickLinksManager: ObservableObject {
         self.links.append(newLink)
         saveLinks()
     }
-    
+
     func removeLink(_ link: QuickLink) {
         self.links.removeAll { $0.id == link.id }
         saveLinks()
@@ -60,7 +60,7 @@ struct dashboardview: View {
     @State private var freeDiskSpace: String = "Loading..."
     @State private var usedDiskSpacePercentage: Double = 0.0
     @State private var macOSVersion: String = ProcessInfo.processInfo.operatingSystemVersionString
-    
+
     @StateObject private var quickLinksManager = QuickLinksManager()
     @State private var isShowingAddLink = false
     @State private var newLinkName = ""
@@ -68,13 +68,13 @@ struct dashboardview: View {
     @AppStorage("juicer.dashboard.showVitals") private var showVitals = true
     @AppStorage("juicer.dashboard.showCuratedTools") private var showCuratedTools = true
     @AppStorage("juicer.dashboard.showBookmarks") private var showBookmarks = true
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 // Editorial Main Card
                 editorialMainCard()
-                
+
                 // System Vitals & Recommendations grid
                 if showVitals || showCuratedTools {
                     LazyVGrid(columns: [GridItem(.flexible(), spacing: 20), GridItem(.flexible(), spacing: 20)], spacing: 20) {
@@ -99,7 +99,7 @@ struct dashboardview: View {
             addLinkSheet()
         }
     }
-    
+
     // MARK: - Editorial Main Card (App Store Featured style)
     @ViewBuilder
     private func editorialMainCard() -> some View {
@@ -108,7 +108,7 @@ struct dashboardview: View {
                 .font(.caption2).bold()
                 .foregroundStyle(.white.opacity(0.8))
                 .tracking(1.5)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("Juicer is ready.")
                     .font(.system(size: 32, weight: .black, design: .rounded))
@@ -117,13 +117,13 @@ struct dashboardview: View {
                     .font(.title3).medium()
                     .foregroundStyle(.white.opacity(0.9))
             }
-            
+
             Text("Clean junk, strip Gatekeeper blocks, manage active local ports, explore drive usages, and discover packages in the Software Center.")
                 .font(.body)
                 .foregroundStyle(.white.opacity(0.75))
                 .lineLimit(2)
                 .frame(maxWidth: 550)
-            
+
             HStack(spacing: 12) {
                 Button(action: {
                     NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.cacheCleaner"), object: nil)
@@ -136,7 +136,7 @@ struct dashboardview: View {
                         .cornerRadius(20)
                 }
                 .buttonStyle(.plain)
-                
+
                 Button(action: {
                     NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.appStore"), object: nil)
                 }) {
@@ -169,13 +169,13 @@ struct dashboardview: View {
     private func vitalsCard() -> some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("System Vitals").font(.headline).foregroundStyle(.primary)
-            
+
             HStack(spacing: 20) {
                 ZStack {
                     Circle()
                         .stroke(Color.secondary.opacity(0.12), lineWidth: 10)
                         .frame(width: 80, height: 80)
-                    
+
                     Circle()
                         .trim(from: 0.0, to: CGFloat(usedDiskSpacePercentage))
                         .stroke(
@@ -184,11 +184,11 @@ struct dashboardview: View {
                         )
                         .frame(width: 80, height: 80)
                         .rotationEffect(Angle(degrees: -90))
-                    
+
                     Text("\(Int(usedDiskSpacePercentage * 100))%")
                         .font(.headline).bold()
                 }
-                
+
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Disk Storage").bold()
                     Text("Free: \(freeDiskSpace)").font(.subheadline).foregroundStyle(.secondary)
@@ -212,7 +212,7 @@ struct dashboardview: View {
     private func curatedToolsCard() -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Discover Essential Tools").font(.headline).foregroundStyle(.primary)
-            
+
             VStack(spacing: 8) {
                 curatedToolRow(title: "App Uninstaller", desc: "Drag & drop cleaner companion", icon: "trash.fill", color: .red, dest: "juicer.nav.uninstaller")
                 curatedToolRow(title: "Brew-Ghost Companion", desc: "Purge & track idle Homebrew packages", icon: "ghost.fill", color: .purple, dest: "juicer.nav.brewGhost")
@@ -234,14 +234,14 @@ struct dashboardview: View {
                     .fill(color.opacity(0.15)).frame(width: 32, height: 32)
                 Image(systemName: icon).foregroundColor(color).font(.body)
             }
-            
+
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.subheadline).bold()
                 Text(desc).font(.caption).foregroundStyle(.secondary)
             }
-            
+
             Spacer()
-            
+
             Button("OPEN") {
                 NotificationCenter.default.post(name: NSNotification.Name(dest), object: nil)
             }
@@ -266,7 +266,7 @@ struct dashboardview: View {
                 .buttonStyle(.bordered)
                 .controlSize(.small)
             }
-            
+
             if quickLinksManager.links.isEmpty {
                 Text("No bookmarks added yet. Drop folders or files here to bookmark them.")
                     .font(.subheadline)
@@ -290,7 +290,7 @@ struct dashboardview: View {
             }
         }
     }
-    
+
     // MARK: - Add Link Sheet
     @ViewBuilder
     private func addLinkSheet() -> some View {
@@ -298,15 +298,15 @@ struct dashboardview: View {
             Text("Add Bookmark Link")
                 .font(.headline)
                 .bold()
-            
+
             Form {
                 TextField("Shortcut Name:", text: $newLinkName)
                     .textFieldStyle(.roundedBorder)
-                
+
                 HStack {
                     TextField("Path (File or Folder):", text: $newLinkPath)
                         .textFieldStyle(.roundedBorder)
-                    
+
                     Button("Browse...") {
                         let panel = NSOpenPanel()
                         panel.allowsMultipleSelection = false
@@ -324,7 +324,7 @@ struct dashboardview: View {
                 }
             }
             .padding(.horizontal)
-            
+
             HStack {
                 Spacer()
                 Button("Cancel") {
@@ -333,7 +333,7 @@ struct dashboardview: View {
                     newLinkPath = ""
                 }
                 .buttonStyle(.bordered)
-                
+
                 Button("Add Link") {
                     if !newLinkName.isEmpty && !newLinkPath.isEmpty {
                         quickLinksManager.addLink(name: newLinkName, path: newLinkPath)
@@ -350,7 +350,7 @@ struct dashboardview: View {
         .frame(width: 420, height: 220)
         .padding()
     }
-    
+
     private func updateDiskMetrics() {
         let fileManager = FileManager.default
         let path = "/"
@@ -359,11 +359,11 @@ struct dashboardview: View {
             if let totalBytes = values[.systemSize] as? Int64,
                let freeBytes = values[.systemFreeSize] as? Int64 {
                 let usedBytes = totalBytes - freeBytes
-                
+
                 let formatter = ByteCountFormatter()
                 formatter.countStyle = .file
                 formatter.allowedUnits = [.useGB, .useTB]
-                
+
                 totalDiskSpace = formatter.string(fromByteCount: totalBytes)
                 freeDiskSpace = formatter.string(fromByteCount: freeBytes)
                 usedDiskSpacePercentage = Double(usedBytes) / Double(totalBytes)
@@ -378,15 +378,15 @@ struct QuickLinkCard: View {
     let link: QuickLink
     let onNavigate: () -> Void
     let onDelete: () -> Void
-    
+
     @State private var isHovered = false
-    
+
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: link.icon)
                 .font(.title3)
                 .foregroundColor(.accentColor)
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(link.name)
                     .font(.headline)
@@ -397,9 +397,9 @@ struct QuickLinkCard: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            
+
             Spacer()
-            
+
             if isHovered {
                 Button(action: onDelete) {
                     Image(systemName: "trash")

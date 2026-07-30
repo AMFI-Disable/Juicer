@@ -4,11 +4,11 @@ import Combine
 
 class UpdateManager: ObservableObject {
     static let shared = UpdateManager()
-    
+
     private var updaterController: SPUStandardUpdaterController?
-    
+
     @Published var canCheckForUpdates = false
-    
+
     private init() {
         #if !DEBUG
         // Only run Sparkle updater in compiled app environment, bypassing unit tests
@@ -22,7 +22,7 @@ class UpdateManager: ObservableObject {
         canCheckForUpdates = true
         #endif
     }
-    
+
     func checkForUpdates() {
         updaterController?.checkForUpdates(nil)
     }

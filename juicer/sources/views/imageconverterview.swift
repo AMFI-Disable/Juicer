@@ -3,7 +3,7 @@ import AppKit
 
 struct imageconverterview: View {
     @StateObject private var manager = ImageConverterManager()
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header Bar
@@ -16,9 +16,9 @@ struct imageconverterview: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
-                
+
                 Spacer()
-                
+
                 Button("Add Images...") {
                     let panel = NSOpenPanel()
                     panel.allowedContentTypes = [.image]
@@ -31,9 +31,9 @@ struct imageconverterview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Format & Quality Controls Toolbar
             HStack(spacing: 20) {
                 Picker("Target Format:", selection: $manager.selectedFormat) {
@@ -43,23 +43,23 @@ struct imageconverterview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 220)
-                
+
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Quality: \(Int(manager.compressionQuality * 100))%")
                         .font(.caption)
                     Slider(value: $manager.compressionQuality, in: 0.1...1.0)
                         .frame(width: 150)
                 }
-                
+
                 Spacer()
-                
+
                 if !manager.completionMessage.isEmpty {
                     Text(manager.completionMessage)
                         .font(.caption)
                         .bold()
                         .foregroundStyle(.green)
                 }
-                
+
                 Button("Convert All") {
                     manager.convertBatch()
                 }
@@ -67,9 +67,9 @@ struct imageconverterview: View {
                 .disabled(manager.items.isEmpty || manager.isConverting)
             }
             .padding()
-            
+
             Divider()
-            
+
             // File List
             if manager.items.isEmpty {
                 VStack(spacing: 12) {

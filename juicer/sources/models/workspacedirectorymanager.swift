@@ -3,7 +3,7 @@ import Combine
 
 class WorkspaceDirectoryManager: ObservableObject {
     static let shared = WorkspaceDirectoryManager()
-    
+
     @Published var currentDirectory: String = "" {
         didSet {
             let clean = currentDirectory.hasSuffix("/") && currentDirectory.count > 1 ? String(currentDirectory.dropLast()) : currentDirectory
@@ -13,7 +13,7 @@ class WorkspaceDirectoryManager: ObservableObject {
                 }
                 return
             }
-            
+
             // Check if directory exists
             var isDir: ObjCBool = false
             if FileManager.default.fileExists(atPath: clean, isDirectory: &isDir), isDir.boolValue {
@@ -26,7 +26,7 @@ class WorkspaceDirectoryManager: ObservableObject {
             }
         }
     }
-    
+
     private init() {
         let projectsPath = FileManager.default.homeDirectoryForCurrentUser.path + "/Desktop/Projects"
         var isDir: ObjCBool = false

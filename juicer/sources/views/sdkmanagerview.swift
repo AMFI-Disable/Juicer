@@ -2,7 +2,7 @@ import SwiftUI
 
 struct sdkmanagerview: View {
     @StateObject private var manager = SDKManager()
-    
+
     // Switch state trackers
     @State private var selectedRuntime: SDKRuntime?
     @State private var targetVersion: String = ""
@@ -10,10 +10,10 @@ struct sdkmanagerview: View {
     @State private var showingSecondAlert = false
     @State private var statusMessage = ""
     @State private var isProcessing = false
-    
+
     // Selection dictionaries to track selected dropdown values in UI
     @State private var selections: [String: String] = [:]
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
@@ -40,9 +40,9 @@ struct sdkmanagerview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Content
             if manager.isLoading {
                 VStack {
@@ -74,7 +74,7 @@ struct sdkmanagerview: View {
                     .padding()
                 }
             }
-            
+
             // Status bar message
             if !statusMessage.isEmpty {
                 HStack {
@@ -122,7 +122,7 @@ struct sdkmanagerview: View {
             }
         }
     }
-    
+
     // MARK: - Runtime Card Component
     @ViewBuilder
     private func runtimeCard(for runtime: SDKRuntime) -> some View {
@@ -132,33 +132,33 @@ struct sdkmanagerview: View {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.accentColor.opacity(0.15))
                     .frame(width: 44, height: 44)
-                
+
                 Image(systemName: iconName(for: runtime.type))
                     .font(.title3)
                     .foregroundColor(.accentColor)
             }
-            
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(runtime.name)
                     .font(.headline)
-                
+
                 HStack(spacing: 6) {
                     Text("Active: \(runtime.activeVersion)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     Circle()
                         .fill(Color.green)
                         .frame(width: 6, height: 6)
                 }
             }
-            
+
             Spacer()
-            
+
             // Picker & Switch controls
             HStack(spacing: 12) {
                 let currentSelection = selections[runtime.name] ?? runtime.activeVersion
-                
+
                 Picker("", selection: Binding(
                     get: { currentSelection },
                     set: { selections[runtime.name] = $0 }
@@ -169,7 +169,7 @@ struct sdkmanagerview: View {
                 }
                 .pickerStyle(.menu)
                 .frame(width: 140)
-                
+
                 Button("Switch") {
                     if let selected = selections[runtime.name], selected != runtime.activeVersion {
                         self.selectedRuntime = runtime
@@ -189,7 +189,7 @@ struct sdkmanagerview: View {
                 .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Helpers
     private func iconName(for type: SDKRuntime.RuntimeType) -> String {
         switch type {
@@ -205,13 +205,13 @@ struct sdkmanagerview: View {
             return "shippingbox.fill"
         }
     }
-    
+
     private func executeVersionSwitch() {
         guard let runtime = selectedRuntime else { return }
-        
+
         self.isProcessing = true
         self.statusMessage = "Applying version switch to \(targetVersion)..."
-        
+
         manager.switchVersion(for: runtime, to: targetVersion) { success in
             self.isProcessing = false
             self.selectedRuntime = nil
