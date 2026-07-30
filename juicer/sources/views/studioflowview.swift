@@ -53,6 +53,12 @@ enum studioflowcatalog {
                 ("Inspect data", "Browse SQLite, local databases, and Redis", [.sqliteInspector, .sqliteSchemaInspector, .redisViewer]),
                 ("Backups", "Create and manage SQL dumps", [.dbBackupTool])
             ]
+        case .api:
+            return [
+                ("Request workbench", "Build and inspect REST requests", [.apiWorkbench, .apiAuthManager]),
+                ("Performance", "Measure endpoint latency and load", [.apiBenchmark, .apiLoadTester]),
+                ("History", "Reuse previous requests and presets", [.apiHistory])
+            ]
         default:
             return []
         }
@@ -68,6 +74,7 @@ enum studioflowcatalog {
         case .containers: return [.dockerDashboard, .dockerLogs, .dockerCompose]
         case .ai: return [.aiWorkbench, .aiChat, .aiKeyManager]
         case .database: return [.dbDaemonMonitor, .sqliteInspector, .dbBackupTool]
+        case .api: return [.apiWorkbench, .apiBenchmark, .apiHistory]
         default: return []
         }
     }
