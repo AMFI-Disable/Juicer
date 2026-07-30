@@ -47,6 +47,12 @@ enum studioflowcatalog {
                 ("Prompts & chat", "Build, save, and test AI-assisted workflows", [.aiPromptVault, .aiChat]),
                 ("Credentials", "Manage local AI provider profiles", [.aiKeyManager])
             ]
+        case .database:
+            return [
+                ("Connections", "Check local database daemons and ports", [.dbDaemonMonitor]),
+                ("Inspect data", "Browse SQLite, local databases, and Redis", [.sqliteInspector, .sqliteSchemaInspector, .redisViewer]),
+                ("Backups", "Create and manage SQL dumps", [.dbBackupTool])
+            ]
         default:
             return []
         }
@@ -61,6 +67,7 @@ enum studioflowcatalog {
         case .git: return [.juicerGit, .gitExtras, .developerAccounts]
         case .containers: return [.dockerDashboard, .dockerLogs, .dockerCompose]
         case .ai: return [.aiWorkbench, .aiChat, .aiKeyManager]
+        case .database: return [.dbDaemonMonitor, .sqliteInspector, .dbBackupTool]
         default: return []
         }
     }
