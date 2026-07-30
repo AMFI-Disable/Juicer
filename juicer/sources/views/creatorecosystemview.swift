@@ -44,7 +44,7 @@ struct creatorecosystemview: View {
             themeColor: .orange,
             tag: "MAIN APP",
             language: "Swift / SwiftUI",
-            starsCount: "v1.0.3",
+            starsCount: "v1.1.0",
             brewCommand: "brew install --cask juicer"
         ),
         CreatorRepoItem(
