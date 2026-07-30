@@ -6,7 +6,7 @@ struct brewfilesyncview: View {
     @State private var isProcessing = false
     @State private var statusMessage = ""
     @State private var showStatusAlert = false
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header panel
@@ -23,9 +23,9 @@ struct brewfilesyncview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
-            
+
             Divider()
-            
+
             // Layout Panels split
             HStack(spacing: 20) {
                 // Export card
@@ -40,9 +40,9 @@ struct brewfilesyncview: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    
+
                     Spacer()
-                    
+
                     Button("Export Brewfile...") {
                         exportBrewfile()
                     }
@@ -54,7 +54,7 @@ struct brewfilesyncview: View {
                 .frame(height: 220)
                 .background(Color(NSColor.controlBackgroundColor))
                 .cornerRadius(12)
-                
+
                 // Import card
                 VStack(spacing: 16) {
                     Image(systemName: "square.and.arrow.down")
@@ -67,9 +67,9 @@ struct brewfilesyncview: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    
+
                     Spacer()
-                    
+
                     Button("Import Brewfile...") {
                         importBrewfile()
                     }
@@ -83,16 +83,16 @@ struct brewfilesyncview: View {
                 .cornerRadius(12)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Console logger drawer for bundle imports
             VStack(alignment: .leading, spacing: 6) {
                 Text("Restore Logs Console")
                     .font(.caption)
                     .bold()
                     .foregroundColor(.secondary)
-                
+
                 ScrollView {
                     Text(importConsoleLog.isEmpty ? "System idle. Ready to restore..." : importConsoleLog)
                         .font(.system(.caption, design: .monospaced))
@@ -112,19 +112,19 @@ struct brewfilesyncview: View {
             Text(statusMessage)
         }
     }
-    
+
     // Save panel dump
     private func exportBrewfile() {
         let savePanel = NSSavePanel()
         savePanel.allowedContentTypes = [.text]
         savePanel.nameFieldStringValue = "Brewfile"
         savePanel.title = "Save Brewfile Backup"
-        
+
         savePanel.begin { response in
             if response == .OK, let url = savePanel.url {
                 self.isProcessing = true
                 NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
-                
+
                 self.manager.exportBrewfile(to: url) { success in
                     self.isProcessing = false
                     if success {
@@ -137,7 +137,7 @@ struct brewfilesyncview: View {
             }
         }
     }
-    
+
     // Open panel restore
     private func importBrewfile() {
         let openPanel = NSOpenPanel()
@@ -146,13 +146,13 @@ struct brewfilesyncview: View {
         openPanel.canChooseDirectories = false
         openPanel.allowsMultipleSelection = false
         openPanel.title = "Choose Brewfile to Import"
-        
+
         openPanel.begin { response in
             if response == .OK, let url = openPanel.url {
                 self.isProcessing = true
                 self.importConsoleLog = "Beginning bundle restore from \(url.lastPathComponent)...\n"
                 NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
-                
+
                 self.manager.importBrewfile(from: url) { success, log in
                     self.isProcessing = false
                     self.importConsoleLog += log

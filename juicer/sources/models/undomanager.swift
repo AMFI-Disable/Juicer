@@ -12,11 +12,11 @@ struct DeletionBackup: Identifiable, Codable {
 
 class DeletionUndoManager: ObservableObject {
     static let shared = DeletionUndoManager()
-    
+
     @Published var backups: [DeletionBackup] = []
-    
+
     private let fm = FileManager.default
-    
+
     private var backupsDir: URL {
         let appSupport = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? fm.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support", isDirectory: true)
@@ -24,16 +24,16 @@ class DeletionUndoManager: ObservableObject {
         try? fm.createDirectory(at: path, withIntermediateDirectories: true)
         return path
     }
-    
+
     private var metadataFile: URL {
         backupsDir.appendingPathComponent("backups_metadata.json")
     }
-    
+
     private init() {
         loadBackups()
         pruneOldBackups()
     }
-    
+
     func loadBackups() {
         guard let data = try? Data(contentsOf: metadataFile),
               let decoded = try? JSONDecoder().decode([DeletionBackup].self, from: data) else {
@@ -42,19 +42,19 @@ class DeletionUndoManager: ObservableObject {
         }
         DispatchQueue.main.async { self.backups = decoded }
     }
-    
+
     func saveBackups() {
         if let data = try? JSONEncoder().encode(backups) {
             try? data.write(to: metadataFile)
         }
     }
-    
+
     func trashItem(atPath path: String, completion: @escaping (Bool, String) -> Void) {
         let url = URL(fileURLWithPath: path)
         let name = url.lastPathComponent
         let timestamp = Date()
         let backupDest = backupsDir.appendingPathComponent("\(name)_\(Int(timestamp.timeIntervalSince1970))")
-        
+
         var size: Int64 = 0
         var isDir: ObjCBool = false
         if fm.fileExists(atPath: path, isDirectory: &isDir) {
@@ -67,7 +67,7 @@ class DeletionUndoManager: ObservableObject {
             completion(false, "File does not exist")
             return
         }
-        
+
         do {
             try fm.moveItem(at: url, to: backupDest)
             let backup = DeletionBackup(
@@ -78,7 +78,7 @@ class DeletionUndoManager: ObservableObject {
                 sizeBytes: size,
                 timestamp: timestamp
             )
-            
+
             DispatchQueue.main.async {
                 self.backups.append(backup)
                 self.saveBackups()
@@ -88,20 +88,20 @@ class DeletionUndoManager: ObservableObject {
             completion(false, error.localizedDescription)
         }
     }
-    
+
     func restoreBackup(_ backup: DeletionBackup, completion: @escaping (Bool, String) -> Void) {
         let source = URL(fileURLWithPath: backup.backupPath)
         let dest = URL(fileURLWithPath: backup.originalPath)
-        
+
         let parent = dest.deletingLastPathComponent()
         try? fm.createDirectory(at: parent, withIntermediateDirectories: true)
-        
+
         do {
             if fm.fileExists(atPath: dest.path) {
                 try fm.removeItem(at: dest)
             }
             try fm.moveItem(at: source, to: dest)
-            
+
             DispatchQueue.main.async {
                 if let idx = self.backups.firstIndex(where: { $0.id == backup.id }) {
                     self.backups.remove(at: idx)
@@ -113,17 +113,17 @@ class DeletionUndoManager: ObservableObject {
             completion(false, error.localizedDescription)
         }
     }
-    
+
     func deleteBackupPermanently(_ backup: DeletionBackup) {
         let source = URL(fileURLWithPath: backup.backupPath)
         try? fm.removeItem(at: source)
-        
+
         if let idx = backups.firstIndex(where: { $0.id == backup.id }) {
             backups.remove(at: idx)
             saveBackups()
         }
     }
-    
+
     func pruneOldBackups() {
         let cutoff = Date().addingTimeInterval(-259200) // 3 days
         var updated: [DeletionBackup] = []
@@ -137,7 +137,7 @@ class DeletionUndoManager: ObservableObject {
         self.backups = updated
         saveBackups()
     }
-    
+
     private func directorySize(path: String) -> Int64 {
         var size: Int64 = 0
         guard let enumerator = fm.enumerator(at: URL(fileURLWithPath: path), includingPropertiesForKeys: [.fileSizeKey], options: []) else { return 0 }

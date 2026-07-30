@@ -17,11 +17,11 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
     case configs = "Juicer Configs Studio"
     case utilities = "Juicer Utilities Studio"
     case creator = "Creator Studio"
-    
+
     var id: String { rawValue }
-    
+
     var title: String { rawValue }
-    
+
     var iconName: String {
         switch self {
         case .hub: return "square.grid.2x2.fill"
@@ -36,13 +36,13 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
         case .ai: return "sparkles"
         case .database: return "cylinder.split.1x2.fill"
         case .api: return "paperplane.fill"
-        case .converter: return "arrow.triangle.2.circlepath.doc.on.clipboard"
+        case .converter: return "arrow.triangle.2.circlepath"
         case .configs: return "slider.horizontal.3"
         case .utilities: return "wrench.and.screwdriver.fill"
         case .creator: return "star.square.on.square.fill"
         }
     }
-    
+
     var description: String {
         switch self {
         case .hub: return "Central launchpad canvas and workspace navigator."
@@ -63,7 +63,7 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
         case .creator: return "Explore open-source software, clone repositories, and copy brew formulas by amfi-disable."
         }
     }
-    
+
     var themeColor: Color {
         switch self {
         case .hub: return .orange
@@ -86,7 +86,7 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
     }
 }
 
-enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
+enum NavigationItem: String, CaseIterable, Identifiable, Equatable, Hashable {
     case dashboard, workflowCenter
     case featureCatalog
     case actionHistory
@@ -127,13 +127,14 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
     case dbDaemonMonitor, sqliteInspector, redisViewer, dbBackupTool
     case apiWorkbench, apiBenchmark, apiAuthManager, apiHistory
     case docConverter, imageConverterStudio, codeSchemaConverter, archiveConverter
+    case developerAccounts
     case dockerBuildCachePurge, localLLMBenchmark, apiLoadTester, sqliteSchemaInspector, memoryPressureOptimizer, pathSecurityAuditor, duplicateSanitizer, zeroDayTCCAudit, kextOrphanDetector, dylibOrphanDetector, cpuMemoryMonitor, gpuMonitor, diskIOMonitor, networkTraffic, batteryHealth, startupItems, loginItemDelays, processKiller, systemLogs, kextManager, powerSchedule, thermalMonitor, fanController, memoryPurge, swapManager, vpnProfiles, networkLocations, bluetoothDevices, airDropQuickSend, duplicateFiles, emptyFolders, downloadOrganizer, archiveUtility, diskImages, permissionRepair, extendedAttributes, fileTypeConverter, metadataEditor, symbolicLinks, diskVerification, storageSnapshots, fileVault, firewall, privacyScanner, passwordAudit, secureDelete, quarantinedFiles, sandboxInspector, networkExposure, usbDeviceGuard, screenRecording, clipboardAccess, locationServices, microphoneCamera, antiKeylogger, secureNotes, clipboardManager, snippetExpander, menuBarCustomizer, desktopIcons, hotCorners, keyboardShortcuts, textCaseConverter, characterCounter, qrCode, colorPicker, screenRuler, screenLoupe, batterySaver, printerQueue, pdfToolbox, markdownPreviewer, codeSnippets, localWebServer, portScanner, lanDiscovery, wifiSurvey, networkProfileSwitcher, vpnAutoConnect, publicIP, speedTest, dnsDiagnostics, hostsFile, blocklistUpdater, appLocker, fileVaultAutoLock, japaneseKana, emojiPicker, unicodeInspector, screenshotAnnotation, windowSnapping, displayProfiles, nightShift, keyboardBacklight, trackpadGestures, shortcutRunner, systemInfoExporter, softwareInventory, autoUpdateChecker, logRotator, systemServices, diskSpacePredictor, backupTrigger, networkLimiter, diskImageMounter, soundVolumeMixer
-    
+
     var id: NavigationItem { self }
-    
+
     var workspace: JuicerWorkspace {
         switch self {
-        case .juicerGit, .gitExtras:
+        case .juicerGit, .gitExtras, .developerAccounts:
             return .git
         case .dockerDashboard, .dockerPurge, .dockerLogs, .dockerCompose:
             return .containers
@@ -151,8 +152,18 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return .creator
         case .dashboard, .workflowCenter, .statusMonitor, .memoryPressureOptimizer, .pathSecurityAuditor, .duplicateSanitizer, .cpuMemoryMonitor, .gpuMonitor, .diskIOMonitor, .batteryHealth, .powerSchedule, .thermalMonitor, .fanController, .memoryPurge, .swapManager, .batterySaver, .kextManager, .startupItems, .loginItemDelays, .processKiller, .systemLogs, .systemServices:
             return .system
-        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector, .dockerBuildCachePurge, .localLLMBenchmark, .apiLoadTester, .sqliteSchemaInspector, .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
+        case .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
             return .network
+        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector:
+            return .security
+        case .dockerBuildCachePurge:
+            return .containers
+        case .localLLMBenchmark:
+            return .ai
+        case .apiLoadTester:
+            return .api
+        case .sqliteSchemaInspector:
+            return .database
         case .tccViewer, .fileVault, .privacyScanner, .passwordAudit, .secureDelete, .quarantinedFiles, .sandboxInspector, .usbDeviceGuard, .screenRecording, .clipboardAccess, .locationServices, .microphoneCamera, .antiKeylogger, .secureNotes, .appLocker, .fileVaultAutoLock, .permissionCenter:
             return .security
         case .diskExplorer, .cacheCleaner, .devCaches, .largeFiles, .hiddenFiles, .diskVisualizer, .undoHistory, .duplicateFiles, .emptyFolders, .downloadOrganizer, .archiveUtility, .diskImages, .fileTypeConverter, .symbolicLinks, .diskVerification, .storageSnapshots, .diskSpacePredictor, .backupTrigger, .diskImageMounter:
@@ -165,7 +176,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return .utilities
         }
     }
-    
+
     var title: String {
         switch self {
         case .dashboard: return "Dashboard"
@@ -223,6 +234,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .imageConverter: return "Batch Image Converter"
         case .juicerGit: return "Git Studio & Workbench"
         case .gitExtras: return "Git Analytics & Power Tools"
+        case .developerAccounts: return "Developer Accounts & OAuth Vault"
         case .snapshots: return "Diagnostic Snapshots"
         case .scriptConsole: return "Script Console"
         case .utilitiesView: return "Utilities Settings"
@@ -338,18 +350,72 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .soundVolumeMixer: return "Sound Volume Mixer"
         }
     }
-    
+
     var iconName: String {
         switch self {
         case .dashboard: return "house.fill"
         case .workflowCenter: return "list.bullet.clipboard"
+        case .statusMonitor: return "waveform.path.ecg"
+        case .serviceManager: return "gearshape.2"
+        case .devCaches: return "folder.badge.gearshape"
+        case .systemTweaks: return "slider.horizontal.3"
+        case .quarantineStripper: return "shield.slash.fill"
+        case .dnsEditor: return "network.badge.shield.half.filled"
+        case .launchServices: return "app.dashed"
+        case .hiddenFiles: return "eye.fill"
+        case .appLipo: return "cpu"
+        case .largeFiles: return "doc.badge.ellipsis"
+        case .brewExplorer: return "shippingbox.fill"
+        case .sdkSwitcher: return "square.stack.3d.down.dotted.line"
+        case .portListener: return "dot.radiowaves.left.and.right"
+        case .diskExplorer: return "externaldrive"
+        case .systemOptimizer: return "wand.and.stars"
+        case .cacheCleaner: return "trash.fill"
+        case .appStore: return "shippingbox.fill"
+        case .envProfiles: return "slider.horizontal.3"
+        case .appLanguageStripper: return "globe"
+        case .ocrScreenGrabber: return "viewfinder"
+        case .logStream: return "doc.text.magnifyingglass"
+        case .nlToCommand: return "text.bubble"
+        case .imageConverter: return "photo"
+        case .juicerGit: return "arrow.triangle.pull"
+        case .gitExtras: return "chart.bar.xaxis"
+        case .snapshots: return "camera.viewfinder"
+        case .scriptConsole: return "terminal"
+        case .utilitiesView: return "wrench.and.screwdriver"
+        case .diskVisualizer: return "chart.bar.fill"
+        case .undoHistory: return "clock.arrow.circlepath"
+        case .appUpdates: return "arrow.triangle.2.circlepath"
+        case .tccViewer: return "lock.shield"
+        case .creatorRepos: return "star.square.on.square.fill"
+        case .dockerDashboard: return "cube.fill"
+        case .dockerPurge: return "trash.circle.fill"
+        case .dockerLogs: return "doc.text"
+        case .dockerCompose: return "square.stack.3d.up"
+        case .aiWorkbench: return "cpu"
+        case .aiPromptVault: return "text.badge.plus"
+        case .aiChat: return "bubble.left.and.bubble.right"
+        case .aiKeyManager: return "key.fill"
+        case .dbDaemonMonitor: return "externaldrive"
+        case .sqliteInspector: return "tablecells"
+        case .redisViewer: return "externaldrive.connected.to.line.below"
+        case .dbBackupTool: return "externaldrive.badge.timemachine"
+        case .apiWorkbench: return "paperplane.fill"
+        case .apiBenchmark: return "stopwatch.fill"
+        case .apiAuthManager: return "lock.fill"
+        case .apiHistory: return "clock.arrow.circlepath"
+        case .docConverter: return "doc.richtext"
+        case .imageConverterStudio: return "photo.stack"
+        case .codeSchemaConverter: return "curlybraces.square"
+        case .archiveConverter: return "archivebox"
+        case .developerAccounts: return "person.badge.key.fill"
         case .featureCatalog: return "square.grid.2x2"
         case .actionHistory: return "clock.arrow.circlepath"
         case .permissionCenter: return "lock.shield"
         case .scriptPlugins: return "puzzlepiece.extension"
         case .appUninstaller: return "trash.fill"
         case .orphanScanner: return "folder.badge.minus"
-        case .brewGhost: return "ghost.fill"
+        case .brewGhost: return "sparkles"
         case .pathSecurityAuditor: return "lock.shield"
         case .duplicateSanitizer: return "doc.on.doc"
         case .zeroDayTCCAudit: return "lock.shield.fill"
@@ -386,7 +452,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .downloadOrganizer: return "folder.badge.gearshape"
         case .archiveUtility: return "archivebox"
         case .diskImages: return "externaldrive.badge.timemachine"
-        case .permissionRepair: return "lock.document"
+        case .permissionRepair: return "lock.doc"
         case .extendedAttributes: return "tag"
         case .fileTypeConverter: return "arrow.triangle.2.circlepath"
         case .metadataEditor: return "tag.fill"
@@ -435,8 +501,6 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .speedTest: return "speedometer"
         case .dnsDiagnostics: return "network.badge.shield.half.filled"
         case .hostsFile: return "list.bullet.rectangle"
-        case .blocklistUpdater: return "shield.checkered"
-        case .appLocker: return "lock.app.dashed"
         case .fileVaultAutoLock: return "lock.display"
         case .japaneseKana: return "character.book.closed"
         case .emojiPicker: return "face.smiling"
@@ -458,10 +522,9 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
         case .networkLimiter: return "gauge.with.dots.needle.33percent"
         case .diskImageMounter: return "externaldrive.badge.plus"
         case .soundVolumeMixer: return "speaker.wave.2"
-        default: return "gearshape.fill"
         }
     }
-    
+
     var subcategory: String {
         switch self {
         // System & Hardware
@@ -471,7 +534,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return "Hardware & Power"
         case .processKiller, .startupItems, .loginItemDelays, .systemLogs, .systemServices, .kextManager, .workflowCenter:
             return "Process & System Logs"
-            
+
         // Network & Ports
         case .speedTest, .networkTraffic, .publicIP, .networkLimiter:
             return "Speed & Traffic"
@@ -479,7 +542,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return "Diagnostics & Ports"
         case .firewall, .vpnProfiles, .vpnAutoConnect, .networkExposure, .hostsFile, .blocklistUpdater, .networkLocations, .bluetoothDevices, .airDropQuickSend, .networkProfileSwitcher:
             return "Firewall & Security"
-            
+
         // Security & Privacy
         case .tccViewer, .privacyScanner, .locationServices, .clipboardAccess, .microphoneCamera, .screenRecording:
             return "Privacy & Permissions"
@@ -487,7 +550,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return "Vault & Encryption"
         case .antiKeylogger, .quarantinedFiles, .sandboxInspector, .usbDeviceGuard, .permissionCenter:
             return "System Defense"
-            
+
         // Disk & Storage
         case .diskExplorer, .diskVisualizer, .storageSnapshots, .diskVerification, .diskImageMounter:
             return "Explorers & Visualizers"
@@ -495,17 +558,17 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return "Cleaners & Large Files"
         case .undoHistory, .downloadOrganizer, .archiveUtility, .diskImages, .fileTypeConverter, .symbolicLinks, .diskSpacePredictor, .backupTrigger:
             return "File Utilities"
-            
+
         // Git Studio
         case .juicerGit, .gitExtras:
             return "Git Tools & Workbench"
-            
+
         // Developer Suite
         case .sdkSwitcher, .scriptPlugins, .scriptConsole, .localWebServer:
             return "Runtimes & Scripts"
         case .codeSnippets, .envProfiles, .ocrScreenGrabber, .logStream, .nlToCommand, .imageConverter, .appLanguageStripper:
             return "Code & Tooling"
-            
+
         // System Configs
         case .appUninstaller, .orphanScanner, .brewGhost, .appLipo, .systemOptimizer:
             return "App Maintenance"
@@ -513,7 +576,7 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return "Services & Tweaks"
         case .permissionRepair, .extendedAttributes, .metadataEditor, .quarantineStripper, .dnsEditor:
             return "Permissions & Attributes"
-            
+
         // Utilities & Desktop
         case .windowSnapping, .menuBarCustomizer, .desktopIcons, .hotCorners, .keyboardShortcuts, .displayProfiles, .nightShift, .keyboardBacklight, .trackpadGestures:
             return "Desktop & Window Controls"

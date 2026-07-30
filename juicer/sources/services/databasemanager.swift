@@ -19,37 +19,37 @@ struct LocalSQLiteFile: Identifiable {
 
 final class DatabaseManager: ObservableObject {
     static let shared = DatabaseManager()
-    
+
     @Published var daemons: [DatabaseDaemon] = []
     @Published var sqliteFiles: [LocalSQLiteFile] = []
     @Published var isRefreshing = false
     @Published var activeCount = 0
-    
+
     private init() {
         refreshAll()
     }
-    
+
     func refreshAll() {
         isRefreshing = true
-        
+
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            
+
             let postgresOk = self.checkPort(5432)
             let mysqlOk = self.checkPort(3306)
             let redisOk = self.checkPort(6379)
             let mongoOk = self.checkPort(27017)
-            
+
             let daemonList = [
                 DatabaseDaemon(name: "PostgreSQL", port: 5432, isRunning: postgresOk, defaultPort: 5432, iconName: "cylinder.split.1x2.fill"),
                 DatabaseDaemon(name: "MySQL / MariaDB", port: 3306, isRunning: mysqlOk, defaultPort: 3306, iconName: "externaldrive.fill"),
                 DatabaseDaemon(name: "Redis Cache", port: 6379, isRunning: redisOk, defaultPort: 6379, iconName: "bolt.horizontal.fill"),
                 DatabaseDaemon(name: "MongoDB", port: 27017, isRunning: mongoOk, defaultPort: 27017, iconName: "leaf.fill")
             ]
-            
+
             let active = daemonList.filter { $0.isRunning }.count
             let foundSQLite = self.scanSQLiteFiles()
-            
+
             DispatchQueue.main.async {
                 self.daemons = daemonList
                 self.activeCount = active
@@ -58,7 +58,7 @@ final class DatabaseManager: ObservableObject {
             }
         }
     }
-    
+
     private func checkPort(_ port: Int) -> Bool {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/nc")
@@ -71,7 +71,7 @@ final class DatabaseManager: ObservableObject {
             return false
         }
     }
-    
+
     private func scanSQLiteFiles() -> [LocalSQLiteFile] {
         var results: [LocalSQLiteFile] = []
         let home = NSHomeDirectory()
@@ -79,7 +79,7 @@ final class DatabaseManager: ObservableObject {
             home + "/Library/Application Support",
             home + "/Desktop/Projects"
         ]
-        
+
         let fm = FileManager.default
         for folder in locations {
             if let enumerator = fm.enumerator(atPath: folder) {

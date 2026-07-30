@@ -42,6 +42,47 @@ enum SystemMetricsSupport {
 
         return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
     }
+
+    /// Runs a command with stdout and stderr merged, with the same timeout
+    /// guarantees as `run`. This is useful for terminal-like features where
+    /// both streams must be displayed without risking a pipe deadlock.
+    static func runCombined(
+        _ path: String,
+        _ arguments: [String] = [],
+        currentDirectoryURL: URL? = nil,
+        timeout: TimeInterval = 30
+    ) -> String? {
+        let task = Process()
+        let pipe = Pipe()
+        task.executableURL = URL(fileURLWithPath: path)
+        task.arguments = arguments
+        task.currentDirectoryURL = currentDirectoryURL
+        task.standardOutput = pipe
+        task.standardError = pipe
+
+        do {
+            try task.run()
+        } catch {
+            return nil
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while task.isRunning && Date() < deadline {
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        }
+
+        if task.isRunning {
+            task.terminate()
+            Thread.sleep(forTimeInterval: 0.1)
+            if task.isRunning {
+                kill(task.processIdentifier, SIGKILL)
+            }
+            task.waitUntilExit()
+            return nil
+        }
+
+        return String(data: pipe.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+    }
     static func bytes(_ value: UInt64) -> String { ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .binary) }
     static func formatBytes(_ value: UInt64) -> String { bytes(value) }
     static func percent(_ value: Double) -> String { String(format: "%.1f%%", value) }
