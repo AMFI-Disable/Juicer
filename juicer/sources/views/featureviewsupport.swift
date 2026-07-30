@@ -1,9 +1,23 @@
 import SwiftUI
+import AppKit
+
+struct JuicerSymbol: View {
+    let name: String
+    var fallback: String = "gearshape.fill"
+
+    var body: some View {
+        if NSImage(systemSymbolName: name, accessibilityDescription: nil) != nil {
+            Image(systemName: name)
+        } else {
+            Image(systemName: fallback)
+        }
+    }
+}
 
 struct JuicerFeatureHeader: View { let title: String; let subtitle: String; let icon: String; let refreshing: Bool; let action: () -> Void
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
+            JuicerSymbol(name: icon)
                 .font(.title2)
                 .foregroundStyle(.tint)
                 .frame(width: 38, height: 38)

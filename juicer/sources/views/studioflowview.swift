@@ -153,7 +153,7 @@ struct studioflowview: View {
                     Button { onSelect(item) } label: {
                         HStack(spacing: 10) {
                             if numbered { Text("\(index + 1)").font(.caption.bold()).foregroundStyle(workspace.themeColor).frame(width: 18) }
-                            Image(systemName: item.iconName).frame(width: 22).foregroundStyle(workspace.themeColor)
+                            JuicerSymbol(name: item.iconName, fallback: "square.grid.2x2").frame(width: 22).foregroundStyle(workspace.themeColor)
                             Text(item.title).font(.subheadline.weight(.medium)).foregroundStyle(.primary).multilineTextAlignment(.leading).lineLimit(2)
                             Spacer(minLength: 4)
                             Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
