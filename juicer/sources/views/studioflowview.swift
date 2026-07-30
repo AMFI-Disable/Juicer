@@ -13,6 +13,13 @@ enum studioflowcatalog {
                 ("Network access", "Control profiles, VPN, and exposure", [.firewall, .vpnProfiles, .vpnAutoConnect, .networkExposure, .hostsFile, .blocklistUpdater]),
                 ("Nearby devices", "Manage local network conveniences", [.networkLocations, .bluetoothDevices, .airDropQuickSend, .networkProfileSwitcher])
             ]
+        case .security:
+            return [
+                ("Privacy & permissions", "Review access granted to apps and services", [.tccViewer, .privacyScanner, .locationServices, .clipboardAccess, .microphoneCamera, .screenRecording]),
+                ("Vault & encryption", "Protect files, apps, and sensitive notes", [.fileVault, .fileVaultAutoLock, .secureNotes, .appLocker, .passwordAudit, .secureDelete]),
+                ("System defense", "Inspect quarantine, sandbox, and hardware access", [.antiKeylogger, .quarantinedFiles, .sandboxInspector, .usbDeviceGuard, .permissionCenter]),
+                ("Security diagnostics", "Audit deeper system security surfaces", [.zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector])
+            ]
         default:
             return []
         }
@@ -21,6 +28,7 @@ enum studioflowcatalog {
     static func recommended(for workspace: JuicerWorkspace) -> [NavigationItem] {
         switch workspace {
         case .network: return [.speedTest, .dnsDiagnostics, .portListener]
+        case .security: return [.tccViewer, .privacyScanner, .fileVault]
         default: return []
         }
     }
