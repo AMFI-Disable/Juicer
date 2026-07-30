@@ -152,8 +152,10 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return .creator
         case .dashboard, .workflowCenter, .statusMonitor, .memoryPressureOptimizer, .pathSecurityAuditor, .duplicateSanitizer, .cpuMemoryMonitor, .gpuMonitor, .diskIOMonitor, .batteryHealth, .powerSchedule, .thermalMonitor, .fanController, .memoryPurge, .swapManager, .batterySaver, .kextManager, .startupItems, .loginItemDelays, .processKiller, .systemLogs, .systemServices:
             return .system
-        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector, .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
+        case .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
             return .network
+        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector:
+            return .security
         case .dockerBuildCachePurge:
             return .containers
         case .localLLMBenchmark:
