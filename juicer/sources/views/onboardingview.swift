@@ -16,7 +16,7 @@ struct onboardingview: View {
                     Circle()
                         .fill(Color.accentColor.opacity(0.12))
                         .frame(width: 90, height: 90)
-                    
+
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 44))
                         .foregroundColor(.accentColor)
@@ -26,7 +26,7 @@ struct onboardingview: View {
 
                 Text("Companion Setup: Full Disk Access")
                     .font(.title).bold()
-                
+
                 Text("Juicer is your macOS developer companion. To clean caches, remove orphan folders, edit service agents, and optimize directories, it requires Full Disk Access.")
                     .font(.body)
                     .foregroundStyle(.secondary)
@@ -72,7 +72,7 @@ struct onboardingview: View {
                     }
                     .buttonStyle(.bordered)
                     .keyboardShortcut(.defaultAction)
-                    
+
                     Button("Remember Permission & Proceed") {
                         bypassAndRemember()
                     }
@@ -128,7 +128,7 @@ struct onboardingview: View {
             }
         }
     }
-    
+
     private func bypassAndRemember() {
         UserDefaults.standard.set(true, forKey: "juicer.permission.fdaGranted")
         UserDefaults.standard.set(true, forKey: "juicer.permission.skipFDA")
@@ -144,13 +144,13 @@ struct onboardingview: View {
            UserDefaults.standard.bool(forKey: "juicer.permission.skipFDA") {
             return true
         }
-        
+
         // 2. Perform live filesystem check
         let paths = [
             NSHomeDirectory() + "/Library/Safari",
             "/Library/Application Support/com.apple.TCC"
         ]
-        
+
         for path in paths {
             do {
                 _ = try FileManager.default.contentsOfDirectory(atPath: path)
@@ -170,7 +170,7 @@ struct onboardingview: View {
                 }
             }
         }
-        
+
         UserDefaults.standard.set(true, forKey: "juicer.permission.fdaGranted")
         return true
     }

@@ -5,7 +5,7 @@ struct systemoptimizerview: View {
     @State private var activeTab: Tab = .optimize
     @State private var showFirstAlert = false
     @State private var showSecondAlert = false
-    @State private var filterCategory: OptimizationTask.TaskCategory? = nil
+    @State private var filterCategory: OptimizationTask.TaskCategory?
 
     enum Tab: String, CaseIterable {
         case optimize = "Optimizer"

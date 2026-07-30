@@ -2,7 +2,7 @@ import SwiftUI
 
 struct systemtweakerview: View {
     @StateObject private var tweaker = SystemTweaker()
-    
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 30) {
@@ -14,7 +14,7 @@ struct systemtweakerview: View {
                     Text("Customize advanced macOS preferences beyond standard system limits.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
+
                     // Quick Links to Apple's Native System Settings Panes
                     HStack(spacing: 12) {
                         if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
@@ -40,16 +40,16 @@ struct systemtweakerview: View {
                     }
                     .padding(.top, 10)
                 }
-                
+
                 Divider()
-                
+
                 // Keyboard Repeat Settings Card
                 tweakSectionCard(title: "Keyboard Speed", systemImage: "keyboard") {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Fine-tune keyboard inputs. Note: Lower values mean faster response.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Key Repeat Rate:")
@@ -64,7 +64,7 @@ struct systemtweakerview: View {
                                 set: { tweaker.keyRepeat = Int($0) }
                             ), in: 1...120, step: 1)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Delay Until Repeat:")
@@ -79,7 +79,7 @@ struct systemtweakerview: View {
                                 set: { tweaker.initialKeyRepeat = Int($0) }
                             ), in: 5...120, step: 1)
                         }
-                        
+
                         HStack {
                             Spacer()
                             Button("Apply Keyboard Tweaks") {
@@ -89,14 +89,14 @@ struct systemtweakerview: View {
                         }
                     }
                 }
-                
+
                 // Finder Settings Card
                 tweakSectionCard(title: "Finder Preferences", systemImage: "macwindow") {
                     VStack(alignment: .leading, spacing: 16) {
                         Toggle("Show Hidden Files & Directories", isOn: $tweaker.showHiddenFiles)
                         Toggle("Show Path Bar in Finder Windows", isOn: $tweaker.showPathBar)
                         Toggle("Disable Window Zoom and Resize Animations", isOn: $tweaker.disableFinderAnimations)
-                        
+
                         HStack {
                             Spacer()
                             Button("Apply Finder Tweaks") {
@@ -106,14 +106,14 @@ struct systemtweakerview: View {
                         }
                     }
                 }
-                
+
                 // Dock Preferences Card
                 tweakSectionCard(title: "Dock Autohide Speeds", systemImage: "dock.rectangle") {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("Customize auto-hide slide delay and animation speeds. Set to 0.0 for instant response.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Autohide Delay:")
@@ -124,7 +124,7 @@ struct systemtweakerview: View {
                             }
                             Slider(value: $tweaker.dockAutohideDelay, in: 0.0...2.0, step: 0.05)
                         }
-                        
+
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Text("Animation Slide Duration:")
@@ -135,7 +135,7 @@ struct systemtweakerview: View {
                             }
                             Slider(value: $tweaker.dockAutohideTimeModifier, in: 0.0...2.0, step: 0.05)
                         }
-                        
+
                         HStack {
                             Spacer()
                             Button("Apply Dock Tweaks") {
@@ -145,7 +145,7 @@ struct systemtweakerview: View {
                         }
                     }
                 }
-                
+
                 // Screenshots Card
                 tweakSectionCard(title: "Screenshot Captures", systemImage: "camera") {
                     VStack(alignment: .leading, spacing: 16) {
@@ -162,9 +162,9 @@ struct systemtweakerview: View {
                             TextField("Path (e.g. ~/Desktop)", text: $tweaker.screenshotLocation)
                                 .textFieldStyle(.roundedBorder)
                         }
-                        
+
                         Toggle("Disable Shadow on Window Captures", isOn: $tweaker.screenshotDisableShadow)
-                        
+
                         Picker("File Format Output:", selection: $tweaker.screenshotFormat) {
                             Text("PNG").tag("png")
                             Text("JPG").tag("jpg")
@@ -172,7 +172,7 @@ struct systemtweakerview: View {
                             Text("TIFF").tag("tiff")
                         }
                         .pickerStyle(.segmented)
-                        
+
                         HStack {
                             Spacer()
                             Button("Apply Screenshot Tweaks") {
@@ -190,7 +190,7 @@ struct systemtweakerview: View {
             tweaker.loadAllPreferences()
         }
     }
-    
+
     // MARK: - Reusable Card Component
     @ViewBuilder
     private func tweakSectionCard<Content: View>(title: String, systemImage: String, @ViewBuilder content: () -> Content) -> some View {
@@ -203,7 +203,7 @@ struct systemtweakerview: View {
                     .font(.headline)
                     .bold()
             }
-            
+
             content()
         }
         .padding()
@@ -214,7 +214,7 @@ struct systemtweakerview: View {
                 .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Actions
     private func selectScreenshotFolder() {
         let panel = NSOpenPanel()
@@ -222,7 +222,7 @@ struct systemtweakerview: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.prompt = "Choose Folder"
-        
+
         if panel.runModal() == .OK, let url = panel.url {
             tweaker.screenshotLocation = url.path
         }

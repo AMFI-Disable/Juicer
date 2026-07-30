@@ -2,36 +2,36 @@ import SwiftUI
 
 struct dnseditorview: View {
     @StateObject private var manager = DNSManager()
-    
+
     // New Record input fields
     @State private var newIP = "127.0.0.1"
     @State private var newDomain = ""
     @State private var showValidationError = false
     @State private var validationErrorMessage = ""
-    
+
     // Create Profile sheets
     @State private var showCreateProfile = false
     @State private var newProfileName = ""
     @State private var newProfileDesc = ""
     @State private var newProfileSubURL = ""
-    
+
     var body: some View {
         HStack(spacing: 0) {
             // LEFT SIDEBAR: DNS Profiles List
             profilesSidebar()
                 .frame(width: 240)
                 .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
-            
+
             Divider()
-            
+
             // RIGHT DETAIL: Records and Actions list
             VStack(spacing: 0) {
                 headerSection()
                 Divider()
-                
+
                 if let activeId = manager.activeProfileId,
                    let profile = manager.profiles.first(where: { $0.id == activeId }) {
-                    
+
                     // Show subscription alert banner if it's a remote subscription
                     if let subURL = profile.subscriptionURL, !subURL.isEmpty {
                         subscriptionBanner(profile: profile, url: subURL)
@@ -39,7 +39,7 @@ struct dnseditorview: View {
                         addEntryForm()
                             .padding()
                     }
-                    
+
                     // Records details
                     if manager.isLoading || manager.isDownloading {
                         loadingPlaceholder()
@@ -59,7 +59,7 @@ struct dnseditorview: View {
             createProfileSheet()
         }
     }
-    
+
     // MARK: - Sidebar UI
     @ViewBuilder
     private func profilesSidebar() -> some View {
@@ -79,9 +79,9 @@ struct dnseditorview: View {
                 .help("Create New Profile")
             }
             .padding()
-            
+
             Divider()
-            
+
             // Profiles List
             List(manager.profiles) { profile in
                 Button(action: { manager.selectProfile(profileId: profile.id) }) {
@@ -98,7 +98,7 @@ struct dnseditorview: View {
                                     .foregroundColor(.secondary)
                             }
                         }
-                        
+
                         Text(profile.description)
                             .font(.caption2)
                             .foregroundColor(.secondary)
@@ -121,11 +121,11 @@ struct dnseditorview: View {
                 }
             }
             .listStyle(.sidebar)
-            
+
             Spacer()
         }
     }
-    
+
     // MARK: - Subscription Banner UI
     @ViewBuilder
     private func subscriptionBanner(profile: DNSProfile, url: String) -> some View {
@@ -158,7 +158,7 @@ struct dnseditorview: View {
         .cornerRadius(8)
         .padding()
     }
-    
+
     // MARK: - Header UI
     @ViewBuilder
     private func headerSection() -> some View {
@@ -178,9 +178,9 @@ struct dnseditorview: View {
                     .font(.title2)
                     .bold()
             }
-            
+
             Spacer()
-            
+
             Button(action: { manager.loadHosts() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
@@ -193,7 +193,7 @@ struct dnseditorview: View {
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
     }
-    
+
     // MARK: - Add Entry Form UI
     @ViewBuilder
     private func addEntryForm() -> some View {
@@ -202,10 +202,10 @@ struct dnseditorview: View {
                 TextField("IP Address (e.g. 127.0.0.1)", text: $newIP)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 200)
-                
+
                 TextField("Hostname (e.g. local.dev)", text: $newDomain)
                     .textFieldStyle(.roundedBorder)
-                
+
                 Button(action: addRecord) {
                     HStack {
                         Image(systemName: "plus")
@@ -215,7 +215,7 @@ struct dnseditorview: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(newIP.isEmpty || newDomain.isEmpty)
             }
-            
+
             if showValidationError {
                 Text(validationErrorMessage)
                     .font(.caption)
@@ -230,7 +230,7 @@ struct dnseditorview: View {
                 .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
         )
     }
-    
+
     // MARK: - Loading Indicator
     @ViewBuilder
     private func loadingPlaceholder() -> some View {
@@ -243,7 +243,7 @@ struct dnseditorview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Placeholders
     @ViewBuilder
     private func emptyStatePlaceholder() -> some View {
@@ -262,7 +262,7 @@ struct dnseditorview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     @ViewBuilder
     private func noProfileSelectedPlaceholder() -> some View {
         VStack {
@@ -280,7 +280,7 @@ struct dnseditorview: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
     // MARK: - Records List UI
     @ViewBuilder
     private func recordsList() -> some View {
@@ -293,15 +293,15 @@ struct dnseditorview: View {
                 }
             }
             .listStyle(.inset)
-            
+
             // Bottom Operations Bar
             HStack {
                 Text("System mappings are protected and cannot be disabled. Click Apply to overwrite /etc/hosts.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
-                
+
                 Spacer()
-                
+
                 Button(action: saveChanges) {
                     if manager.isSaving {
                         ProgressView()
@@ -319,7 +319,7 @@ struct dnseditorview: View {
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
         }
     }
-    
+
     @ViewBuilder
     private func listHeader() -> some View {
         HStack {
@@ -337,7 +337,7 @@ struct dnseditorview: View {
         }
         .padding(.vertical, 4)
     }
-    
+
     @ViewBuilder
     private func recordRow(record: HostRecord) -> some View {
         HStack {
@@ -353,20 +353,20 @@ struct dnseditorview: View {
             .toggleStyle(.checkbox)
             .disabled(record.isSystem)
             .frame(width: 30)
-            
+
             Text(record.ip)
                 .font(.system(.body, design: .monospaced))
                 .foregroundColor(record.isEnabled ? .primary : .secondary)
                 .strikethrough(!record.isEnabled)
                 .frame(width: 150, alignment: .leading)
-            
+
             Text(record.domain)
                 .font(.body)
                 .foregroundColor(record.isEnabled ? .primary : .secondary)
                 .strikethrough(!record.isEnabled)
-            
+
             Spacer()
-            
+
             Text(record.isSystem ? "System" : "User")
                 .font(.caption)
                 .padding(.horizontal, 6)
@@ -378,30 +378,30 @@ struct dnseditorview: View {
         }
         .padding(.vertical, 2)
     }
-    
+
     // MARK: - Create Profile Sheet
     @ViewBuilder
     private func createProfileSheet() -> some View {
         VStack(spacing: 16) {
             Text("Create DNS Profile")
                 .font(.headline)
-            
+
             Form {
                 TextField("Profile Name", text: $newProfileName)
                 TextField("Description", text: $newProfileDesc)
                 TextField("Subscription URL (Optional)", text: $newProfileSubURL)
             }
             .textFieldStyle(.roundedBorder)
-            
+
             HStack {
                 Button("Cancel") {
                     showCreateProfile = false
                     clearProfileSheetFields()
                 }
                 .buttonStyle(.bordered)
-                
+
                 Spacer()
-                
+
                 Button("Create") {
                     let subURL = newProfileSubURL.trimmingCharacters(in: .whitespacesAndNewlines)
                     manager.createProfile(
@@ -419,33 +419,33 @@ struct dnseditorview: View {
         .padding()
         .frame(width: 400, height: 220)
     }
-    
+
     private func clearProfileSheetFields() {
         newProfileName = ""
         newProfileDesc = ""
         newProfileSubURL = ""
     }
-    
+
     // MARK: - Actions
     private func addRecord() {
         showValidationError = false
-        
+
         if newIP.split(separator: ".").count != 4 && !newIP.contains(":") {
             validationErrorMessage = "Invalid IP Address format."
             showValidationError = true
             return
         }
-        
+
         if newDomain.split(separator: ".").count < 2 {
             validationErrorMessage = "Invalid Hostname format (e.g. need domain extension)."
             showValidationError = true
             return
         }
-        
+
         manager.addRecord(ip: newIP, domain: newDomain)
         newDomain = ""
     }
-    
+
     private func saveChanges() {
         manager.saveHosts { success in
             if success {

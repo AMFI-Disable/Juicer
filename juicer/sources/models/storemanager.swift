@@ -10,9 +10,9 @@ enum AppCategory: String, Codable, CaseIterable, Identifiable {
     case entertainment = "Entertainment"
     case system = "System"
     case other = "Other"
-    
+
     var id: String { rawValue }
-    
+
     var iconName: String {
         switch self {
         case .productivity: return "briefcase.fill"
@@ -78,7 +78,7 @@ class StoreManager: ObservableObject {
     @Published var isCheckingUpdates: Bool = false
     @Published var progressLog: String = ""
     @Published var isRunningAction: Bool = false
-    @Published var errorMessage: String? = nil
+    @Published var errorMessage: String?
 
     private let fm = FileManager.default
     private var actionProcess: Process?
@@ -157,26 +157,26 @@ class StoreManager: ObservableObject {
     func checkForUpdates() {
         guard !isCheckingUpdates else { return }
         isCheckingUpdates = true
-        
+
         Task.detached(priority: .background) { [weak self] in
             guard let self else { return }
-            
+
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/opt/homebrew/bin/brew")
             proc.arguments = ["outdated", "--json"]
-            
+
             let pipe = Pipe()
             proc.standardOutput = pipe
             proc.standardError = Pipe() // Ignore errors
-            
+
             do {
                 try proc.run()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 proc.waitUntilExit()
-                
+
                 if let decoded = try? JSONDecoder().decode(BrewOutdatedJSON.self, from: data) {
                     var outdatedList: [StoreApp] = []
-                    
+
                     // Match casks
                     for cask in decoded.casks {
                         if let matched = self.apps.first(where: { $0.id == cask.name && $0.isCask }) {
@@ -192,7 +192,7 @@ class StoreManager: ObservableObject {
                             ))
                         }
                     }
-                    
+
                     // Match formulae
                     for formula in decoded.formulae {
                         if let matched = self.apps.first(where: { $0.id == formula.name && !$0.isCask }) {
@@ -208,7 +208,7 @@ class StoreManager: ObservableObject {
                             ))
                         }
                     }
-                    
+
                     await MainActor.run {
                         self.outdatedApps = outdatedList
                         self.isCheckingUpdates = false
@@ -389,37 +389,37 @@ class StoreManager: ObservableObject {
 
     private func classifyCategory(token: String, desc: String, homepage: String) -> AppCategory {
         let text = "\(token) \(desc) \(homepage)".lowercased()
-        
+
         let devKeywords = ["git", "develop", "code", "compiler", "editor", "ide", "programming", "rust", "go", "python", "node", "swift", "java", "sdk", "api", "database", "sql", "docker", "iterm", "terminal", "warp", "postman", "json", "xml", "yaml", "neovim", "emacs", "visual-studio", "sublime"]
         for kw in devKeywords {
             if text.contains(kw) { return .development }
         }
-        
+
         let designKeywords = ["paint", "draw", "sketch", "figma", "photoshop", "illustrator", "premiere", "design", "creative", "canvas", "lucid", "cad", "color", "image", "photo", "render", "3d", "vector", "art"]
         for kw in designKeywords {
             if text.contains(kw) { return .design }
         }
-        
+
         let prodKeywords = ["1password", "password", "obsidian", "notion", "todoist", "trello", "slack", "zoom", "office", "word", "excel", "powerpoint", "notes", "calendar", "task", "project", "writing", "pdf", "markdown", "document"]
         for kw in prodKeywords {
             if text.contains(kw) { return .productivity }
         }
-        
+
         let systemKeywords = ["hosts", "dns", "network", "monitor", "cpu", "gpu", "kernel", "cleanup", "trash", "uninstaller", "cache", "driver", "firewall", "vpn", "tweak", "macbook", "battery", "menubar", "bar", "disk", "visualizer", "explorer"]
         for kw in systemKeywords {
             if text.contains(kw) { return .system }
         }
-        
+
         let entertainmentKeywords = ["music", "audio", "video", "player", "movie", "game", "steam", "spotify", "vlc", "discord", "youtube", "media", "mp3", "mp4", "stream"]
         for kw in entertainmentKeywords {
             if text.contains(kw) { return .entertainment }
         }
-        
+
         let utilityKeywords = ["alt-tab", "raycast", "alfred", "utility", "tool", "converter", "calculator", "helper", "sync", "backup", "archiver", "zip", "unzip", "unarchiver", "finder", "quicklook"]
         for kw in utilityKeywords {
             if text.contains(kw) { return .utilities }
         }
-        
+
         return .other
     }
 
@@ -432,7 +432,7 @@ class StoreManager: ObservableObject {
         // Query folders contents exactly once to avoid filesystem overhead
         let localAppsDir = "/Applications"
         let userAppsDir = "\(homeDir)/Applications"
-        
+
         let installedApps: Set<String> = {
             var set = Set<String>()
             if let local = try? fm.contentsOfDirectory(atPath: localAppsDir) { set.formUnion(local) }
@@ -491,7 +491,7 @@ class StoreManager: ObservableObject {
                 } else {
                     let pathBinaryExists = optHomebrewBinInstalled.contains(lowerId)
                     let usrLocalBinaryExists = usrLocalBinInstalled.contains(lowerId)
-                    
+
                     if pathBinaryExists || usrLocalBinaryExists {
                         updated[i].status = .installedExternally
                     } else {
