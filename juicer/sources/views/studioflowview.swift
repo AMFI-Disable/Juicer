@@ -66,6 +66,12 @@ enum studioflowcatalog {
                 ("Code & schemas", "Transform structured developer data", [.codeSchemaConverter]),
                 ("Archives", "Compress and extract packages", [.archiveConverter])
             ]
+        case .configs:
+            return [
+                ("App maintenance", "Remove, inspect, and repair applications", [.appUninstaller, .orphanScanner, .brewGhost, .appLipo, .systemOptimizer]),
+                ("Services & tweaks", "Manage launch behavior and system preferences", [.serviceManager, .systemTweaks, .launchServices, .autoUpdateChecker, .logRotator]),
+                ("Permissions & attributes", "Review metadata and file-level controls", [.permissionRepair, .extendedAttributes, .metadataEditor, .quarantineStripper, .dnsEditor])
+            ]
         default:
             return []
         }
@@ -83,6 +89,7 @@ enum studioflowcatalog {
         case .database: return [.dbDaemonMonitor, .sqliteInspector, .dbBackupTool]
         case .api: return [.apiWorkbench, .apiBenchmark, .apiHistory]
         case .converter: return [.docConverter, .imageConverterStudio, .codeSchemaConverter]
+        case .configs: return [.appUninstaller, .orphanScanner, .systemOptimizer]
         default: return []
         }
     }
