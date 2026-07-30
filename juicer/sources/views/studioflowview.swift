@@ -26,6 +26,11 @@ enum studioflowcatalog {
                 ("Clean safely", "Find reclaimable space before removing anything", [.cacheCleaner, .devCaches, .largeFiles, .duplicateFiles, .emptyFolders]),
                 ("File utilities", "Organize, inspect, and protect files", [.undoHistory, .downloadOrganizer, .archiveUtility, .diskImages, .fileTypeConverter, .symbolicLinks, .diskSpacePredictor, .backupTrigger])
             ]
+        case .developer:
+            return [
+                ("Runtimes & scripts", "Set up environments and run repeatable work", [.sdkSwitcher, .scriptPlugins, .scriptConsole, .localWebServer]),
+                ("Code & tooling", "Transform, inspect, and reuse developer content", [.codeSnippets, .envProfiles, .ocrScreenGrabber, .logStream, .nlToCommand, .imageConverter, .appLanguageStripper])
+            ]
         default:
             return []
         }
@@ -36,6 +41,7 @@ enum studioflowcatalog {
         case .network: return [.speedTest, .dnsDiagnostics, .portListener]
         case .security: return [.tccViewer, .privacyScanner, .fileVault]
         case .disk: return [.diskExplorer, .cacheCleaner, .largeFiles]
+        case .developer: return [.sdkSwitcher, .envProfiles, .scriptConsole]
         default: return []
         }
     }
