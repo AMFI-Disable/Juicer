@@ -148,7 +148,7 @@ struct mainsidebarview: View {
                         }
 
                         // Workspace Header & Controls
-                        Section(header: HStack(spacing: 6) {
+                        HStack(spacing: 6) {
                             Image(systemName: currentWorkspace.iconName)
                                 .font(.caption.bold())
                                 .foregroundColor(currentWorkspace.themeColor)
@@ -164,29 +164,30 @@ struct mainsidebarview: View {
                                     .background(currentWorkspace.themeColor.opacity(0.14), in: Capsule())
                                     .foregroundColor(currentWorkspace.themeColor)
                             }
-                        }) {
-                            if !navigationPreferences.favorites.filter({ $0.workspace == currentWorkspace }).isEmpty && sidebarScope == "all" {
-                                Section("Favorites ⭐") {
-                                    ForEach(navigationPreferences.favorites.filter { $0.workspace == currentWorkspace }) { item in
-                                        sidebarLink(for: item)
-                                    }
+                        }
+                        .padding(.horizontal, 4)
+
+                        if !navigationPreferences.favorites.filter({ $0.workspace == currentWorkspace }).isEmpty && sidebarScope == "all" {
+                            Section("Favorites") {
+                                ForEach(navigationPreferences.favorites.filter { $0.workspace == currentWorkspace }) { item in
+                                    sidebarLink(for: item)
                                 }
                             }
+                        }
 
-                            // Direct Subcategory Listing (1-Click Instant Navigation)
-                            let categories = Array(Set(items.map { $0.subcategory })).sorted()
-                            ForEach(categories, id: \.self) { category in
-                                let categoryItems = items.filter { $0.subcategory == category }
-                                    .sorted { item1, item2 in
-                                        if item1 == .brewGhost { return true }
-                                        if item2 == .brewGhost { return false }
-                                        return item1.title < item2.title
-                                    }
-                                if !categoryItems.isEmpty {
-                                    Section(category) {
-                                        ForEach(categoryItems) { item in
-                                            sidebarLink(for: item)
-                                        }
+                        // Group tools by their purpose so the sidebar remains scannable.
+                        let categories = Array(Set(items.map { $0.subcategory })).sorted()
+                        ForEach(categories, id: \.self) { category in
+                            let categoryItems = items.filter { $0.subcategory == category }
+                                .sorted { item1, item2 in
+                                    if item1 == .brewGhost { return true }
+                                    if item2 == .brewGhost { return false }
+                                    return item1.title < item2.title
+                                }
+                            if !categoryItems.isEmpty {
+                                Section(category) {
+                                    ForEach(categoryItems) { item in
+                                        sidebarLink(for: item)
                                     }
                                 }
                             }
@@ -396,7 +397,14 @@ struct mainsidebarview: View {
                         case .soundVolumeMixer: soundvolumemixerview()
                         }
                     } else {
-                        ContentUnavailableView("No Tool Selected", systemImage: "square.dashed", description: Text("Choose a tool from the sidebar to get started."))
+                        workspaceoverviewview(
+                            workspace: currentWorkspace,
+                            items: NavigationItem.allCases.filter { $0.workspace == currentWorkspace },
+                            favorites: navigationPreferences.favorites.filter { $0.workspace == currentWorkspace },
+                            recent: navigationPreferences.recent.filter { $0.workspace == currentWorkspace }.prefix(5).map { $0 }
+                        ) { item in
+                            selectedItem = item
+                        }
                     }
                 }
             }
@@ -482,7 +490,7 @@ struct mainsidebarview: View {
             selectedItem = .snapshots
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.nav.scriptConsole"))) { _ in
-            currentWorkspace = .system
+            currentWorkspace = .developer
             selectedItem = .scriptConsole
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.nav.utilities"))) { _ in
@@ -490,7 +498,7 @@ struct mainsidebarview: View {
             selectedItem = .utilitiesView
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.nav.permissionCenter"))) { _ in
-            currentWorkspace = .utilities
+            currentWorkspace = .security
             selectedItem = .permissionCenter
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.action.commandPalette"))) { _ in
@@ -606,21 +614,21 @@ struct mainsidebarview: View {
                             let gridColumns = Array(repeating: GridItem(.flexible(), spacing: 20), count: columnsCount)
 
                             LazyVGrid(columns: gridColumns, spacing: 20) {
-                                hubAppCard(workspace: .store, defaultItem: .appStore)
-                                hubAppCard(workspace: .system, defaultItem: .dashboard)
-                                hubAppCard(workspace: .network, defaultItem: .speedTest)
-                                hubAppCard(workspace: .security, defaultItem: .tccViewer)
-                                hubAppCard(workspace: .disk, defaultItem: .diskExplorer)
-                                hubAppCard(workspace: .developer, defaultItem: .sdkSwitcher)
-                                hubAppCard(workspace: .git, defaultItem: .juicerGit)
-                                hubAppCard(workspace: .containers, defaultItem: .dockerDashboard)
-                                hubAppCard(workspace: .ai, defaultItem: .aiWorkbench)
-                                hubAppCard(workspace: .database, defaultItem: .dbDaemonMonitor)
-                                hubAppCard(workspace: .api, defaultItem: .apiWorkbench)
-                                hubAppCard(workspace: .converter, defaultItem: .docConverter)
-                                hubAppCard(workspace: .configs, defaultItem: .appUninstaller)
-                                hubAppCard(workspace: .utilities, defaultItem: .utilitiesView)
-                                hubAppCard(workspace: .creator, defaultItem: .creatorRepos)
+                                hubAppCard(workspace: .store)
+                                hubAppCard(workspace: .system)
+                                hubAppCard(workspace: .network)
+                                hubAppCard(workspace: .security)
+                                hubAppCard(workspace: .disk)
+                                hubAppCard(workspace: .developer)
+                                hubAppCard(workspace: .git)
+                                hubAppCard(workspace: .containers)
+                                hubAppCard(workspace: .ai)
+                                hubAppCard(workspace: .database)
+                                hubAppCard(workspace: .api)
+                                hubAppCard(workspace: .converter)
+                                hubAppCard(workspace: .configs)
+                                hubAppCard(workspace: .utilities)
+                                hubAppCard(workspace: .creator)
                             }
                             .frame(maxWidth: min(geo.size.width - 64, 1280))
                         }
@@ -669,13 +677,13 @@ struct mainsidebarview: View {
     }
 
     @ViewBuilder
-    private func hubAppCard(workspace: JuicerWorkspace, defaultItem: NavigationItem) -> some View {
+    private func hubAppCard(workspace: JuicerWorkspace) -> some View {
         let toolCount = NavigationItem.allCases.filter { $0.workspace == workspace }.count
 
         Button(action: {
             withAnimation(.easeInOut(duration: 0.2)) {
                 currentWorkspace = workspace
-                selectedItem = defaultItem
+                selectedItem = nil
             }
         }) {
             VStack(alignment: .leading, spacing: 12) {
