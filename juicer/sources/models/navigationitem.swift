@@ -152,8 +152,16 @@ enum NavigationItem: String, CaseIterable, Identifiable, Equatable {
             return .creator
         case .dashboard, .workflowCenter, .statusMonitor, .memoryPressureOptimizer, .pathSecurityAuditor, .duplicateSanitizer, .cpuMemoryMonitor, .gpuMonitor, .diskIOMonitor, .batteryHealth, .powerSchedule, .thermalMonitor, .fanController, .memoryPurge, .swapManager, .batterySaver, .kextManager, .startupItems, .loginItemDelays, .processKiller, .systemLogs, .systemServices:
             return .system
-        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector, .dockerBuildCachePurge, .localLLMBenchmark, .apiLoadTester, .sqliteSchemaInspector, .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
+        case .zeroDayTCCAudit, .kextOrphanDetector, .dylibOrphanDetector, .networkTraffic, .portListener, .vpnProfiles, .networkLocations, .bluetoothDevices, .airDropQuickSend, .portScanner, .lanDiscovery, .wifiSurvey, .networkProfileSwitcher, .vpnAutoConnect, .publicIP, .speedTest, .dnsDiagnostics, .hostsFile, .blocklistUpdater, .firewall, .networkExposure, .networkLimiter:
             return .network
+        case .dockerBuildCachePurge:
+            return .containers
+        case .localLLMBenchmark:
+            return .ai
+        case .apiLoadTester:
+            return .api
+        case .sqliteSchemaInspector:
+            return .database
         case .tccViewer, .fileVault, .privacyScanner, .passwordAudit, .secureDelete, .quarantinedFiles, .sandboxInspector, .usbDeviceGuard, .screenRecording, .clipboardAccess, .locationServices, .microphoneCamera, .antiKeylogger, .secureNotes, .appLocker, .fileVaultAutoLock, .permissionCenter:
             return .security
         case .diskExplorer, .cacheCleaner, .devCaches, .largeFiles, .hiddenFiles, .diskVisualizer, .undoHistory, .duplicateFiles, .emptyFolders, .downloadOrganizer, .archiveUtility, .diskImages, .fileTypeConverter, .symbolicLinks, .diskVerification, .storageSnapshots, .diskSpacePredictor, .backupTrigger, .diskImageMounter:

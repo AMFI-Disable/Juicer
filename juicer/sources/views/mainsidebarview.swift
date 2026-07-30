@@ -402,7 +402,7 @@ struct mainsidebarview: View {
                                 selectedItem = item
                             }
                         } else {
-                            workspaceoverviewview(
+                            studioflowview(
                                 workspace: currentWorkspace,
                                 items: NavigationItem.allCases.filter { $0.workspace == currentWorkspace },
                                 favorites: navigationPreferences.favorites.filter { $0.workspace == currentWorkspace },
