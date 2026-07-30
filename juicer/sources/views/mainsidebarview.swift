@@ -294,7 +294,7 @@ struct mainsidebarview: View {
                         case .apiWorkbench, .apiBenchmark, .apiAuthManager, .apiHistory: apistudioview()
                         case .docConverter, .imageConverterStudio, .codeSchemaConverter, .archiveConverter: converterstudioview()
                         case .pathSecurityAuditor: PathSecurityAuditorView()
-                        case .duplicateSanitizer: DuplicateSanitizerView()
+                        case .duplicateSanitizer: duplicatefileview()
                         case .zeroDayTCCAudit: ZeroDayTCCAuditView()
                         case .kextOrphanDetector: KernelExtensionDetectorView()
                         case .dylibOrphanDetector: DylibIntegrityDetectorView()
@@ -397,13 +397,19 @@ struct mainsidebarview: View {
                         case .soundVolumeMixer: soundvolumemixerview()
                         }
                     } else {
-                        workspaceoverviewview(
-                            workspace: currentWorkspace,
-                            items: NavigationItem.allCases.filter { $0.workspace == currentWorkspace },
-                            favorites: navigationPreferences.favorites.filter { $0.workspace == currentWorkspace },
-                            recent: navigationPreferences.recent.filter { $0.workspace == currentWorkspace }.prefix(5).map { $0 }
-                        ) { item in
-                            selectedItem = item
+                        if currentWorkspace == .system {
+                            systemcontrolcenterview { item in
+                                selectedItem = item
+                            }
+                        } else {
+                            workspaceoverviewview(
+                                workspace: currentWorkspace,
+                                items: NavigationItem.allCases.filter { $0.workspace == currentWorkspace },
+                                favorites: navigationPreferences.favorites.filter { $0.workspace == currentWorkspace },
+                                recent: navigationPreferences.recent.filter { $0.workspace == currentWorkspace }.prefix(5).map { $0 }
+                            ) { item in
+                                selectedItem = item
+                            }
                         }
                     }
                 }
