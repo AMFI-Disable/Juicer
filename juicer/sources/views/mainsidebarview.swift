@@ -60,6 +60,10 @@ struct mainsidebarview: View {
     @State private var lastHubOffset: CGSize = .zero
     @State private var isShowingSettings = false
 
+    private var currentWorkspaceFavorites: [NavigationItem] {
+        navigationPreferences.favorites.filter { $0.workspace == currentWorkspace }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if currentWorkspace == .hub {
@@ -169,9 +173,9 @@ struct mainsidebarview: View {
                         }
                         .padding(.horizontal, 4)
 
-                        if !navigationPreferences.favorites.filter({ $0.workspace == currentWorkspace }).isEmpty && sidebarScope == "all" {
+                        if !currentWorkspaceFavorites.isEmpty && sidebarScope == "all" {
                             Section("Favorites") {
-                                ForEach(navigationPreferences.favorites.filter { $0.workspace == currentWorkspace }) { item in
+                                ForEach(currentWorkspaceFavorites) { item in
                                     sidebarLink(for: item)
                                 }
                             }
@@ -531,7 +535,12 @@ struct mainsidebarview: View {
             TrashObserver.shared.startObserving()
             if restoreMainWindow {
                 NSApp.activate(ignoringOtherApps: true)
-                NSApp.windows.first(where: { $0.canBecomeKey && $0.title != "" })?.makeKeyAndOrderFront(nil)
+                let targetWindow = NSApp.windows.first { win in
+                    let isKey = win.canBecomeKey
+                    let hasTitle = !win.title.isEmpty
+                    return isKey && hasTitle
+                }
+                targetWindow?.makeKeyAndOrderFront(nil)
             }
         }
 

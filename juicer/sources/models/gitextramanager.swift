@@ -194,17 +194,25 @@ class GitExtraManager: ObservableObject {
 
     // MARK: - 4. Git Effort Engine
     private func computeFileEffort() -> [GitFileEffort] {
-        let logFiles = runGitCommand(["log", "--name-only", "--pretty=format:", "-n", "300"])
+        let logFiles = runGitCommand(["log", "--name-only", "--pretty=format:__JUICER_AUTHOR__%aN", "-n", "300"])
         var fileCounts: [String: Int] = [:]
+        var fileAuthors: [String: Set<String>] = [:]
+        var currentAuthor = "Unknown"
         for file in logFiles.components(separatedBy: "\n") {
             let clean = file.trimmingCharacters(in: .whitespaces)
-            if !clean.isEmpty && !clean.hasPrefix(".git") {
-                fileCounts[clean, default: 0] += 1
+            if clean.hasPrefix("__JUICER_AUTHOR__") {
+                currentAuthor = String(clean.dropFirst("__JUICER_AUTHOR__".count))
+                continue
             }
+            guard !clean.isEmpty, !clean.hasPrefix(".git") else { continue }
+            fileCounts[clean, default: 0] += 1
+            fileAuthors[clean, default: []].insert(currentAuthor)
         }
 
         let sorted = fileCounts.sorted { $0.value > $1.value }.prefix(15)
-        return sorted.map { GitFileEffort(path: $0.key, commits: $0.value, activeAuthors: Int.random(in: 1...3)) }
+        return sorted.map {
+            GitFileEffort(path: $0.key, commits: $0.value, activeAuthors: fileAuthors[$0.key]?.count ?? 0)
+        }
     }
 
     // MARK: - 5. Git-Standup Generator

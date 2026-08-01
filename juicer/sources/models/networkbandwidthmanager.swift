@@ -39,18 +39,12 @@ class NetworkBandwidthManager: ObservableObject {
     private func fetchNetworkStats() {
         Task.detached(priority: .userInitiated) {
             // Run nettop command in logging mode: nettop -P -L 1 -J bytes_in,bytes_out
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/nettop")
-            process.arguments = ["-P", "-L", "1", "-J", "bytes_in,bytes_out"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe()
-
-            try? process.run()
-            process.waitUntilExit()
-
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
+            let result = CommandExecutor.shared.run(
+                executablePath: "/usr/bin/nettop",
+                arguments: ["-P", "-L", "1", "-J", "bytes_in,bytes_out"],
+                timeout: 10
+            )
+            let output = result.succeeded ? result.standardOutput : ""
 
             var currentStats: [ProcessNetworkStat] = []
             let lines = output.components(separatedBy: "\n")

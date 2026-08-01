@@ -68,7 +68,7 @@ struct juicerapp: App {
                         .frame(minWidth: 500, minHeight: 300)
                 } else if hasAccess {
                 mainsidebarview()
-                    .frame(minWidth: 950, minHeight: 650)
+                    .frame(minWidth: 950, maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                 onboardingview(isAccessGranted: $hasAccess)
                     .frame(width: 800, height: 600)
@@ -92,7 +92,7 @@ struct juicerapp: App {
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1180, height: 760)
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(after: .appInfo) {
                 Button("Check for Updates...") {

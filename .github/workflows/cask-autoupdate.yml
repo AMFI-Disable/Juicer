@@ -33,16 +33,11 @@ jobs:
           echo "download_url=${DOWNLOAD_URL}" >> $GITHUB_OUTPUT
 
       - name: Checkout homebrew-juicer Tap
-        uses: actions/checkout@v7
+        uses: actions/checkout@v6
         with:
           repository: amfi-disable/homebrew-juicer
           token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
           path: homebrew-juicer
-
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
 
       - name: Update Cask Definition
         run: |

@@ -54,6 +54,6 @@ struct PathSecurityAuditorView: View {
             return pathauditentry(path: path, issue: issue)
         }
         let issues = entries.compactMap(\.issue).count
-        pathStatus = issues == 0 ? "Audit complete: no obvious PATH issues found." : "Audit complete: (issues) issue(s) need review."
+        pathStatus = issues == 0 ? "Audit complete: no obvious PATH issues found." : "Audit complete: \(issues) issue(s) need review."
     }
 }

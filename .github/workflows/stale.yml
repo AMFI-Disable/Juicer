@@ -12,11 +12,6 @@ jobs:
   stale:
     runs-on: ubuntu-latest
     steps:
-      - name: Setup Node.js 24
-        uses: actions/setup-node@v7
-        with:
-          node-version: '24'
-
       - uses: actions/stale@v10
         with:
           stale-issue-message: 'This issue has been automatically marked as stale because it has not had recent activity in 60 days. It will be closed if no further activity occurs.'
