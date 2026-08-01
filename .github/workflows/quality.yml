@@ -1,0 +1,123 @@
+name: "Quality: Fast Offline Checks"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: YAML, Project, and Swift Parse
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Select Xcode Version
+        run: |
+          set -euo pipefail
+          if [[ -d /Applications/Xcode_16.app ]]; then
+            sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+          else
+            sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -r | head -1)/Contents/Developer"
+          fi
+
+      - name: Validate YAML
+        run: |
+          set -euo pipefail
+          ruby <<'RUBY'
+          require "date"
+          require "yaml"
+
+          files = Dir.glob(".github/**/*.{yml,yaml}") + ["project.yml"]
+          files.sort.each do |file|
+            YAML.safe_load(File.read(file), permitted_classes: [Date, Time], aliases: true)
+            puts "validated #{file}"
+          end
+          RUBY
+
+      - name: Validate Project Specification
+        run: |
+          set -euo pipefail
+          ruby <<'RUBY'
+          require "yaml"
+
+          project = YAML.safe_load(File.read("project.yml"), aliases: true)
+          abort "project.yml must declare the juicer application target" unless project.dig("targets", "juicer", "type") == "application"
+          abort "project.yml must declare the juicerTests unit-test target" unless project.dig("targets", "juicerTests", "type") == "bundle.unit-test"
+          abort "juicerTests TEST_HOST must match the Juicer product" unless project.dig("targets", "juicerTests", "settings", "TEST_HOST") == "$(BUILT_PRODUCTS_DIR)/Juicer.app/Contents/MacOS/Juicer"
+          signing_script = project.dig("targets", "juicer", "postCompileScripts", 0, "script").to_s
+          abort "the post-compile signing script must honor CODE_SIGNING_ALLOWED=NO" unless signing_script.include?('CODE_SIGNING_ALLOWED:-YES')
+
+          [".github/workflows/build.yml", ".github/workflows/test.yml"].each do |workflow|
+            content = File.read(workflow)
+            abort "#{workflow} must not swallow failures" if content.match?(/\|\|\s*true/)
+            abort "#{workflow} references xcpretty without installing it" if content.include?("xcpretty") && !content.match?(/(gem|brew) install xcpretty/)
+          end
+
+          release_workflow = File.read(".github/workflows/release.yml")
+          abort "release workflow must run tests before packaging" unless release_workflow.include?("xcodebuild test")
+          abort "release workflow must use an explicit DerivedData path" unless release_workflow.include?('-derivedDataPath "$RUNNER_TEMP/JuicerDerivedData"')
+          test_targets = project.dig("schemes", "juicer", "test", "targets")
+          abort "the juicer scheme must include juicerTests" unless test_targets.is_a?(Array) && test_targets.include?("juicerTests")
+          RUBY
+
+          if command -v xcodegen >/dev/null 2>&1; then
+            generated_project_dir="$(mktemp -d)"
+            xcodegen generate --spec project.yml --project "$generated_project_dir"
+            generated_scheme="$generated_project_dir/juicer.xcodeproj/xcshareddata/xcschemes/juicer.xcscheme"
+            grep -q '<TestableReference' "$generated_scheme" || {
+              echo "Generated juicer scheme has no runnable test target."
+              exit 1
+            }
+          else
+            echo "XcodeGen is not preinstalled; structural project validation completed offline."
+          fi
+
+      - name: Check Changed Swift Files Parse
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            comparison="$BASE_SHA...HEAD"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            comparison="HEAD^...HEAD"
+          else
+            comparison="HEAD"
+          fi
+
+          swift_files=()
+          while IFS= read -r -d '' file; do
+            [[ -f "$file" ]] && swift_files+=("$file")
+          done < <(git diff --name-only --diff-filter=ACMR -z "$comparison" -- '*.swift')
+
+          if (( ${#swift_files[@]} == 0 )); then
+            echo "No changed Swift files to parse."
+            exit 0
+          fi
+
+          printf 'Parsing %s\n' "${swift_files[@]}"
+          xcrun swiftc -parse "${swift_files[@]}"
+
+      - name: Check Patch Whitespace
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          set -euo pipefail
+
+          if [[ -n "$BASE_SHA" && ! "$BASE_SHA" =~ ^0+$ ]] && git cat-file -e "$BASE_SHA^{commit}" 2>/dev/null; then
+            git diff --check "$BASE_SHA...HEAD"
+          elif git rev-parse HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^...HEAD
+          else
+            git diff-tree --check --root HEAD
+          fi

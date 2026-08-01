@@ -60,16 +60,12 @@ final class DatabaseManager: ObservableObject {
     }
 
     private func checkPort(_ port: Int) -> Bool {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/nc")
-        process.arguments = ["-z", "-w", "1", "127.0.0.1", "\(port)"]
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
+        let result = CommandExecutor.shared.run(
+            executablePath: "/usr/bin/nc",
+            arguments: ["-z", "-w", "1", "127.0.0.1", "\(port)"],
+            timeout: 2
+        )
+        return result.succeeded
     }
 
     private func scanSQLiteFiles() -> [LocalSQLiteFile] {

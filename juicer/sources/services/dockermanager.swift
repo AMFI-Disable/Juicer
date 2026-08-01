@@ -226,15 +226,16 @@ final class DockerManager: ObservableObject {
     private func runDockerCommand(_ args: [String], completion: @escaping (Bool) -> Void) {
         guard !dockerPath.isEmpty else { completion(false); return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: self?.dockerPath ?? "/usr/local/bin/docker")
-            process.arguments = args
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = pipe
-            try? process.run()
-            process.waitUntilExit()
-            let success = process.terminationStatus == 0
+            let category: CommandCategory = ["start", "stop", "restart"].contains(args.first ?? "")
+                ? .reversibleMutation
+                : .destructiveMutation
+            let result = CommandExecutor.shared.run(
+                executablePath: self?.dockerPath ?? "/usr/local/bin/docker",
+                arguments: args,
+                timeout: 60,
+                category: category
+            )
+            let success = result.succeeded
             DispatchQueue.main.async { completion(success) }
         }
     }

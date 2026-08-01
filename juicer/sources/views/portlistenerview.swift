@@ -143,22 +143,8 @@ struct portlistenerview: View {
             self.showArgs = showArgsSaved
             self.filterToDevPorts = filterDevSaved
         }
-        // First Confirmation Alert
-        .alert("Confirm Process Termination", isPresented: $showFirstAlert) {
-            Button("Proceed", role: .none) {
-                showSecondAlert = true
-            }
-            Button("Cancel", role: .cancel) {
-                self.selectedPort = nil
-            }
-        } message: {
-            if let port = selectedPort {
-                Text("Are you sure you want to terminate process '\(port.processName)' (PID: \(port.pid)) listening on port \(port.port)?")
-            }
-        }
-        // Second Confirmation Alert
-        .alert("Final Verification Required", isPresented: $showSecondAlert) {
-            Button("Force Terminate", role: .destructive) {
+        .alert("Terminate Process?", isPresented: $showFirstAlert) {
+            Button("Terminate Process", role: .destructive) {
                 executeProcessKill()
             }
             Button("Cancel", role: .cancel) {
@@ -167,7 +153,7 @@ struct portlistenerview: View {
         } message: {
             if let port = selectedPort {
                 let forceKill = UserDefaults.standard.bool(forKey: "juicer.settings.killForceful")
-                Text("This will send a \(forceKill ? "SIGKILL (Force-Kill)" : "SIGTERM (Graceful)") signal. Unsaved work in the target process may be lost. Continue?")
+                Text("Are you sure you want to terminate '\(port.processName)' (PID: \(port.pid)) on port \(port.port)? This will send a \(forceKill ? "SIGKILL" : "SIGTERM") signal.")
             }
         }
     }

@@ -309,6 +309,17 @@ struct creatorecosystemview: View {
         )
     ]
 
+    private var filteredReposCount: Int {
+        allRepos.filter { repo in
+            (selectedCategoryFilter == "All" || repo.category == selectedCategoryFilter) &&
+            (searchText.isEmpty ||
+             repo.name.localizedCaseInsensitiveContains(searchText) ||
+             repo.description.localizedCaseInsensitiveContains(searchText) ||
+             repo.language.localizedCaseInsensitiveContains(searchText) ||
+             (repo.tag?.localizedCaseInsensitiveContains(searchText) ?? false))
+        }.count
+    }
+
     var categories: [String] {
         ["Apps", "Extensions", "Meta", "Scripts", "Tooling"]
     }
@@ -335,7 +346,7 @@ struct creatorecosystemview: View {
                         Text("Juicer Creator's Studio")
                             .font(.title2).bold()
 
-                        Text("22 REPOSITORIES")
+                        Text(searchText.isEmpty ? "\(allRepos.count) REPOSITORIES" : "\(filteredReposCount) OF \(allRepos.count) MATCHES")
                             .font(.system(size: 9, weight: .black))
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
@@ -681,15 +692,21 @@ struct creatorecosystemview: View {
 
             DispatchQueue.global(qos: .userInitiated).async {
                 let process = Process()
+                let errorPipe = Pipe()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
                 process.arguments = ["clone", "https://github.com/\(repo.repository).git"]
                 process.currentDirectoryURL = targetDir
+                process.standardError = errorPipe
 
                 do {
                     try process.run()
                     process.waitUntilExit()
 
-                    let clonedFolder = targetDir.appendingPathComponent(repo.name)
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
+                    let errorString = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+                    let repoFolderName = repo.repository.components(separatedBy: "/").last ?? repo.name
+                    let clonedFolder = targetDir.appendingPathComponent(repoFolderName)
 
                     DispatchQueue.main.async {
                         self.cloningRepo = nil
@@ -699,7 +716,8 @@ struct creatorecosystemview: View {
                             self.lastClonedPath = clonedFolder.path
                             WorkspaceDirectoryManager.shared.currentDirectory = clonedFolder.path
                         } else {
-                            self.cloneStatusMessage = "Failed to clone repository. Make sure git is installed."
+                            let detailedError = errorString.isEmpty ? "Failed to clone repository." : errorString
+                            self.cloneStatusMessage = detailedError
                             self.cloneStatusColor = .red
                         }
                     }

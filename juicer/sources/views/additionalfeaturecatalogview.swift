@@ -41,55 +41,101 @@ struct additionalfeaturecatalogview: View {
         VStack(alignment: .leading, spacing: 16) {
             JuicerFeatureHeader(title: "Additional Features", subtitle: "One-click shortcuts for common macOS inspection and setup tasks.", icon: "square.grid.2x2", refreshing: false, action: {})
 
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 10) {
-                    TextField("Search features & shortcuts...", text: $query)
-                        .textFieldStyle(.roundedBorder)
-
-                    Picker("Category", selection: $category) {
-                        ForEach(categories, id: \.self) { Text($0).tag($0) }
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("Search features & shortcuts...", text: $query)
+                            .textFieldStyle(.plain)
+                        if !query.isEmpty {
+                            Button(action: { query = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .frame(width: 140)
-                }
+                    .padding(8)
+                    .background(Color(NSColor.controlBackgroundColor).opacity(0.6), in: RoundedRectangle(cornerRadius: 8))
 
-                HStack(spacing: 14) {
-                    Toggle("Favorites only", isOn: $favoritesOnly)
-                        .toggleStyle(.checkbox)
-
-                    Toggle("Details", isOn: $showDetails)
-                        .toggleStyle(.checkbox)
-
-                    Spacer()
+                    Toggle("Favorites", isOn: $favoritesOnly)
+                        .toggleStyle(.button)
+                        .tint(.yellow)
 
                     Picker("Layout", selection: $layout) {
-                        Image(systemName: "list.bullet").tag("list")
                         Image(systemName: "square.grid.2x2").tag("grid")
+                        Image(systemName: "list.bullet").tag("list")
                     }
                     .pickerStyle(.segmented)
                     .frame(width: 80)
                 }
+
+                // Category Filter Pills
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(categories, id: \.self) { cat in
+                            let count = cat == "All" ? features.count : features.filter { $0.category == cat }.count
+                            Button(action: { category = cat }) {
+                                HStack(spacing: 6) {
+                                    Text(cat)
+                                        .font(.caption.bold())
+                                    Text("\(count)")
+                                        .font(.caption2)
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(category == cat ? Color.accentColor.opacity(0.3) : Color.primary.opacity(0.08), in: Capsule())
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(category == cat ? Color.accentColor.opacity(0.15) : Color(NSColor.controlBackgroundColor).opacity(0.5), in: Capsule())
+                                .foregroundColor(category == cat ? .accentColor : .primary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
 
-            Text("\(filtered.count) available features")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            if layout == "grid" {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 12)], spacing: 12) {
-                    ForEach(filtered) { feature in featureCard(feature) }
+            if filtered.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "doc.text.magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No matching features found")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 160)
+            } else if layout == "grid" {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 260), spacing: 14)], spacing: 14) {
+                        ForEach(filtered) { feature in featureCard(feature) }
+                    }
+                    .padding(.vertical, 4)
                 }
             } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(filtered) { feature in
-                        featureCard(feature)
-                        Divider()
+                ScrollView {
+                    LazyVStack(spacing: 8) {
+                        ForEach(filtered) { feature in
+                            featureCard(feature)
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
             }
 
-            if !message.isEmpty { Text(message).font(.caption).foregroundStyle(.secondary) }
+            if !message.isEmpty {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.accentColor.opacity(0.1), in: Capsule())
+            }
         }
-        .padding(24)
+        .padding(20)
     }
 
     @ViewBuilder
