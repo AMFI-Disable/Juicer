@@ -54,6 +54,18 @@ struct gitdashboardview: View {
                 .menuStyle(.borderlessButton)
                 .buttonStyle(.bordered)
 
+                Button(action: { manager.pull { _ in } }) {
+                    Label("Pull", systemImage: "arrow.down.circle")
+                }
+                .buttonStyle(.bordered)
+                .disabled(manager.isLoading || manager.repoPath.isEmpty)
+
+                Button(action: { manager.push { _ in } }) {
+                    Label("Push", systemImage: "arrow.up.circle")
+                }
+                .buttonStyle(.bordered)
+                .disabled(manager.isLoading || manager.repoPath.isEmpty)
+
                 Button("Open Repo...") {
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
@@ -248,6 +260,19 @@ struct gitdashboardview: View {
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(commitMessage.trimmingCharacters(in: .whitespaces).isEmpty || manager.statusFiles.filter { $0.isStaged }.isEmpty)
+
+                    Button("Commit & Push") {
+                        let fullMsg = "\(conventionalPrefix): \(commitMessage)"
+                        manager.createCommit(message: fullMsg) { success in
+                            if success {
+                                manager.push { _ in
+                                    commitMessage = ""
+                                }
+                            }
+                        }
+                    }
+                    .buttonStyle(.bordered)
                     .disabled(commitMessage.trimmingCharacters(in: .whitespaces).isEmpty || manager.statusFiles.filter { $0.isStaged }.isEmpty)
                 }
 

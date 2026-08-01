@@ -145,7 +145,7 @@ final class AIManager: ObservableObject {
             ]
             request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
 
-            URLSession.shared.dataTask(with: request) { [weak self] data, _, _ in
+            URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
                 DispatchQueue.main.async {
                     self?.isGenerating = false
                     if let data = data,
@@ -154,18 +154,24 @@ final class AIManager: ObservableObject {
                         let aiMsg = AIChatMessage(isUser: false, text: responseText)
                         self?.chatMessages.append(aiMsg)
                     } else {
-                        let aiMsg = AIChatMessage(isUser: false, text: "Received response from local engine (\(selectedModel)). Debug Assistant Ready.")
+                        let status = (response as? HTTPURLResponse)?.statusCode
+                        let detail = error?.localizedDescription
+                            ?? status.map { "HTTP \($0)" }
+                            ?? "invalid response"
+                        let aiMsg = AIChatMessage(
+                            isUser: false,
+                            text: "Local model request failed (\(detail)). Verify that \(selectedModel) is available in Ollama and try again."
+                        )
                         self?.chatMessages.append(aiMsg)
                     }
                 }
             }.resume()
         } else {
-            // Simulated local response for demonstration
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
-                self?.isGenerating = false
-                let mockReply = "juicer AI Analysis:\n\n1. **Root Cause**: Memory retain cycle or missing weak reference.\n2. **Recommendation**: Verify closures capturing `self` with `[weak self]` in asynchronous tasks."
-                self?.chatMessages.append(AIChatMessage(isUser: false, text: mockReply))
-            }
+            isGenerating = false
+            chatMessages.append(AIChatMessage(
+                isUser: false,
+                text: "No supported local AI engine is available. Start Ollama and install a model before sending a prompt."
+            ))
         }
     }
 }

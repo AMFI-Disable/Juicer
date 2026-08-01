@@ -21,7 +21,7 @@ Juicer is the ultimate open-source companion utility for **macOS developers and 
 
 ## 🧭 Bundled Workspace Companion Suite (V1.0.1)
 
-Juicer organizes its extensive feature set across **9 specialized companion workspaces**:
+Juicer organizes its extensive feature set across **16 specialized companion workspaces**:
 
 - 🚀 **Juicer Hub**: Central launcher and interactive launchpad canvas supporting Pan & Zoom gestures, edge-to-edge full screen modes, and launch bypass options.
 - 📦 **Juicer Store**: Modern Homebrew Cask (GUI) & Formula (CLI) package manager with background metadata resolution, tap manager, service controller, and Brewfile sync.
@@ -30,8 +30,15 @@ Juicer organizes its extensive feature set across **9 specialized companion work
 - 🛡️ **Security & Privacy**: TCC permission audit, privacy cabinet, FileVault inspector, quarantine stripper, anti-keylogger scanner, and app locker.
 - 💾 **Disk & Storage**: Space Lens disk visualizer (Treemaps & Sunburst charts), developer cache cleaner, large file locator, duplicate finder, and storage snapshot manager.
 - 🛠️ **Developer Suite**: SDK runtime switcher, trusted script plugins runner, local web server, code snippet expander, and environment profiles.
+- 🌿 **Git Studio**: Repository workbench, commit history, branch operations, effort analytics, and developer account helpers.
+- 🐳 **Docker Studio**: Container inventory, lifecycle actions, logs, Compose stacks, and disk-usage cleanup.
+- ✨ **AI Studio**: Local Ollama and LM Studio discovery, prompt tools, model benchmarks, and local chat when an engine is available.
+- 🗄️ **Database Studio**: Local database daemon checks, SQLite inspection, Redis browsing, and backup helpers.
+- 📡 **API Studio**: REST requests, cURL import, authentication headers, history, benchmarks, and load tests.
+- 🔄 **Converter Studio**: Offline document, image, schema, archive, and media conversion tools.
 - ⚙️ **System Configs**: App uninstaller, orphan finder, launch daemon editor, hidden macOS tweaks, log rotator, and system optimizer.
 - 🧰 **Utilities & Desktop**: Window tiler, clipboard manager, hot corners, color loupe, screen ruler, PDF toolbox, and desktop helper widgets.
+- 🌟 **Creator Studio**: Open-source project discovery, repository cloning, and ecosystem shortcuts.
 
 ---
 
@@ -75,7 +82,7 @@ brew install --cask juicer
 ## 🏗️ Technical Architecture & Build Setup
 
 - **Platform**: macOS 14.0+
-- **Language**: Swift 6 / SwiftUI
+- **Language**: Swift / SwiftUI (currently compiled in Swift 5 language mode)
 - **Code Signing**: Deep ad-hoc signed (`CODE_SIGN_IDENTITY: "-"`) with Sparkle framework re-signing to eliminate dyld Team ID launch errors.
 - **Project Generator**: Uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to build `juicer.xcodeproj` from `project.yml`.
 

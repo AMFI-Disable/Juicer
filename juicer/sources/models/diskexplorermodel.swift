@@ -113,7 +113,7 @@ class DiskExplorerManager: ObservableObject {
         DispatchQueue.main.async {
             self.volumes = result
             if let rootVol = result.first(where: { $0.mountPoint == "/" }) {
-                self.loadMockHistoryIfNeeded(currentUsed: rootVol.usedBytes, currentFree: rootVol.freeBytes)
+                self.loadStorageHistory()
                 self.recordStorageSnapshot(used: rootVol.usedBytes, free: rootVol.freeBytes)
             }
         }
@@ -271,29 +271,14 @@ class DiskExplorerManager: ObservableObject {
         }
     }
 
-    func loadMockHistoryIfNeeded(currentUsed: Int64, currentFree: Int64) {
+    func loadStorageHistory() {
         let key = "juicer.settings.storageHistory"
-        var history: [StorageSnapshot] = []
+        let history: [StorageSnapshot]
         if let data = UserDefaults.standard.data(forKey: key),
            let decoded = try? JSONDecoder().decode([StorageSnapshot].self, from: data) {
             history = decoded
-        }
-
-        if history.count < 2 {
+        } else {
             history = []
-            let daySec: TimeInterval = 86400
-            let baseGrowth: Int64 = 1_200_000_000 // ~1.2 GB growth per day
-
-            for i in (0...6).reversed() {
-                let date = Date().addingTimeInterval(-Double(i) * daySec)
-                let mockUsed = currentUsed - Int64(i) * baseGrowth
-                let mockFree = currentFree + Int64(i) * baseGrowth
-                history.append(StorageSnapshot(timestamp: date, usedBytes: mockUsed, freeBytes: mockFree))
-            }
-
-            if let encoded = try? JSONEncoder().encode(history) {
-                UserDefaults.standard.set(encoded, forKey: key)
-            }
         }
 
         self.storageHistory = history

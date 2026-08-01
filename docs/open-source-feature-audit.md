@@ -2,7 +2,7 @@
 
 ## current juicer inventory
 
-Juicer currently has six workspaces and 200 user-facing capabilities:
+Juicer currently defines 16 workspaces and 169 primary navigation capabilities, plus catalog actions. The current ownership and maturity source of truth is `docs/capability-matrix.md`; the bullets below preserve this audit's earlier grouped view for benchmarking context.
 
 - Store: software center, Homebrew explorer, cask/formula updates, services, taps, and Brewfile sync.
 - System: dashboard, live status, CPU/memory/GPU/disk I/O/network monitors, battery health, startup/login items, process killer, logs, KEXTs, power, thermal, fans, memory purge, swap, VPN profiles, network locations, Bluetooth, AirDrop, FileVault, firewall, network exposure, USB guard, screen recording, clipboard access, location services, and microphone/camera indicators.

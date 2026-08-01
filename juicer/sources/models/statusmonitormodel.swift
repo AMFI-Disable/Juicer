@@ -259,7 +259,7 @@ class StatusMonitorManager: ObservableObject {
         data.coreCount = coreCount
 
         // CPU usage via `ps`
-        if let out = shell("/bin/sh", ["-c", "ps -Aceo pcpu"]) {
+        if let out = shell("/bin/ps", ["-Aceo", "pcpu"]) {
             var total = 0.0
             for line in out.split(separator: "\n") {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
@@ -413,7 +413,7 @@ class StatusMonitorManager: ObservableObject {
     // MARK: - Process Collection
 
     private func collectProcesses() -> [ProcessMonitorEntry] {
-        guard let out = shell("/bin/sh", ["-c", "ps -Aceo pid=,ppid=,pcpu=,pmem=,rss=,comm= -r"]) else { return [] }
+        guard let out = shell("/bin/ps", ["-Aceo", "pid=,ppid=,pcpu=,pmem=,rss=,comm=", "-r"]) else { return [] }
         var entries: [ProcessMonitorEntry] = []
 
         for line in out.split(separator: "\n") {
@@ -445,7 +445,7 @@ class StatusMonitorManager: ObservableObject {
             guard let self else { return }
             var hw = HardwareInfoData()
 
-            if let out = self.shell("/usr/bin/system_profiler", ["SPHardwareDataType"]) {
+            if let out = self.shell("/usr/sbin/system_profiler", ["SPHardwareDataType"]) {
                 for line in out.split(separator: "\n") {
                     let str = String(line).trimmingCharacters(in: .whitespaces)
                     let lower = str.lowercased()
@@ -475,7 +475,7 @@ class StatusMonitorManager: ObservableObject {
 
     func kill(pid: Int, completion: @escaping (Bool) -> Void) {
         Task.detached {
-            let result = self.shell("/bin/kill", ["-9", String(pid)])
+            let result = self.shell("/bin/kill", ["-9", String(pid)], category: .destructiveMutation)
             await MainActor.run { completion(result != nil) }
         }
     }
@@ -483,20 +483,18 @@ class StatusMonitorManager: ObservableObject {
     // MARK: - Shell Helper
 
     @discardableResult
-    private func shell(_ command: String, _ args: [String]) -> String? {
-        guard FileManager.default.fileExists(atPath: command) else { return nil }
-        let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: command)
-        proc.arguments = args
-        let pipe = Pipe()
-        proc.standardOutput = pipe
-        proc.standardError = Pipe()
-        do {
-            try proc.run()
-            proc.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8)
-        } catch { return nil }
+    private func shell(
+        _ command: String,
+        _ args: [String],
+        category: CommandCategory = .readOnly
+    ) -> String? {
+        let result = CommandExecutor.shared.run(
+            executablePath: command,
+            arguments: args,
+            timeout: 30,
+            category: category
+        )
+        return result.succeeded ? result.standardOutput : nil
     }
 
     // MARK: - Formatting Helpers
@@ -520,16 +518,7 @@ class StatusMonitorManager: ObservableObject {
     // MARK: - GPU & Bluetooth Gathering
 
     func collectGPUInfo() {
-        let task = Process()
-        task.launchPath = "/usr/sbin/system_profiler"
-        task.arguments = ["SPDisplaysDataType"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.launch()
-        task.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
+        let output = shell("/usr/sbin/system_profiler", ["SPDisplaysDataType"]) ?? ""
 
         var gpuName = "Apple Silicon GPU"
         let lines = output.components(separatedBy: .newlines)
@@ -541,16 +530,10 @@ class StatusMonitorManager: ObservableObject {
             }
         }
 
-        let ioregTask = Process()
-        ioregTask.launchPath = "/usr/sbin/ioreg"
-        ioregTask.arguments = ["-l", "-d", "1", "-w", "0", "-c", "IOAccelerator"]
-        let ioregPipe = Pipe()
-        ioregTask.standardOutput = ioregPipe
-        ioregTask.launch()
-        ioregTask.waitUntilExit()
-
-        let ioregData = ioregPipe.fileHandleForReading.readDataToEndOfFile()
-        let ioregOutput = String(data: ioregData, encoding: .utf8) ?? ""
+        let ioregOutput = shell(
+            "/usr/sbin/ioreg",
+            ["-l", "-d", "1", "-w", "0", "-c", "IOAccelerator"]
+        ) ?? ""
 
         var gpuUsage: Double = 0.0
         if let range = ioregOutput.range(of: "\"Device Utilization\" = ") {
@@ -560,8 +543,6 @@ class StatusMonitorManager: ObservableObject {
                let val = Double(firstNum) {
                 gpuUsage = val
             }
-        } else {
-            gpuUsage = Double(Int.random(in: 2...12)) + (cpu.usagePercent * 0.1)
         }
 
         let vramTotal = Int64(memory.totalBytes)
@@ -578,16 +559,7 @@ class StatusMonitorManager: ObservableObject {
     }
 
     func collectBluetoothInfo() {
-        let task = Process()
-        task.launchPath = "/usr/sbin/system_profiler"
-        task.arguments = ["SPBluetoothDataType"]
-        let pipe = Pipe()
-        task.standardOutput = pipe
-        task.launch()
-        task.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        let output = String(data: data, encoding: .utf8) ?? ""
+        let output = shell("/usr/sbin/system_profiler", ["SPBluetoothDataType"]) ?? ""
 
         var isEnabled = false
         var devices: [String] = []

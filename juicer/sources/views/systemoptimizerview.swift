@@ -1,10 +1,11 @@
 import SwiftUI
 
-struct systemoptimizerview: View {
+typealias systemoptimizerview = SystemOptimizerView
+
+struct SystemOptimizerView: View {
     @StateObject private var manager = SystemOptimizerManager()
     @State private var activeTab: Tab = .optimize
-    @State private var showFirstAlert = false
-    @State private var showSecondAlert = false
+    @State private var showConfirmAlert = false
     @State private var filterCategory: OptimizationTask.TaskCategory?
 
     enum Tab: String, CaseIterable {
@@ -24,17 +25,12 @@ struct systemoptimizerview: View {
         .onAppear {
             manager.loadHealthMetrics()
         }
-        .alert("Warning: Run System Optimizations?", isPresented: $showFirstAlert) {
-            Button("Proceed", role: .none) { showSecondAlert = true }
+        .alert("Run Optimization Tasks?", isPresented: $showConfirmAlert) {
+            Button("Run Optimizations", role: .destructive) { manager.runSelectedTasks() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("You are about to run \(manager.tasks.filter { $0.isSelected && $0.status == .pending }.count) optimization tasks. Some actions affect system state and may require a restart. Proceed?")
-        }
-        .alert("Final Confirmation", isPresented: $showSecondAlert) {
-            Button("Confirm & Optimize", role: .destructive) { manager.runSelectedTasks() }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Selected optimization tasks will now execute. Any failed tasks will be logged. This cannot be undone.")
+            let count = manager.tasks.filter { $0.isSelected && $0.status == .pending }.count
+            Text("You are about to run \(count) selected optimization tasks. Some actions affect system caches or state. Proceed?")
         }
     }
 
@@ -131,7 +127,7 @@ struct systemoptimizerview: View {
                 .buttonStyle(.bordered)
                 .disabled(manager.isRunning)
 
-                Button(action: { showFirstAlert = true }) {
+                Button(action: { showConfirmAlert = true }) {
                     HStack {
                         Image(systemName: "bolt.fill")
                         Text("Run Optimizations")

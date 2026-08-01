@@ -30,15 +30,34 @@ targets:
     postCompileScripts:
       - name: Deep Re-sign Embedded Frameworks and Dylibs
         script: |
+          if [ "${CODE_SIGNING_ALLOWED:-YES}" = "NO" ]; then
+            exit 0
+          fi
           if [ -d "${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}" ]; then
             find "${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}" -name "*.dylib" -o -name "*.framework" | xargs -I {} codesign --force --sign - "{}"
             codesign --force --deep --sign - "${TARGET_BUILD_DIR}/${FULL_PRODUCT_NAME}"
           fi
+  juicerTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: juicer/tests
+    dependencies:
+      - target: juicer
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.even.juicer.tests
+      MACOSX_DEPLOYMENT_TARGET: "14.0"
+      TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Juicer.app/Contents/MacOS/Juicer"
+      BUNDLE_LOADER: "$(TEST_HOST)"
 schemes:
   juicer:
     build:
       targets:
         juicer: all
+    test:
+      targets:
+        - juicerTests
     run:
       environmentVariables:
         OS_ACTIVITY_MODE: disable

@@ -25,7 +25,10 @@ class PortManager: ObservableObject {
             var portsList: [ActivePort] = []
 
             // Run lsof -nP -i -sTCP:LISTEN (gets both IPv4/IPv6 listening TCP sockets)
-            let lsofOutput = Self.runShellCommand("/usr/sbin/lsof -nP -iTCP -sTCP:LISTEN")
+            let lsofOutput = Self.runCommand(
+                "/usr/sbin/lsof",
+                arguments: ["-nP", "-iTCP", "-sTCP:LISTEN"]
+            )
             let lines = lsofOutput.components(separatedBy: "\n")
 
             // Expected format: COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
@@ -43,8 +46,10 @@ class PortManager: ObservableObject {
                     if let portNumber = Int(portStr.trimmingCharacters(in: .whitespacesAndNewlines)) {
 
                         // Query command line args and parent PID
-                        let args = Self.runShellCommand("/bin/ps -p \(pid) -o args=").trimmingCharacters(in: .whitespacesAndNewlines)
-                        let ppidStr = Self.runShellCommand("/bin/ps -p \(pid) -o ppid=").trimmingCharacters(in: .whitespacesAndNewlines)
+                        let args = Self.runCommand("/bin/ps", arguments: ["-p", String(pid), "-o", "args="])
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
+                        let ppidStr = Self.runCommand("/bin/ps", arguments: ["-p", String(pid), "-o", "ppid="])
+                            .trimmingCharacters(in: .whitespacesAndNewlines)
                         let ppid = Int(ppidStr)
 
                         let activePort = ActivePort(
@@ -86,37 +91,28 @@ class PortManager: ObservableObject {
         AppLogger.shared.log("Sending signal \(signal) to process PID \(pid)...")
 
         Task.detached(priority: .userInitiated) {
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/bin/kill")
-            process.arguments = [signal, String(pid)]
-
-            do {
-                try process.run()
-                process.waitUntilExit()
-                let success = process.terminationStatus == 0
-                await MainActor.run {
-                    self.loadPorts()
-                    completion(success)
-                }
-            } catch {
-                AppLogger.shared.log("Failed to kill process PID \(pid): \(error.localizedDescription)")
-                await MainActor.run {
-                    completion(false)
-                }
+            let result = CommandExecutor.shared.run(
+                executablePath: "/bin/kill",
+                arguments: [signal, String(pid)],
+                timeout: 5,
+                category: .destructiveMutation
+            )
+            if !result.succeeded {
+                AppLogger.shared.log("Failed to signal process PID \(pid) (status: \(result.terminationStatus.map(String.init) ?? "launch error")).")
+            }
+            await MainActor.run {
+                self.loadPorts()
+                completion(result.succeeded)
             }
         }
     }
 
-    private static func runShellCommand(_ command: String) -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-c", command]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-        try? process.run()
-        process.waitUntilExit()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8) ?? ""
+    private static func runCommand(_ executablePath: String, arguments: [String]) -> String {
+        let result = CommandExecutor.shared.run(
+            executablePath: executablePath,
+            arguments: arguments,
+            timeout: 5
+        )
+        return result.succeeded ? result.standardOutput : ""
     }
 }

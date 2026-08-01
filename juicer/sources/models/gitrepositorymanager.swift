@@ -114,6 +114,27 @@ class GitRepositoryManager: ObservableObject {
         runGitCommandAsync(["checkout", "-b", name]) { self.loadRepositoryState() }
     }
 
+    func push(completion: @escaping (Bool) -> Void) {
+        runGitCommandAsync(["push"]) {
+            self.loadRepositoryState()
+            completion(true)
+        }
+    }
+
+    func pull(completion: @escaping (Bool) -> Void) {
+        runGitCommandAsync(["pull"]) {
+            self.loadRepositoryState()
+            completion(true)
+        }
+    }
+
+    func fetch(completion: @escaping (Bool) -> Void) {
+        runGitCommandAsync(["fetch"]) {
+            self.loadRepositoryState()
+            completion(true)
+        }
+    }
+
     // MARK: - Git Command Runner
     private func runGitCommand(_ args: [String]) -> String {
         SystemMetricsSupport.run("/usr/bin/git", ["-C", repoPath] + args, timeout: 30) ?? ""
