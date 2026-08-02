@@ -79,6 +79,7 @@ class StoreManager: ObservableObject {
     @Published var progressLog: String = ""
     @Published var isRunningAction: Bool = false
     @Published var errorMessage: String?
+    @Published var syncOperation = ReliabilityOperation(total: 3, message: "Ready to sync database")
 
     private let fm = FileManager.default
     private var actionProcess: Process?
@@ -118,8 +119,10 @@ class StoreManager: ObservableObject {
     // MARK: - Fetch & Parse (Async + Cache)
 
     func loadStore(forceRefresh: Bool = false) {
+        guard !isLoading else { return }
         isLoading = true
         errorMessage = nil
+        _ = syncOperation.start(message: "Loading catalog data")
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
@@ -134,14 +137,22 @@ class StoreManager: ObservableObject {
                 await MainActor.run {
                     self.apps = finalApps
                     self.isLoading = false
+                    self.syncOperation.update(completed: 2, message: "Catalog loaded; checking updates…")
                     self.checkForUpdates() // Trigger updates check automatically
                 }
             } catch {
                 await MainActor.run {
                     self.errorMessage = "Failed to load Software Center: \(error.localizedDescription)"
                     self.isLoading = false
+                    self.syncOperation.fail(self.errorMessage ?? "Catalog sync failed")
                 }
             }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 45) { [weak self] in
+            guard let self, self.isLoading, self.syncOperation.isActive else { return }
+            self.isLoading = false
+            self.errorMessage = "Sync timed out. Retry to refresh the catalog."
+            self.syncOperation.timeOut(self.errorMessage ?? "Sync timed out")
         }
     }
 
@@ -212,12 +223,13 @@ class StoreManager: ObservableObject {
                     await MainActor.run {
                         self.outdatedApps = outdatedList
                         self.isCheckingUpdates = false
+                        if self.syncOperation.isActive { self.syncOperation.succeed(message: "Catalog sync completed") }
                     }
                 } else {
-                    await MainActor.run { self.isCheckingUpdates = false }
+                    await MainActor.run { self.isCheckingUpdates = false; if self.syncOperation.isActive { self.syncOperation.finish(partial: true, message: "Catalog loaded; update data unavailable") } }
                 }
             } catch {
-                await MainActor.run { self.isCheckingUpdates = false }
+                await MainActor.run { self.isCheckingUpdates = false; if self.syncOperation.isActive { self.syncOperation.finish(partial: true, message: "Catalog loaded; update check failed") } }
             }
         }
     }

@@ -37,6 +37,12 @@ struct storeview: View {
 
             if manager.isLoading {
                 loadingPlaceholder()
+            } else if manager.syncOperation.snapshot.state == .failed || manager.syncOperation.snapshot.state == .timedOut {
+                VStack(spacing: 12) {
+                    Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
+                    Text(manager.errorMessage ?? "Sync failed").font(.headline)
+                    Button("Retry Sync") { manager.loadStore(forceRefresh: true) }.buttonStyle(.borderedProminent)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if filteredApps.isEmpty {
                 emptyStatePlaceholder()
             } else {
@@ -160,6 +166,10 @@ struct storeview: View {
                 .frame(width: 280)
 
                 Spacer()
+
+                if manager.syncOperation.snapshot.state == .partiallySucceeded {
+                    Text(manager.syncOperation.snapshot.progress.message).font(.caption).foregroundStyle(.orange)
+                }
 
                 // Reload Button
                 Button(action: { manager.loadStore(forceRefresh: true) }) {
