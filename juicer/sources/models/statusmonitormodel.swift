@@ -139,6 +139,9 @@ class StatusMonitorManager: ObservableObject {
     @Published var processSearchQuery: String = ""
     @Published var processSortKey: ProcessSortKey = .cpu
     @Published var isRefreshing: Bool = false
+    @Published var refreshOperation = ReliabilityOperation(total: 4, message: "Ready")
+    @Published var refreshError: String?
+    @Published var lastUpdated: Date?
 
     init() {
         let stored = UserDefaults.standard.string(forKey: "juicer.settings.statusMonitorRefresh")
@@ -222,7 +225,11 @@ class StatusMonitorManager: ObservableObject {
     }
 
     func refresh() {
+        guard !isRefreshing else { return }
         isRefreshing = true
+        refreshError = nil
+        _ = refreshOperation.start(message: "Collecting system metrics…")
+        let refreshID = refreshOperation.snapshot.id
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             let cpu = self.collectCPU()
@@ -239,6 +246,7 @@ class StatusMonitorManager: ObservableObject {
             self.collectBluetoothInfo()
 
             await MainActor.run {
+                guard self.refreshOperation.snapshot.id == refreshID, self.isRefreshing else { return }
                 self.cpu = cpu
                 self.memory = mem
                 self.network = net
@@ -247,7 +255,17 @@ class StatusMonitorManager: ObservableObject {
                 self.health = health
                 self.isLoading = false
                 self.isRefreshing = false
+                self.lastUpdated = Date()
+                self.refreshOperation.update(completed: 4, message: "Metrics updated")
+                self.refreshOperation.succeed(message: "Metrics updated")
             }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 30) { [weak self] in
+            guard let self, self.refreshOperation.snapshot.id == refreshID, self.isRefreshing else { return }
+            self.isRefreshing = false
+            self.isLoading = false
+            self.refreshError = "Metric collection timed out. Retry to collect fresh values."
+            self.refreshOperation.timeOut(self.refreshError ?? "Metric collection timed out.")
         }
     }
 
@@ -474,6 +492,7 @@ class StatusMonitorManager: ObservableObject {
     // MARK: - Kill Process
 
     func kill(pid: Int, completion: @escaping (Bool) -> Void) {
+        guard pid > 1 else { completion(false); return }
         Task.detached {
             let result = self.shell("/bin/kill", ["-9", String(pid)], category: .destructiveMutation)
             await MainActor.run { completion(result != nil) }

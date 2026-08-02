@@ -9,6 +9,7 @@ class BrewManager: ObservableObject {
     @Published var isRunningDoctor = false
     @Published var cleanupOutput = ""
     @Published var isRunningCleanup = false
+    @Published var metadataOperation = ReliabilityOperation(total: 1, message: "Waiting for package metadata")
 
     private let fileManager = FileManager.default
 
@@ -34,7 +35,9 @@ class BrewManager: ObservableObject {
             return
         }
 
+        guard !isLoading else { return }
         self.isLoading = true
+        _ = metadataOperation.start(message: "Loading Homebrew packages")
         self.packages = []
 
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -70,6 +73,7 @@ class BrewManager: ObservableObject {
             await MainActor.run {
                 self.packages = initialSorted
                 self.isLoading = false
+                self.metadataOperation.update(completed: 0, message: "Loaded \(self.packages.count) packages; fetching metadata…")
                 AppLogger.shared.log("Fast loaded \(self.packages.count) Homebrew packages. Fetching metadata in the background...")
             }
 
@@ -154,8 +158,14 @@ class BrewManager: ObservableObject {
                     let finalSorted = Array(enrichedMap.values).sorted(by: { $0.name.lowercased() < $1.name.lowercased() })
                     await MainActor.run {
                         self.packages = finalSorted
+                        self.metadataOperation.succeed(message: "Package metadata is up to date")
                         AppLogger.shared.log("Enriched background metadata for \(self.packages.count) Homebrew packages.")
                     }
+                }
+            }
+            await MainActor.run {
+                if self.metadataOperation.isActive {
+                    self.metadataOperation.finish(partial: true, message: "Package list loaded; some metadata is unavailable")
                 }
             }
         }
