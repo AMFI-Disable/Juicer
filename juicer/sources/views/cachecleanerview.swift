@@ -12,6 +12,7 @@ struct cachecleanerview: View {
     @State private var resultMessage: String = ""
     @State private var showResult = false
     @State private var showConfetti = false
+    @State private var previewError: String?
 
     enum InsightsTab: String, CaseIterable {
         case insights = "Space Insights"
@@ -80,6 +81,17 @@ struct cachecleanerview: View {
             Button("OK") {}
         } message: {
             Text(resultMessage)
+        }
+        .alert("Unable to Build Safety Preview", isPresented: Binding(
+            get: { previewError != nil },
+            set: { if !$0 { previewError = nil } }
+        )) {
+            Button("OK") { previewError = nil }
+        } message: {
+            Text(previewError ?? "Unknown preview error.")
+        }
+        .sheet(item: $manager.safetyPreview) { manifest in
+            cacheCleanupSafetyPreview(manifest: manifest)
         }
     }
 
@@ -255,6 +267,16 @@ struct cachecleanerview: View {
                 .buttonStyle(.bordered)
                 .disabled(manager.isScanning)
 
+            Button("Safety Preview") {
+                do {
+                    try manager.prepareInsightsSafetyPreview()
+                } catch {
+                    previewError = error.localizedDescription
+                }
+            }
+            .buttonStyle(.bordered)
+            .disabled(selectedCount == 0 || manager.isCleaning || manager.isScanning)
+
             Button(action: { showFirstAlert = true }) {
                 HStack {
                     if manager.isCleaning {
@@ -271,6 +293,58 @@ struct cachecleanerview: View {
         }
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+    }
+
+    @ViewBuilder
+    private func cacheCleanupSafetyPreview(manifest: DestructiveOperationManifest) -> some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Cleanup Safety Preview").font(.title2).bold()
+                    Text("Read-only manifest • no files will be changed from this preview")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Button("Done") { manager.safetyPreview = nil }
+                    .keyboardShortcut(.cancelAction)
+            }
+
+            HStack(spacing: 16) {
+                Label("\(manifest.impact.itemCount) items", systemImage: "shippingbox")
+                Label(CacheCleanerManager.formatBytes(manifest.impact.knownByteCount), systemImage: "externaldrive")
+                if !manifest.impact.hasCompleteByteEstimate {
+                    Text("\(manifest.impact.unknownByteCountItems) sizes unknown")
+                        .foregroundStyle(.orange)
+                }
+            }
+            .font(.headline)
+
+            Text("A future confirmed operation would move exactly these captured targets to Trash. Rescan or selection changes require a new preview.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+
+            List(manifest.selectedItems) { item in
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(item.displayName).bold()
+                        Spacer()
+                        Text(item.kind.rawValue.capitalized).foregroundStyle(.secondary)
+                        Text(item.byteCount.map(CacheCleanerManager.formatBytes) ?? "Size unknown")
+                    }
+                    Text(item.path)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                }
+                .padding(.vertical, 3)
+            }
+            .frame(minHeight: 260)
+
+            Label("Preview only: this sheet has no destructive action.", systemImage: "checkmark.shield.fill")
+                .foregroundStyle(.green)
+        }
+        .padding(20)
+        .frame(minWidth: 720, minHeight: 470)
     }
 
     // MARK: - Project Cleaner Tab
