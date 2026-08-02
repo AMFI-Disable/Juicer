@@ -1,86 +1,46 @@
-# Task #5 Report: Destructive-Operation Safety Foundation
+# Juicer reliability task report
 
 ## Outcome
 
-Implemented a reusable, Foundation-only safety transaction model and integrated it into Cache Cleaner as a preview-only vertical slice. The new path validates and freezes selected targets into a serializable manifest, shows exact paths and aggregate impact, and intentionally exposes no mutation action.
+Implemented the reliability and safety foundation requested by the new task. Long-running Store and System flows now expose observable lifecycle states, prevent duplicate refreshes, surface timeout/partial/failure outcomes, and retain last-update/error context.
 
-The existing Cache Cleaner trash methods were not refactored or invoked by the new preview path. No real user files were deleted, moved, or modified during implementation or verification.
+## Implemented
 
-## Shared safety model
+- Added `juicer/sources/models/reliability.swift` with deterministic operation state/progress, package-source classification, Homebrew outdated-data parsing, launchd status parsing, and protected-process policy.
+- Store Studio Sync Database now blocks duplicate requests, reports loading/partial/failure/timeout states, offers retry UI, and no longer leaves the catalog in an indefinite loading state.
+- Homebrew package metadata activity is owned by `BrewManager.metadataOperation`; it reports background completion or partial metadata failure instead of an unscoped indefinite log message.
+- Live Status Monitor now deduplicates refreshes, has a bounded 30-second timeout, preserves stale values on failure, records the last successful update, and rejects stale worker results.
+- Battery Health explicitly reports “Not available on this Mac” when no battery telemetry exists.
+- Process Killer distinguishes unavailable data, protects system-critical processes, and prevents protected force-kill requests.
+- System Service Status now uses structured searchable columns with timestamps and explanations for `-9`, `-1`, and `78`; inspection remains read-only.
+- Added six deterministic regression tests in `juicer/tests/reliabilitytests.swift` for lifecycle transitions, timeout/cancellation, package classification, outdated parsing, service status parsing, and process protection.
 
-Added `juicer/sources/models/destructiveoperation.swift` with reusable types for:
-
-- stable operation identity and human-readable title;
-- read-only preview items, selected target IDs, target categories, and exact paths;
-- aggregate item count, known byte count, and unknown-size tracking;
-- explicit confirmation state and an impact-specific confirmation phrase;
-- preview, confirmation, ready, running, success, partial-failure, failure, and cancellation states;
-- monotonic item progress;
-- target-specific failure details and recovery information;
-- a Codable operation manifest suitable for local action history;
-- guarded state transitions that prevent incomplete work from being reported as successful;
-- path validation for empty, relative, filesystem-root, home-root, workspace-root, and out-of-scope targets, with narrow explicit authorization support.
-
-The model does not import SwiftUI, execute shell commands, or perform filesystem mutation.
-
-## Cache Cleaner preview integration
-
-Updated `CacheCleanerManager` to build a safety manifest from the currently selected, existing cache insights. Path validation occurs before the manifest is published, and selected target IDs and impact are captured together so the preview remains a stable snapshot.
-
-Updated `cachecleanerview` with a **Safety Preview** action and read-only sheet that displays:
-
-- exact selected item count;
-- known byte impact and unknown-size count;
-- cache/log classification;
-- every captured target name and path;
-- an explicit statement that the sheet cannot change files;
-- guidance that rescans or selection changes require a new preview.
-
-The sheet has only a **Done** action. It has no callback to `trashSelected`, `trashProjectDeps`, `removeItem`, `trashItem`, or command execution.
-
-## Regression coverage
-
-Added `juicer/tests/destructiveoperationtests.swift` with 10 deterministic tests covering:
-
-- selected item/byte aggregation and unknown sizes;
-- rejection of an empty selection;
-- explicit confirmation and successful state transitions;
-- rejection of an incorrect confirmation phrase;
-- partial failure classification;
-- distinct cancellation with preserved manifest and recovery data;
-- manifest JSON serialization round-trip;
-- empty, relative, root, home, and workspace target rejection;
-- allowed-scope enforcement using temporary directories;
-- monotonic progress enforcement.
-
-Tests use only UUID-named directories under `FileManager.default.temporaryDirectory`; teardown removes only the exact directory created by each test.
+The existing destructive-operation manifest and Cache Cleaner preview from the previous task remain intact. No new destructive action was invoked, and no user files, services, startup items, schedules, or processes were modified.
 
 ## Verification
 
 - `swiftc -parse` over all application and test Swift sources: passed.
-- Scoped `git diff --check` for Task #5 files: passed. Git emitted a benign fsmonitor IPC warning already present in this workspace.
-- `xcodegen generate`: passed with XcodeGen at `/opt/homebrew/bin/xcodegen`.
-- Generated project metadata: no tracked diff was required; source folder discovery included both new files.
-- Full macOS XCTest run with signing disabled and DerivedData at `/private/tmp/JuicerTask5DerivedData`: passed.
-- Test result: **20 tests executed, 0 failures** (the existing 10 tests plus 10 new tests).
-- Xcode result bundle: `/private/tmp/JuicerTask5DerivedData/Logs/Test/Test-juicer-2026.08.02_09-34-17-+0800.xcresult`.
-- Source audit confirmed the new model contains no command execution or production mutation call, and the preview sheet contains no destructive action.
+- `xcodegen generate`: passed; generated project includes the new source and test files.
+- Full macOS XCTest run with signing disabled: **26 tests, 0 failures**.
+- Result bundle: `/private/tmp/JuicerNewTaskDerivedData/Logs/Test/Test-juicer-2026.08.02_09-49-07-+0800.xcresult`.
+- Existing warnings remain, including deprecated APIs, Swift 6 concurrency diagnostics, notification authorization in the test host, and the pre-existing app-icon/build-script warnings.
 
-The build continues to emit pre-existing warnings, including Swift 6 concurrency diagnostics, deprecated macOS APIs, unassigned app-icon children, and a build-script dependency-analysis warning. XCTest also logs an expected notification-authorization failure in the test host. None caused a test failure, and they were outside this focused task.
+## Scope note
+
+The task lists a large follow-up matrix (health repository-level reporting, startup-item auditing, full cleanup transaction adoption, and complete System Studio refresh migration). This pass establishes the shared lifecycle and safety primitives and wires the highest-risk observable paths without broad mutation refactors. Those remaining workflows should adopt `ReliabilityOperation` before their production mutation paths are expanded.
+
+`plan.md` was not present when this task began, so no planning file was restored or modified. `task.md` was deleted after completion as requested.
 
 ## Files changed
 
-- `juicer/sources/models/destructiveoperation.swift` — new shared safety transaction, manifest, impact, and path-validation model.
-- `juicer/tests/destructiveoperationtests.swift` — new deterministic regression coverage.
-- `juicer/sources/models/cachecleanermodel.swift` — preview-manifest builder for selected cache insights.
-- `juicer/sources/views/cachecleanerview.swift` — read-only safety preview UI and validation error presentation.
-- `report.md` — this completion report.
-- `task.md` — removed after completion as requested.
-
-## Planning recovery note
-
-`plan.md` was absent before Task #5 began and remains absent. Repository history contains earlier versions of `plan.md`, so recovery appears possible, but no version was restored because selecting the correct historical roadmap is a separate planning decision and this task explicitly prohibited changing planning/documentation files. No planning file was deleted or overwritten during Task #5.
-
-## Recommended next adoption step
-
-Before changing any production deletion path, make the existing Cache Cleaner confirmation consume the frozen manifest and revalidate it immediately before commit. Persist the terminal manifest atomically to a local history store, then migrate one recoverable mutation path with per-target results and partial-failure reporting. The current task deliberately stops before that boundary.
+- `juicer/sources/models/reliability.swift`
+- `juicer/tests/reliabilitytests.swift`
+- `juicer/sources/models/brewmanager.swift`
+- `juicer/sources/models/statusmonitormodel.swift`
+- `juicer/sources/models/storemanager.swift`
+- `juicer/sources/models/systemfeaturemanagers.swift`
+- `juicer/sources/views/storeview.swift`
+- `juicer/sources/views/systemfeatureviews.swift`
+- `juicer/sources/views/systemservicesview.swift`
+- `report.md`
+- `task.md` — deleted after completion
