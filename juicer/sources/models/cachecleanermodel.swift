@@ -90,8 +90,29 @@ class CacheCleanerManager: ObservableObject {
     @Published var totalCleanableBytes: Int64 = 0
     @Published var projectScanRoot: String = ""
     @Published var log: [String] = []
+    @Published var safetyPreview: DestructiveOperationManifest?
 
     private let fm = FileManager.default
+
+    func prepareInsightsSafetyPreview() throws {
+        let selected = insights.filter { $0.isSelected && $0.exists }
+        let validator = DestructivePathValidator(
+            allowedRoots: selected.map { URL(fileURLWithPath: $0.path).deletingLastPathComponent() }
+        )
+        let previewItems = try selected.map { item -> DestructiveOperationPreviewItem in
+            let validatedURL = try validator.validate(item.path)
+            return DestructiveOperationPreviewItem(
+                displayName: item.name,
+                path: validatedURL.path,
+                kind: item.category == .system && item.name.localizedCaseInsensitiveContains("log") ? .log : .cache,
+                byteCount: item.sizeBytes >= 0 ? item.sizeBytes : nil
+            )
+        }
+        safetyPreview = try DestructiveOperationFlow(
+            identity: .init(title: "Move selected cache items to Trash"),
+            items: previewItems
+        ).manifest
+    }
 
     private var backupsDir: URL {
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask).first
