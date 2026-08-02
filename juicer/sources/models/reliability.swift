@@ -51,12 +51,15 @@ struct ReliabilityOperation {
 
     mutating func start(message: String? = nil, at date: Date = Date()) -> Bool {
         guard !isActive else { return false }
-        snapshot.state = .running
-        snapshot.startedAt = date
-        snapshot.finishedAt = nil
-        snapshot.errorMessage = nil
-        if let message { snapshot.progress.message = message }
-        snapshot.lastUpdatedAt = date
+        snapshot = ReliabilityOperationSnapshot(
+            id: UUID(),
+            state: .running,
+            progress: ReliabilityProgress(completed: 0, total: snapshot.progress.total, message: message ?? snapshot.progress.message),
+            errorMessage: nil,
+            startedAt: date,
+            finishedAt: nil,
+            lastUpdatedAt: date
+        )
         return true
     }
 
