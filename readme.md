@@ -19,7 +19,7 @@ Juicer is the ultimate open-source companion utility for **macOS developers and 
 
 ---
 
-## 🧭 Bundled Workspace Companion Suite (V1.0.1)
+## 🧭 Bundled Workspace Companion Suite (V1.0.3)
 
 Juicer organizes its extensive feature set across **16 specialized companion workspaces**:
 
