@@ -56,4 +56,28 @@ final class reliabilitytests: XCTestCase {
         XCTAssertTrue(ProtectedProcessPolicy.isProtected(pid: 42, name: "launchd"))
         XCTAssertFalse(ProtectedProcessPolicy.isProtected(pid: 42, name: "sample-worker"))
     }
+
+    func testNetworkValidationAndDNSParsing() {
+        XCTAssertEqual(NetworkInputValidation.hostname("example.com"), "example.com")
+        XCTAssertNil(NetworkInputValidation.hostname("bad host"))
+        XCTAssertEqual(NetworkInputValidation.ports("443, 80, 443, 0, 70000"), [80, 443])
+        let output = ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1\n;; ANSWER SECTION:\nexample.com. 60 IN A 93.184.216.34\n;; Query time: 12 msec\n;; SERVER: 1.1.1.1#53\n"
+        let parsed = DNSDiagnosticParser.parse(output, resolver: "1.1.1.1")
+        XCTAssertEqual(parsed.status, "NOERROR")
+        XCTAssertEqual(parsed.queryTimeMilliseconds, 12)
+        XCTAssertEqual(parsed.answers.first?.value, "93.184.216.34")
+    }
+
+    func testNetworkParsersAndOperationIDs() {
+        XCTAssertEqual(NetworkInputValidation.bonjourService("_http._tcp"), "_http._tcp")
+        XCTAssertNil(NetworkInputValidation.bonjourService("http"))
+        let discovery = LANDiscoveryParser.parse("Browsing _http._tcp\nDATE: now\nInstance._http._tcp.local.\n", service: "_http._tcp")
+        XCTAssertEqual(discovery.instances, ["Instance._http._tcp.local."])
+        var operation = ReliabilityOperation(total: 1)
+        XCTAssertTrue(operation.start())
+        let firstID = operation.snapshot.id
+        operation.succeed()
+        XCTAssertTrue(operation.start())
+        XCTAssertNotEqual(firstID, operation.snapshot.id)
+    }
 }
