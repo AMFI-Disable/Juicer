@@ -658,9 +658,9 @@ struct creatorecosystemview: View {
 
                 // Open on GitHub Web
                 Button(action: {
-                    if let url = URL(string: "https://github.com/\(repo.repository)") {
-                        NSWorkspace.shared.open(url)
-                    }
+                    guard isSanitizedRepo(repo.repository),
+                          let url = URL(string: "https://github.com/\(repo.repository)") else { return }
+                    NSWorkspace.shared.open(url)
                 }) {
                     HStack(spacing: 3) {
                         Image(systemName: "arrow.up.right.square")
@@ -678,14 +678,43 @@ struct creatorecosystemview: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(repo.themeColor.opacity(0.28), lineWidth: 1))
     }
 
+    private func isSanitizedRepo(_ repoString: String) -> Bool {
+        let components = repoString.components(separatedBy: "/")
+        guard components.count == 2 else { return false }
+        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-_."))
+        for component in components {
+            if component.isEmpty || component == "." || component == ".." { return false }
+            if component.rangeOfCharacter(from: allowed.inverted) != nil { return false }
+        }
+        return !repoString.hasPrefix("-")
+    }
+
     private func cloneRepoToFolder(repo: CreatorRepoItem) {
+        guard isSanitizedRepo(repo.repository) else {
+            cloneStatusMessage = "Invalid repository format: \(repo.repository)"
+            cloneStatusColor = .red
+            return
+        }
+
         let panel = NSOpenPanel()
         panel.title = "Select Folder to Clone \(repo.name) Into"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
 
-        if panel.runModal() == .OK, let targetDir = panel.url {
+        if panel.runModal() == .OK, let rawTargetDir = panel.url {
+            let targetDir = rawTargetDir.standardizedFileURL.resolvingSymlinksInPath()
+            let repoFolderName = (repo.repository.components(separatedBy: "/").last ?? repo.name)
+                .replacingOccurrences(of: "..", with: "")
+                .trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            let clonedFolder = targetDir.appendingPathComponent(repoFolderName).standardizedFileURL.resolvingSymlinksInPath()
+
+            guard clonedFolder.path.hasPrefix(targetDir.path) else {
+                cloneStatusMessage = "Target destination path safety check failed."
+                cloneStatusColor = .red
+                return
+            }
+
             cloningRepo = repo.repository
             cloneStatusMessage = "Cloning \(repo.repository) into \(targetDir.lastPathComponent)..."
             cloneStatusColor = .orange
@@ -694,19 +723,17 @@ struct creatorecosystemview: View {
                 let process = Process()
                 let errorPipe = Pipe()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-                process.arguments = ["clone", "https://github.com/\(repo.repository).git"]
+                let cloneURLString = "https://github.com/\(repo.repository).git"
+                process.arguments = ["clone", "--", cloneURLString]
                 process.currentDirectoryURL = targetDir
                 process.standardError = errorPipe
 
                 do {
                     try process.run()
+                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                     process.waitUntilExit()
 
-                    let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                     let errorString = String(data: errorData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-
-                    let repoFolderName = repo.repository.components(separatedBy: "/").last ?? repo.name
-                    let clonedFolder = targetDir.appendingPathComponent(repoFolderName)
 
                     DispatchQueue.main.async {
                         self.cloningRepo = nil
