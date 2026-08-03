@@ -49,6 +49,9 @@ final class DockerManager: ObservableObject {
             "/usr/bin/docker"
         ]
 
+        self.dockerPath = ""
+        self.isDockerInstalled = false
+
         for path in candidates {
             if FileManager.default.fileExists(atPath: path) {
                 self.dockerPath = path
@@ -58,26 +61,38 @@ final class DockerManager: ObservableObject {
         }
 
         if !isDockerInstalled {
-            // Check PATH fallback
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/which")
-            process.arguments = ["docker"]
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            try? process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines), !output.isEmpty {
-                self.dockerPath = output
-                self.isDockerInstalled = true
+            let result = CommandExecutor.shared.run(
+                executablePath: "/usr/bin/which",
+                arguments: ["docker"],
+                timeout: 5,
+                category: .readOnly
+            )
+            if result.succeeded {
+                let output = result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+                if output.hasPrefix("/") && FileManager.default.fileExists(atPath: output) {
+                    self.dockerPath = output
+                    self.isDockerInstalled = true
+                }
             }
+        }
+
+        if !isDockerInstalled {
+            self.statusMessage = "Docker CLI is not installed"
+            self.isDaemonRunning = false
+            return
         }
 
         refreshAll()
     }
 
     func refreshAll() {
-        guard isDockerInstalled else { return }
+        guard isDockerInstalled, !dockerPath.isEmpty else {
+            DispatchQueue.main.async {
+                self.isRefreshing = false
+                self.isDaemonRunning = false
+            }
+            return
+        }
         isRefreshing = true
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -91,6 +106,7 @@ final class DockerManager: ObservableObject {
                 self.isDaemonRunning = daemonOk
                 self.containers = loadedContainers
                 self.diskUsage = loadedDiskUsage
+                self.statusMessage = daemonOk ? "Docker daemon connected" : "Docker daemon unreachable"
                 self.isRefreshing = false
             }
         }
@@ -98,91 +114,86 @@ final class DockerManager: ObservableObject {
 
     private func checkDaemonStatus() -> Bool {
         guard !dockerPath.isEmpty else { return false }
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: dockerPath)
-        process.arguments = ["info"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        do {
-            try process.run()
-            process.waitUntilExit()
-            return process.terminationStatus == 0
-        } catch {
-            return false
-        }
+        let result = CommandExecutor.shared.run(
+            executablePath: dockerPath,
+            arguments: ["info"],
+            timeout: 10,
+            category: .readOnly
+        )
+        return result.succeeded
     }
 
     private func loadContainers() -> [DockerContainer] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: dockerPath)
-        process.arguments = ["ps", "-a", "--format", "{{.ID}}||{{.Names}}||{{.Image}}||{{.Status}}||{{.State}}||{{.CreatedAt}}||{{.Ports}}"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            guard let output = String(data: data, encoding: .utf8) else { return [] }
+        guard !dockerPath.isEmpty else { return [] }
+        let result = CommandExecutor.shared.run(
+            executablePath: dockerPath,
+            arguments: ["ps", "-a", "--format", "{{.ID}}||{{.Names}}||{{.Image}}||{{.Status}}||{{.State}}||{{.CreatedAt}}||{{.Ports}}"],
+            timeout: 15,
+            category: .readOnly
+        )
+        guard result.succeeded else { return [] }
 
-            var items: [DockerContainer] = []
-            let lines = output.components(separatedBy: .newlines)
-            for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
-                let parts = line.components(separatedBy: "||")
-                if parts.count >= 5 {
-                    let container = DockerContainer(
-                        id: parts[0],
-                        name: parts[1],
-                        image: parts[2],
-                        status: parts[3],
-                        state: parts[4],
-                        created: parts.count > 5 ? parts[5] : "",
-                        ports: parts.count > 6 ? parts[6] : ""
-                    )
-                    items.append(container)
-                }
+        var items: [DockerContainer] = []
+        let lines = result.standardOutput.components(separatedBy: .newlines)
+        for line in lines where !line.trimmingCharacters(in: .whitespaces).isEmpty {
+            let parts = line.components(separatedBy: "||")
+            if parts.count >= 5 {
+                let container = DockerContainer(
+                    id: parts[0].trimmingCharacters(in: .whitespaces),
+                    name: parts[1].trimmingCharacters(in: .whitespaces),
+                    image: parts[2].trimmingCharacters(in: .whitespaces),
+                    status: parts[3].trimmingCharacters(in: .whitespaces),
+                    state: parts[4].trimmingCharacters(in: .whitespaces),
+                    created: parts.count > 5 ? parts[5].trimmingCharacters(in: .whitespaces) : "",
+                    ports: parts.count > 6 ? parts[6].trimmingCharacters(in: .whitespaces) : ""
+                )
+                items.append(container)
             }
-            return items
-        } catch {
-            return []
         }
+        return items
     }
 
     private func loadDiskUsage() -> [DockerDiskUsage] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: dockerPath)
-        process.arguments = ["system", "df"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            guard let output = String(data: data, encoding: .utf8) else { return [] }
+        guard !dockerPath.isEmpty else { return [] }
+        let result = CommandExecutor.shared.run(
+            executablePath: dockerPath,
+            arguments: ["system", "df"],
+            timeout: 15,
+            category: .readOnly
+        )
+        guard result.succeeded else { return [] }
 
-            var items: [DockerDiskUsage] = []
-            let lines = output.components(separatedBy: .newlines)
-            for line in lines {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                if trimmed.hasPrefix("Images") || trimmed.hasPrefix("Containers") || trimmed.hasPrefix("Local Volumes") || trimmed.hasPrefix("Build Cache") {
-                    let parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                    if parts.count >= 4 {
-                        let type = parts[0] + (parts.count > 1 && parts[1] == "Volumes" ? " Volumes" : (parts.count > 1 && parts[1] == "Cache" ? " Cache" : ""))
-                        let usage = DockerDiskUsage(
-                            type: type,
-                            totalCount: Int(parts[type.contains(" ") ? 2 : 1]) ?? 0,
-                            activeCount: Int(parts[type.contains(" ") ? 3 : 2]) ?? 0,
-                            size: parts.count > 4 ? parts[type.contains(" ") ? 4 : 3] : "0B",
-                            reclaimable: parts.last ?? "0B"
-                        )
-                        items.append(usage)
-                    }
+        var items: [DockerDiskUsage] = []
+        let lines = result.standardOutput.components(separatedBy: .newlines)
+        for line in lines {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("Images") || trimmed.hasPrefix("Containers") || trimmed.hasPrefix("Local Volumes") || trimmed.hasPrefix("Build Cache") {
+                let parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
+                let isTwoWordType = trimmed.hasPrefix("Local Volumes") || trimmed.hasPrefix("Build Cache")
+                let minParts = isTwoWordType ? 4 : 3
+                if parts.count >= minParts {
+                    let type = isTwoWordType && parts.count >= 2 ? "\(parts[0]) \(parts[1])" : parts[0]
+                    let totalIdx = isTwoWordType ? 2 : 1
+                    let activeIdx = isTwoWordType ? 3 : 2
+                    let sizeIdx = isTwoWordType ? 4 : 3
+
+                    let totalCount = totalIdx < parts.count ? (Int(parts[totalIdx]) ?? 0) : 0
+                    let activeCount = activeIdx < parts.count ? (Int(parts[activeIdx]) ?? 0) : 0
+                    let size = sizeIdx < parts.count ? parts[sizeIdx] : "0B"
+                    let reclaimable = parts.count > (sizeIdx + 1) ? parts[parts.count - 1] : "0B"
+
+                    let usage = DockerDiskUsage(
+                        type: type,
+                        totalCount: totalCount,
+                        activeCount: activeCount,
+                        size: size,
+                        reclaimable: reclaimable
+                    )
+                    items.append(usage)
                 }
             }
-            return items
-        } catch {
-            return []
         }
+        return items
     }
 
     // Container Actions
@@ -226,11 +237,15 @@ final class DockerManager: ObservableObject {
     private func runDockerCommand(_ args: [String], completion: @escaping (Bool) -> Void) {
         guard !dockerPath.isEmpty else { completion(false); return }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self, !self.dockerPath.isEmpty else {
+                DispatchQueue.main.async { completion(false) }
+                return
+            }
             let category: CommandCategory = ["start", "stop", "restart"].contains(args.first ?? "")
                 ? .reversibleMutation
                 : .destructiveMutation
             let result = CommandExecutor.shared.run(
-                executablePath: self?.dockerPath ?? "/usr/local/bin/docker",
+                executablePath: self.dockerPath,
                 arguments: args,
                 timeout: 60,
                 category: category
