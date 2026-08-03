@@ -47,7 +47,18 @@ struct cachecleanerview: View {
             Text("This will move \(manager.insights.filter { $0.isSelected && $0.exists }.count) items to Trash. They can be recovered from Trash if needed.")
         }
         .alert("Confirm Clean", isPresented: $showSecondAlert) {
-            Button("Confirm & Trash", role: .destructive) {
+            Button("Confirm & Clean", role: .destructive) {
+                let validator = DestructivePathValidator(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+                let selected = manager.insights.filter { $0.isSelected && $0.exists }
+                let unsafeItems = selected.filter { item in
+                    guard let validated = try? validator.validate(item.path) else { return true }
+                    let path = validated.path
+                    return path == "/" || path.hasPrefix("/System") || path.hasPrefix("/usr") || path.hasPrefix("/bin") || path.hasPrefix("/sbin")
+                }
+                guard unsafeItems.isEmpty else {
+                    previewError = "Refusing to trash \(unsafeItems.count) items with unsafe or system paths."
+                    return
+                }
                 manager.trashSelected { count, freed in
                     NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
                     showConfetti = true
@@ -68,6 +79,17 @@ struct cachecleanerview: View {
         }
         .alert("Confirm Project Clean", isPresented: $showProjectSecondAlert) {
             Button("Confirm & Clean", role: .destructive) {
+                let validator = DestructivePathValidator(homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+                let selected = manager.projectEntries.filter { $0.isSelected }
+                let unsafeEntries = selected.filter { entry in
+                    guard let validated = try? validator.validate(entry.path) else { return true }
+                    let path = validated.path
+                    return path == "/" || path.hasPrefix("/System") || path.hasPrefix("/Library") || path.hasPrefix("/usr") || path.hasPrefix("/bin") || path.hasPrefix("/sbin")
+                }
+                guard unsafeEntries.isEmpty else {
+                    previewError = "Refusing to clean \(unsafeEntries.count) project directories with unsafe or system paths."
+                    return
+                }
                 manager.trashProjectDeps { count, freed in
                     resultMessage = "Cleaned \(count) directories, freed \(CacheCleanerManager.formatBytes(freed))."
                     showResult = true
@@ -358,7 +380,18 @@ struct cachecleanerview: View {
                     .textFieldStyle(.roundedBorder)
 
                 Button("Scan") {
-                    manager.scanProjectDeps(root: projectRootInput)
+                    let sanitized = projectRootInput.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let expanded = (sanitized as NSString).expandingTildeInPath
+                    let targetPath = expanded.isEmpty ? FileManager.default.homeDirectoryForCurrentUser.path : expanded
+                    let canonicalPath = URL(fileURLWithPath: targetPath).standardizedFileURL.resolvingSymlinksInPath().path
+
+                    let systemPaths: Set<String> = ["/", "/System", "/Library", "/usr", "/bin", "/sbin", "/private", "/var", "/etc", "/dev"]
+                    if systemPaths.contains(canonicalPath) {
+                        previewError = "Scanning system root directory '\(canonicalPath)' is disallowed for security."
+                        return
+                    }
+                    projectRootInput = canonicalPath
+                    manager.scanProjectDeps(root: canonicalPath)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(manager.isScanning)
