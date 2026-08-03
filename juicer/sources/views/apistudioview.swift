@@ -28,6 +28,16 @@ struct APIHistoryRecord: Identifiable, Equatable {
 }
 
 // MARK: - cURL Parser & Generator Utility
+enum APIEnvironmentInterpolator {
+    static func interpolate(_ text: String, variables: [String: String]) -> String {
+        var result = text
+        for (key, val) in variables {
+            result = result.replacingOccurrences(of: "{{\(key)}}", with: val)
+        }
+        return result
+    }
+}
+
 enum cURLUtility {
     static func parse(curlCommand: String) -> (method: String, url: String, headers: [HTTPHeaderPair], body: String)? {
         let trimmed = curlCommand.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -540,7 +550,9 @@ struct APIStudioView: View {
     }
 
     private func sendRequest() {
-        guard var urlComponents = URLComponents(string: urlString) else { return }
+        let envVars = ["baseUrl": "https://api.github.com", "endpoint": "zen"]
+        let interpolated = APIEnvironmentInterpolator.interpolate(urlString, variables: envVars)
+        guard let url = URL(string: interpolated), var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return }
         
         var queryItems = urlComponents.queryItems ?? []
         for p in paramsList where p.isEnabled && !p.key.isEmpty {
