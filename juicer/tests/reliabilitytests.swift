@@ -80,4 +80,19 @@ final class reliabilitytests: XCTestCase {
         XCTAssertTrue(operation.start())
         XCTAssertNotEqual(firstID, operation.snapshot.id)
     }
+
+    func testTCCViewerManagerSampleDataHandling() {
+        let manager = TCCViewerManager.shared
+        let mockItems = manager.getMockPermissions()
+        XCTAssertFalse(mockItems.isEmpty)
+        XCTAssertTrue(mockItems.allSatisfy(\.isSampleData))
+
+        let expectation = expectation(description: "Sample revocation rejected")
+        manager.resetPermission(for: mockItems[0]) { success, message in
+            XCTAssertFalse(success)
+            XCTAssertTrue(message.contains("Cannot revoke permissions for sample data"))
+            expectation.fulfill()
+        }
+        wait(for: [expectation], timeout: 2.0)
+    }
 }

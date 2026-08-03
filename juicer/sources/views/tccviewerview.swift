@@ -81,15 +81,14 @@ struct tccviewerview: View {
                 HStack(spacing: 8) {
                     Text("Privacy Permissions Cabinet")
                         .font(.title2).bold()
-                    if !manager.hasAccess {
-                        Text("SANDBOX STUB")
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(Color.orange.opacity(0.15))
-                            .foregroundStyle(.orange).cornerRadius(3)
-                    }
+                    Text(manager.scanSource == .liveSystemDB ? "LIVE SYSTEM DB" : "SAMPLE DATA (SANDBOXED)")
+                        .font(.system(size: 8, weight: .bold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(manager.scanSource == .liveSystemDB ? Color.blue.opacity(0.15) : Color.orange.opacity(0.15))
+                        .foregroundStyle(manager.scanSource == .liveSystemDB ? Color.blue : Color.orange)
+                        .cornerRadius(4)
                 }
-                Text("Inspect and revoke system permissions (Camera, Microphone, Disk Access, Screen Recording) using macOS tccutil.")
+                Text(manager.scanSource == .liveSystemDB ? "Inspect and manage active macOS system privacy permissions." : "Displaying sample TCC permission records. Full Disk Access is required to query live system TCC.db directly.")
                     .font(.subheadline).foregroundStyle(.secondary)
             }
             Spacer()
@@ -152,7 +151,17 @@ struct tccviewerview: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(item.appName).font(.headline)
+                    HStack(spacing: 6) {
+                        Text(item.appName).font(.headline)
+                        if item.isSampleData {
+                            Text("SAMPLE")
+                                .font(.system(size: 7, weight: .bold))
+                                .padding(.horizontal, 4).padding(.vertical, 1)
+                                .background(Color.secondary.opacity(0.15))
+                                .foregroundStyle(Color.secondary)
+                                .cornerRadius(3)
+                        }
+                    }
                     Text(item.client).font(.caption2).foregroundColor(.secondary)
                     Text("Modified: \(formatDate(item.lastModified))")
                         .font(.caption2).foregroundColor(.secondary)
@@ -191,7 +200,13 @@ struct tccviewerview: View {
         HStack {
             if let item = selectedItem {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Selected App: \(item.appName)").bold().font(.subheadline)
+                    HStack(spacing: 6) {
+                        Text("Selected App: \(item.appName)").bold().font(.subheadline)
+                        if item.isSampleData {
+                            Text("(Sample Mode - Revocation Disabled)")
+                                .font(.caption2).foregroundColor(.orange)
+                        }
+                    }
                     Text("Bundle ID: \(item.client)").font(.caption2).foregroundColor(.secondary)
                 }
                 Spacer()
@@ -201,14 +216,16 @@ struct tccviewerview: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(.orange)
+                .disabled(item.isSampleData)
 
                 Button("Revoke All Permissions") {
                     showConfirmResetAll = true
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
+                .disabled(item.isSampleData)
             } else {
-                Text("Select an application permission record to trigger revocation settings.")
+                Text(manager.scanSource == .liveSystemDB ? "Select an application permission record to trigger revocation settings." : "Select an application record. Revocation requires live Full Disk Access permissions.")
                     .font(.caption).foregroundColor(.secondary)
                 Spacer()
             }
