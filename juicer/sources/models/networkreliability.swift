@@ -31,9 +31,9 @@ struct DNSDiagnosticResult: Equatable {
 enum NetworkInputValidation {
     static func hostname(_ value: String) -> String? {
         let host = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !host.isEmpty, host.count <= 253,
-              host.range(of: #"^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$"#, options: .regularExpression) != nil,
-              !host.contains("..") else { return nil }
+        guard !host.isEmpty, host.count <= 253, !host.contains("..") else { return nil }
+        let pattern = "^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$"
+        guard host.range(of: pattern, options: .regularExpression) != nil else { return nil }
         return host
     }
 
@@ -59,10 +59,20 @@ enum NetworkInputValidation {
 enum DNSDiagnosticParser {
     static func parse(_ output: String, resolver: String) -> DNSDiagnosticResult {
         let lines = output.split(whereSeparator: \.isNewline).map(String.init)
-        let status = lines.first(where: { $0.contains("status:") })?.split(separator: " ").last.map(String.init) ?? "UNKNOWN"
-        let queryTime = lines.first(where: { $0.localizedCaseInsensitiveContains("Query time:") })
-            .flatMap { $0.split(whereSeparator: { $0 == " " || $0 == "\t" }).drop(2).first }
-            .flatMap { Int($0) }
+        let statusLine = lines.first(where: { $0.contains("status:") })
+        let status: String
+        if let rawStatus = statusLine?.components(separatedBy: "status:").last?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) {
+            status = rawStatus
+        } else {
+            status = "UNKNOWN"
+        }
+        var queryTime: Int? = nil
+        if let queryLine = lines.first(where: { $0.localizedCaseInsensitiveContains("Query time:") }) {
+            let tokens = queryLine.split(whereSeparator: { $0 == " " || $0 == "\t" })
+            if let idx = tokens.firstIndex(where: { $0.localizedCaseInsensitiveContains("Query") }), idx + 2 < tokens.count, let val = Int(tokens[idx + 2]) {
+                queryTime = val
+            }
+        }
         let dnssec = lines.contains(where: { $0.contains(" ad;") || $0.contains(" ad,") }) ? "Validated (AD flag)" : "Not reported"
         var answers: [DNSAnswer] = []
         var inAnswer = false
@@ -74,7 +84,7 @@ enum DNSDiagnosticParser {
             guard parts.count >= 5 else { continue }
             answers.append(DNSAnswer(name: String(parts[0]), recordType: String(parts[3]), value: parts.dropFirst(4).joined(separator: " ")))
         }
-        let error: String? = status == "NOERROR" ? nil : "Resolver returned status (status). Check the hostname, resolver, and network connection."
+        let error: String? = status == "NOERROR" ? nil : "Resolver returned status \(status). Check the hostname, resolver, and network connection."
         return DNSDiagnosticResult(status: status, resolver: resolver, queryTimeMilliseconds: queryTime, dnssec: dnssec, answers: answers, error: error)
     }
 }
