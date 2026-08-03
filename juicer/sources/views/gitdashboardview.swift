@@ -36,7 +36,11 @@ struct gitdashboardview: View {
                 Menu {
                     Section("Branches") {
                         ForEach(manager.branches) { branch in
-                            Button(action: { manager.checkoutBranch(name: branch.name) }) {
+                            Button(action: {
+                                let sanitized = branch.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard !sanitized.isEmpty, !sanitized.hasPrefix("-") else { return }
+                                manager.checkoutBranch(name: sanitized)
+                            }) {
                                 HStack {
                                     if branch.isCurrent {
                                         Image(systemName: "checkmark")
@@ -72,7 +76,9 @@ struct gitdashboardview: View {
                     panel.canChooseFiles = false
                     panel.allowsMultipleSelection = false
                     if panel.runModal() == .OK, let url = panel.url {
-                        WorkspaceDirectoryManager.shared.currentDirectory = url.path
+                        let path = url.path.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !path.isEmpty else { return }
+                        WorkspaceDirectoryManager.shared.currentDirectory = path
                     }
                 }
                 .buttonStyle(.bordered)
@@ -118,7 +124,9 @@ struct gitdashboardview: View {
                         panel.canChooseDirectories = true
                         panel.canChooseFiles = false
                         if panel.runModal() == .OK, let url = panel.url {
-                            WorkspaceDirectoryManager.shared.currentDirectory = url.path
+                            let path = url.path.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard !path.isEmpty else { return }
+                            WorkspaceDirectoryManager.shared.currentDirectory = path
                         }
                     }
                     .buttonStyle(.borderedProminent)
@@ -142,27 +150,32 @@ struct gitdashboardview: View {
                 HStack {
                     Button("Cancel") { showNewBranchSheet = false }
                     Button("Create & Checkout") {
-                        if !newBranchName.isEmpty {
-                            manager.createBranch(name: newBranchName)
-                            newBranchName = ""
-                            showNewBranchSheet = false
-                        }
+                        let sanitizedBranch = newBranchName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !sanitizedBranch.isEmpty, !sanitizedBranch.hasPrefix("-") else { return }
+                        manager.createBranch(name: sanitizedBranch)
+                        newBranchName = ""
+                        showNewBranchSheet = false
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(newBranchName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || newBranchName.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("-"))
                 }
             }
             .padding(24)
         }
         .onAppear {
-            let activeDir = WorkspaceDirectoryManager.shared.currentDirectory
-            if FileManager.default.fileExists(atPath: "\(activeDir)/.git") {
+            let activeDir = WorkspaceDirectoryManager.shared.currentDirectory.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !activeDir.isEmpty else { return }
+            let gitPath = (activeDir as NSString).appendingPathComponent(".git")
+            if FileManager.default.fileExists(atPath: gitPath) {
                 manager.openRepository(at: activeDir)
             }
         }
         .onReceive(WorkspaceDirectoryManager.shared.$currentDirectory) { newDir in
-            guard !newDir.isEmpty else { return }
-            if manager.repoPath != newDir && FileManager.default.fileExists(atPath: "\(newDir)/.git") {
-                manager.openRepository(at: newDir)
+            let sanitizedDir = newDir.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !sanitizedDir.isEmpty else { return }
+            let gitPath = (sanitizedDir as NSString).appendingPathComponent(".git")
+            if manager.repoPath != sanitizedDir && FileManager.default.fileExists(atPath: gitPath) {
+                manager.openRepository(at: sanitizedDir)
             }
         }
     }
@@ -357,7 +370,9 @@ struct gitdashboardview: View {
 
                 if !branch.isCurrent {
                     Button("Checkout") {
-                        manager.checkoutBranch(name: branch.name)
+                        let sanitized = branch.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !sanitized.isEmpty, !sanitized.hasPrefix("-") else { return }
+                        manager.checkoutBranch(name: sanitized)
                     }
                     .buttonStyle(.bordered)
                 }
