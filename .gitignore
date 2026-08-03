@@ -35,3 +35,4 @@ galleries/
 # keep project.yml, source files, legal files, and readme.md tracked
 .vercel
 .env*
+.aider*
