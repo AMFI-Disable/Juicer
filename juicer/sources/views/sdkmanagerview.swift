@@ -96,7 +96,14 @@ struct sdkmanagerview: View {
         // First Confirmation Alert
         .alert("Warning: Change Active Version?", isPresented: $showingFirstAlert) {
             Button("Proceed", role: .none) {
-                showingSecondAlert = true
+                let trimmed = targetVersion.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    showingSecondAlert = true
+                } else {
+                    self.selectedRuntime = nil
+                    self.targetVersion = ""
+                    self.statusMessage = "Error: Cannot switch to an empty target SDK version."
+                }
             }
             Button("Cancel", role: .cancel) {
                 self.selectedRuntime = nil
@@ -171,7 +178,8 @@ struct sdkmanagerview: View {
                 .frame(width: 140)
 
                 Button("Switch") {
-                    if let selected = selections[runtime.name], selected != runtime.activeVersion {
+                    let selected = selections[runtime.name] ?? runtime.activeVersion
+                    if selected != runtime.activeVersion {
                         self.selectedRuntime = runtime
                         self.targetVersion = selected
                         self.showingFirstAlert = true
@@ -209,10 +217,26 @@ struct sdkmanagerview: View {
     private func executeVersionSwitch() {
         guard let runtime = selectedRuntime else { return }
 
-        self.isProcessing = true
-        self.statusMessage = "Applying version switch to \(targetVersion)..."
+        // Validate target version bounds, path safety, and command execution security
+        let trimmedVersion = targetVersion.trimmingCharacters(in: .whitespacesAndNewlines)
+        let forbiddenChars = CharacterSet(charactersIn: ";&|`$()<>\"'\\ \n\r\t")
 
-        manager.switchVersion(for: runtime, to: targetVersion) { success in
+        guard !trimmedVersion.isEmpty,
+              runtime.installedVersions.contains(trimmedVersion),
+              !trimmedVersion.contains(".."),
+              !trimmedVersion.contains("/"),
+              trimmedVersion.rangeOfCharacter(from: forbiddenChars) == nil else {
+            self.isProcessing = false
+            self.selectedRuntime = nil
+            self.targetVersion = ""
+            self.statusMessage = "Error: Invalid or untrusted SDK version string target."
+            return
+        }
+
+        self.isProcessing = true
+        self.statusMessage = "Applying version switch to \(trimmedVersion)..."
+
+        manager.switchVersion(for: runtime, to: trimmedVersion) { success in
             self.isProcessing = false
             self.selectedRuntime = nil
             self.targetVersion = ""
