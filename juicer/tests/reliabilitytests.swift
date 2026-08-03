@@ -95,4 +95,21 @@ final class reliabilitytests: XCTestCase {
         }
         wait(for: [expectation], timeout: 2.0)
     }
+
+    @MainActor
+    func testPrivacyScannerManagerScanningCancellationAndFiltering() async {
+        let manager = PrivacyScannerManager()
+        XCTAssertEqual(manager.state, .idle)
+
+        let fallback = PrivacyScannerEngine.getFallbackSampleRecords()
+        XCTAssertFalse(fallback.isEmpty)
+        XCTAssertTrue(fallback.allSatisfy { $0.confidence == .low })
+
+        let mappedCat = PrivacyScannerEngine.mapTCCServiceToCategory("kTCCServiceMicrophone")
+        XCTAssertEqual(mappedCat, .microphone)
+
+        manager.startScan()
+        manager.cancelScan()
+        XCTAssertEqual(manager.state, .cancelled)
+    }
 }
