@@ -38,6 +38,18 @@ struct tccviewerview: View {
             Button("Cancel", role: .cancel) {}
             Button("Revoke", role: .destructive) {
                 if let item = selectedItem {
+                    guard !item.isSampleData else {
+                        resultMessage = "Cannot revoke permissions for sample data."
+                        showResult = true
+                        selectedItem = nil
+                        return
+                    }
+                    guard !item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        resultMessage = "Invalid bundle identifier."
+                        showResult = true
+                        selectedItem = nil
+                        return
+                    }
                     manager.resetPermission(for: item) { _, msg in
                         resultMessage = msg
                         showResult = true
@@ -54,6 +66,18 @@ struct tccviewerview: View {
             Button("Cancel", role: .cancel) {}
             Button("Revoke All", role: .destructive) {
                 if let item = selectedItem {
+                    guard !item.isSampleData else {
+                        resultMessage = "Cannot revoke permissions for sample data."
+                        showResult = true
+                        selectedItem = nil
+                        return
+                    }
+                    guard !item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        resultMessage = "Invalid bundle identifier."
+                        showResult = true
+                        selectedItem = nil
+                        return
+                    }
                     manager.resetAllPermissions(forBundle: item.client) { _, msg in
                         resultMessage = msg
                         showResult = true
@@ -66,7 +90,7 @@ struct tccviewerview: View {
                 Text("Are you sure you want to revoke ALL TCC privacy permissions for '\(item.appName)'? This will reset all system permissions recorded for this bundle identifier.")
             }
         }
-        .alert("Done", isPresented: $showResult) {
+        .alert("Operation Result", isPresented: $showResult) {
             Button("OK") {}
         } message: {
             Text(resultMessage)
@@ -90,6 +114,18 @@ struct tccviewerview: View {
                 }
                 Text(manager.scanSource == .liveSystemDB ? "Inspect and manage active macOS system privacy permissions." : "Displaying sample TCC permission records. Full Disk Access is required to query live system TCC.db directly.")
                     .font(.subheadline).foregroundStyle(.secondary)
+
+                if let scanErr = manager.lastScanError, !scanErr.isEmpty {
+                    HStack(spacing: 6) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundColor(.orange)
+                        Text(scanErr)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 2)
+                }
             }
             Spacer()
 
@@ -140,58 +176,72 @@ struct tccviewerview: View {
     private func permissionsList() -> some View {
         let filtered = filterService == nil ? manager.permissions : manager.permissions.filter { $0.service == filterService }
 
-        List(filtered) { item in
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 6)
-                        .fill(serviceColor(item.service).opacity(0.12))
-                        .frame(width: 32, height: 32)
-                    Image(systemName: serviceIcon(item.service))
-                        .font(.caption).foregroundColor(serviceColor(item.service))
-                }
+        if filtered.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "shield.slash")
+                    .font(.largeTitle)
+                    .foregroundStyle(.tertiary)
+                Text("No Privacy Permission Records")
+                    .font(.headline)
+                Text(filterService == nil ? "No permissions detected." : "No permissions found for \(formatService(filterService!)).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List(filtered) { item in
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(serviceColor(item.service).opacity(0.12))
+                            .frame(width: 32, height: 32)
+                        Image(systemName: serviceIcon(item.service))
+                            .font(.caption).foregroundColor(serviceColor(item.service))
+                    }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(item.appName).font(.headline)
-                        if item.isSampleData {
-                            Text("SAMPLE")
-                                .font(.system(size: 7, weight: .bold))
-                                .padding(.horizontal, 4).padding(.vertical, 1)
-                                .background(Color.secondary.opacity(0.15))
-                                .foregroundStyle(Color.secondary)
-                                .cornerRadius(3)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(item.appName).font(.headline)
+                            if item.isSampleData {
+                                Text("SAMPLE")
+                                    .font(.system(size: 7, weight: .bold))
+                                    .padding(.horizontal, 4).padding(.vertical, 1)
+                                    .background(Color.secondary.opacity(0.15))
+                                    .foregroundStyle(Color.secondary)
+                                    .cornerRadius(3)
+                            }
+                        }
+                        Text(item.client).font(.caption2).foregroundColor(.secondary)
+                        Text("Modified: \(formatDate(item.lastModified))")
+                            .font(.caption2).foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    VStack(alignment: .trailing, spacing: 5) {
+                        HStack(spacing: 6) {
+                            Text(formatService(item.service).uppercased())
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(serviceColor(item.service).opacity(0.15))
+                                .foregroundStyle(serviceColor(item.service)).cornerRadius(3)
+
+                            Text(item.isAllowed ? "ALLOWED" : "DENIED")
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(item.isAllowed ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
+                                .foregroundStyle(item.isAllowed ? Color.green : Color.red).cornerRadius(3)
                         }
                     }
-                    Text(item.client).font(.caption2).foregroundColor(.secondary)
-                    Text("Modified: \(formatDate(item.lastModified))")
-                        .font(.caption2).foregroundColor(.secondary)
                 }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 5) {
-                    HStack(spacing: 6) {
-                        Text(formatService(item.service).uppercased())
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(serviceColor(item.service).opacity(0.15))
-                            .foregroundStyle(serviceColor(item.service)).cornerRadius(3)
-
-                        Text(item.isAllowed ? "ALLOWED" : "DENIED")
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 5).padding(.vertical, 1)
-                            .background(item.isAllowed ? Color.green.opacity(0.15) : Color.red.opacity(0.15))
-                            .foregroundStyle(item.isAllowed ? Color.green : Color.red).cornerRadius(3)
-                    }
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    selectedItem = item
                 }
             }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                selectedItem = item
-            }
+            .listStyle(.inset)
         }
-        .listStyle(.inset)
     }
 
     // MARK: - Footer
@@ -212,18 +262,22 @@ struct tccviewerview: View {
                 Spacer()
 
                 Button("Revoke Selected") {
-                    showConfirmReset = true
+                    if !item.isSampleData && !item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        showConfirmReset = true
+                    }
                 }
                 .buttonStyle(.bordered)
                 .tint(.orange)
-                .disabled(item.isSampleData)
+                .disabled(item.isSampleData || item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
                 Button("Revoke All Permissions") {
-                    showConfirmResetAll = true
+                    if !item.isSampleData && !item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        showConfirmResetAll = true
+                    }
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(.red)
-                .disabled(item.isSampleData)
+                .disabled(item.isSampleData || item.client.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } else {
                 Text(manager.scanSource == .liveSystemDB ? "Select an application permission record to trigger revocation settings." : "Select an application record. Revocation requires live Full Disk Access permissions.")
                     .font(.caption).foregroundColor(.secondary)
