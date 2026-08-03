@@ -112,4 +112,30 @@ final class reliabilitytests: XCTestCase {
         manager.cancelScan()
         XCTAssertEqual(manager.state, .cancelled)
     }
+
+    func testNetworkExposureParserLoopbackAndWildcardHandling() {
+        let sampleLsofOutput = """
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+ControlCe   735 even   11u  IPv4 0x3e416a4255974d00      0t0  TCP *:7000 (LISTEN)
+Ollama     1047 even    4u  IPv4 0x48828274edca2946      0t0  TCP 127.0.0.1:49183 (LISTEN)
+custom_app 2048 even    5u  IPv4 0x1234567890abcdef      0t0  TCP 192.168.1.50:8080 (LISTEN)
+"""
+        let parsed = NetworkExposureParser.parseLsofOutput(sampleLsofOutput)
+        XCTAssertEqual(parsed.count, 3)
+
+        let controlCenter = parsed.first { $0.processName == "ControlCe" }
+        XCTAssertNotNil(controlCenter)
+        XCTAssertEqual(controlCenter?.classification, .wildcardPublic)
+        XCTAssertEqual(controlCenter?.port, 7000)
+
+        let ollama = parsed.first { $0.processName == "Ollama" }
+        XCTAssertNotNil(ollama)
+        XCTAssertEqual(ollama?.classification, .localLoopback)
+        XCTAssertEqual(ollama?.port, 49183)
+
+        let customApp = parsed.first { $0.processName == "custom_app" }
+        XCTAssertNotNil(customApp)
+        XCTAssertEqual(customApp?.classification, .specificIP)
+        XCTAssertEqual(customApp?.bindAddress, "192.168.1.50")
+    }
 }
