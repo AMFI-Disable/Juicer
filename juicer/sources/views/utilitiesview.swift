@@ -8,6 +8,7 @@ struct utilitiesview: View {
     @State private var showClipboardSheet = false
     @State private var showCmdTabSheet = false
     @State private var showLoupeSheet = false
+    @State private var showClearNotesAlert = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -92,11 +93,12 @@ struct utilitiesview: View {
                                         .font(.caption2).foregroundStyle(.secondary)
                                     Spacer()
                                     Button("Clear Notes") {
-                                        scratchpadText = ""
+                                        showClearNotesAlert = true
                                     }
                                     .buttonStyle(.plain)
                                     .font(.caption2)
-                                    .foregroundColor(.red)
+                                    .foregroundColor(scratchpadText.isEmpty ? .secondary : .red)
+                                    .disabled(scratchpadText.isEmpty)
                                 }
                             }
                             .padding(.horizontal, 20).padding(.bottom, 16)
@@ -128,13 +130,24 @@ struct utilitiesview: View {
             loupeOverlay()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.util.triggerClipboard"))) { _ in
+            guard manager.clipboardEnabled else { return }
             showClipboardSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.util.triggerCmdTab"))) { _ in
+            guard manager.betterCmdTabEnabled else { return }
             manager.showBetterCmdTabPanel()
         }
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.util.triggerLoupe"))) { _ in
+            guard manager.loupeEnabled else { return }
             showLoupeSheet = true
+        }
+        .alert("Clear Scratchpad Notes?", isPresented: $showClearNotesAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear", role: .destructive) {
+                scratchpadText = ""
+            }
+        } message: {
+            Text("This action will permanently erase all text saved in your scratchpad notes.")
         }
     }
 
