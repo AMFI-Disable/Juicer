@@ -29,39 +29,66 @@ final class ConverterManager: ObservableObject {
         let outputURL = destinationDir.appendingPathComponent(inputURL.deletingPathExtension().lastPathComponent + ".\(ext)")
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            var success = false
+            guard FileManager.default.fileExists(atPath: inputURL.path) else {
+                DispatchQueue.main.async {
+                    self?.isConverting = false
+                    self?.statusMessage = "Input document does not exist."
+                    completion(nil)
+                }
+                return
+            }
+
+            try? FileManager.default.createDirectory(at: destinationDir, withIntermediateDirectories: true, attributes: nil)
+
+            let finish: (Bool) -> Void = { ok in
+                DispatchQueue.main.async {
+                    self?.isConverting = false
+                    if ok && FileManager.default.fileExists(atPath: outputURL.path) {
+                        self?.statusMessage = "Converted successfully to \(outputURL.lastPathComponent)"
+                        completion(outputURL)
+                    } else {
+                        if FileManager.default.fileExists(atPath: outputURL.path) {
+                            try? FileManager.default.removeItem(at: outputURL)
+                        }
+                        self?.statusMessage = "Failed to convert document: \(inputURL.lastPathComponent)"
+                        completion(nil)
+                    }
+                }
+            }
 
             if inputURL.pathExtension.lowercased() == "md" && ext == "html" {
                 if let mdText = try? String(contentsOf: inputURL, encoding: .utf8) {
                     let html = self?.markdownToHTML(mdText) ?? ""
-                    try? html.write(to: outputURL, atomically: true, encoding: .utf8)
-                    success = true
+                    do {
+                        try html.write(to: outputURL, atomically: true, encoding: .utf8)
+                        finish(true)
+                    } catch {
+                        finish(false)
+                    }
+                } else {
+                    finish(false)
                 }
             } else if inputURL.pathExtension.lowercased() == "md" && ext == "pdf" {
                 if let mdText = try? String(contentsOf: inputURL, encoding: .utf8) {
                     let html = self?.markdownToHTML(mdText) ?? ""
                     self?.renderHTMLToPDF(html, outputURL: outputURL) { ok in
-                        success = ok
+                        finish(ok)
                     }
+                } else {
+                    finish(false)
                 }
             } else {
-                // Fallback to textutil or ditto
+                // Fallback to textutil
                 let process = Process()
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/textutil")
                 process.arguments = ["-convert", ext, inputURL.path, "-output", outputURL.path]
-                try? process.run()
-                process.waitUntilExit()
-                success = process.terminationStatus == 0 || FileManager.default.fileExists(atPath: outputURL.path)
-            }
-
-            DispatchQueue.main.async {
-                self?.isConverting = false
-                if success {
-                    self?.statusMessage = "Converted successfully to \(outputURL.lastPathComponent)"
-                    completion(outputURL)
-                } else {
-                    self?.statusMessage = "Conversion completed."
-                    completion(outputURL)
+                do {
+                    try process.run()
+                    process.waitUntilExit()
+                    let success = process.terminationStatus == 0 && FileManager.default.fileExists(atPath: outputURL.path)
+                    finish(success)
+                } catch {
+                    finish(false)
                 }
             }
         }
@@ -85,8 +112,12 @@ final class ConverterManager: ObservableObject {
             textView.string = html.replacingOccurrences(of: "<br>", with: "\n")
 
             let pdfData = textView.dataWithPDF(inside: textView.bounds)
-            try? pdfData.write(to: outputURL)
-            completion(true)
+            do {
+                try pdfData.write(to: outputURL, options: .atomic)
+                completion(true)
+            } catch {
+                completion(false)
+            }
         }
     }
 
@@ -98,23 +129,53 @@ final class ConverterManager: ObservableObject {
         let outputURL = destinationDir.appendingPathComponent(inputURL.deletingPathExtension().lastPathComponent + ".\(ext)")
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard FileManager.default.fileExists(atPath: inputURL.path) else {
+                DispatchQueue.main.async {
+                    self?.isConverting = false
+                    self?.statusMessage = "Input image file does not exist."
+                    completion(nil)
+                }
+                return
+            }
+
+            try? FileManager.default.createDirectory(at: destinationDir, withIntermediateDirectories: true, attributes: nil)
+
             guard let image = NSImage(contentsOf: inputURL),
                   let tiffData = image.tiffRepresentation,
                   let bitmap = NSBitmapImageRep(data: tiffData) else {
-                DispatchQueue.main.async { self?.isConverting = false; completion(nil) }
+                DispatchQueue.main.async {
+                    self?.isConverting = false
+                    self?.statusMessage = "Failed to load input image."
+                    completion(nil)
+                }
                 return
             }
 
             var fileType: NSBitmapImageRep.FileType = .png
             if ext == "jpg" || ext == "jpeg" { fileType = .jpeg } else if ext == "bmp" { fileType = .bmp } else if ext == "tiff" { fileType = .tiff } else if ext == "gif" { fileType = .gif }
 
+            var success = false
             if let data = bitmap.representation(using: fileType, properties: [:]) {
-                try? data.write(to: outputURL)
+                do {
+                    try data.write(to: outputURL, options: .atomic)
+                    success = true
+                } catch {
+                    success = false
+                }
             }
 
             DispatchQueue.main.async {
                 self?.isConverting = false
-                completion(outputURL)
+                if success && FileManager.default.fileExists(atPath: outputURL.path) {
+                    self?.statusMessage = "Converted image successfully to \(outputURL.lastPathComponent)"
+                    completion(outputURL)
+                } else {
+                    if FileManager.default.fileExists(atPath: outputURL.path) {
+                        try? FileManager.default.removeItem(at: outputURL)
+                    }
+                    self?.statusMessage = "Failed to write image file."
+                    completion(nil)
+                }
             }
         }
     }
