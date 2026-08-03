@@ -53,26 +53,35 @@ public enum NetworkExposureParser {
             guard parts.count >= 9 else { continue }
 
             let processName = parts[0]
-            guard let pid = Int(parts[1]) else { continue }
+            guard let pid = Int(parts[1]), pid >= 0 else { continue }
             let user = parts[2]
             let proto = parts[4] // IPv4 or IPv6
 
             // Target name column is usually part 8, e.g. "*:7000" or "127.0.0.1:11434" or "*:7000 (LISTEN)"
-            let nameCol = parts[8]
+            let nameCol = parts[8...].joined(separator: " ")
             let cleanName = nameCol.replacingOccurrences(of: "(LISTEN)", with: "").trimmingCharacters(in: .whitespaces)
 
             guard let lastColon = cleanName.range(of: ":", options: .backwards) else { continue }
-            let bindHost = String(cleanName[..<lastColon.lowerBound])
-            let portString = String(cleanName[lastColon.upperBound...])
-            guard let port = Int(portString) else { continue }
+            let rawHost = String(cleanName[..<lastColon.lowerBound]).trimmingCharacters(in: .whitespaces)
+            let portString = String(cleanName[lastColon.upperBound...]).trimmingCharacters(in: .whitespaces)
+
+            guard let port = Int(portString), (1...65535).contains(port) else { continue }
+
+            let bindHost = rawHost.isEmpty ? "*" : rawHost
+            let normalizedHost: String
+            if bindHost.hasPrefix("[") && bindHost.hasSuffix("]") && bindHost.count >= 2 {
+                normalizedHost = String(bindHost.dropFirst().dropLast())
+            } else {
+                normalizedHost = bindHost
+            }
 
             let classification: ExposureClassification
             let interfaceDescription: String
 
-            if bindHost == "*" || bindHost == "0.0.0.0" || bindHost == "::" || bindHost == "[::]" {
+            if normalizedHost == "*" || normalizedHost == "0.0.0.0" || normalizedHost == "::" {
                 classification = .wildcardPublic
                 interfaceDescription = "All Interfaces (*)"
-            } else if bindHost == "127.0.0.1" || bindHost == "localhost" || bindHost == "::1" || bindHost == "[::1]" {
+            } else if normalizedHost == "127.0.0.1" || normalizedHost == "localhost" || normalizedHost == "::1" {
                 classification = .localLoopback
                 interfaceDescription = "Loopback (lo0)"
             } else {
@@ -138,6 +147,16 @@ public final class NetworkExposureManager: ObservableObject {
                 task.waitUntilExit()
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8) ?? ""
+                let errData = errPipe.fileHandleForReading.readDataToEndOfFile()
+                let errOutput = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+                if task.terminationStatus != 0 && output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !errOutput.isEmpty {
+                    await MainActor.run {
+                        self.state = .failed(error: errOutput)
+                    }
+                    return
+                }
+
                 let parsed = NetworkExposureParser.parseLsofOutput(output)
 
                 await MainActor.run {
