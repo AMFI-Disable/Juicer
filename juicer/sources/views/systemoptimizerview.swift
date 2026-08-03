@@ -29,8 +29,12 @@ struct SystemOptimizerView: View {
             Button("Run Optimizations", role: .destructive) { manager.runSelectedTasks() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            let count = manager.tasks.filter { $0.isSelected && $0.status == .pending }.count
-            Text("You are about to run \(count) selected optimization tasks. Some actions affect system caches or state. Proceed?")
+            let pendingSelected = manager.tasks.filter { $0.isSelected && $0.status == .pending }
+            let privilegeCount = pendingSelected.filter { task in
+                isPrivilegedTask(task)
+            }.count
+            let privilegeNote = privilegeCount > 0 ? " Note: \(privilegeCount) task(s) may require administrator privileges." : ""
+            Text("You are about to run \(pendingSelected.count) selected optimization tasks. Some actions affect system caches or state.\(privilegeNote) Proceed?")
         }
     }
 
@@ -105,8 +109,7 @@ struct SystemOptimizerView: View {
             // Task list
             List {
                 let filtered = filterCategory == nil ? manager.tasks : manager.tasks.filter { $0.category == filterCategory }
-                ForEach(filtered.indices, id: \.self) { originalIdx in
-                    let task = filtered[originalIdx]
+                ForEach(filtered) { task in
                     taskRow(task: task)
                 }
             }
@@ -180,20 +183,29 @@ struct SystemOptimizerView: View {
                     Text(task.name)
                         .font(.headline)
                     categoryBadge(task.category)
+                    if isPrivilegedTask(task) {
+                        privilegeBadge()
+                    }
                 }
                 Text(task.description)
                     .font(.subheadline).foregroundStyle(.secondary)
                     .lineLimit(2).fixedSize(horizontal: false, vertical: true)
                 if !task.resultMessage.isEmpty && task.status != .pending {
+                    let msgLower = task.resultMessage.lowercased()
+                    let isPrivilegeError = msgLower.contains("permission") ||
+                                           msgLower.contains("privilege") ||
+                                           msgLower.contains("not permitted") ||
+                                           msgLower.contains("denied")
                     Text(task.resultMessage)
-                        .font(.caption2).foregroundStyle(.tertiary)
+                        .font(.caption2)
+                        .foregroundStyle(task.status == .failed ? (isPrivilegeError ? Color.red : Color.primary) : Color.tertiary)
                         .lineLimit(2)
                         .padding(.top, 2)
                 }
             }
         }
         .padding(.vertical, 6)
-        .opacity(task.status == .failed ? 0.6 : 1.0)
+        .opacity(task.status == .failed ? 0.85 : 1.0)
     }
 
     @ViewBuilder
@@ -222,6 +234,26 @@ struct SystemOptimizerView: View {
             .background(color.opacity(0.15))
             .foregroundStyle(color)
             .cornerRadius(4)
+    }
+
+    private func isPrivilegedTask(_ task: OptimizationTask) -> Bool {
+        let desc = task.description.lowercased()
+        let cmd = task.command.lowercased()
+        return desc.contains("admin") || desc.contains("root") || desc.contains("privilege") || cmd.contains("mount") || cmd.contains("tccutil") || cmd.contains("syslog")
+    }
+
+    @ViewBuilder
+    private func privilegeBadge() -> some View {
+        HStack(spacing: 2) {
+            Image(systemName: "lock.shield")
+            Text("Admin")
+        }
+        .font(.caption2).bold()
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(Color.red.opacity(0.12))
+        .foregroundStyle(.red)
+        .cornerRadius(4)
     }
 
     private func categoryColor(_ category: OptimizationTask.TaskCategory) -> Color {
@@ -350,10 +382,15 @@ struct SystemOptimizerView: View {
     }
 
     private func logLineColor(_ line: String) -> Color {
+        let lower = line.lowercased()
         if line.hasPrefix("✅") { return .green }
         if line.hasPrefix("❌") { return .red }
         if line.hasPrefix("▶") { return .blue }
         if line.hasPrefix("🏁") { return .orange }
+        if lower.contains("permission") || lower.contains("privilege") || lower.contains("not permitted") || lower.contains("denied") {
+            return .red
+        }
         return .primary
     }
 }
+
