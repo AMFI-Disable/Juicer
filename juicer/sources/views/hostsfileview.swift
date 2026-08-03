@@ -29,7 +29,7 @@ struct HostsFileView: View {
                 }
                 .buttonStyle(.bordered)
 
-                Button(action: createBackup) {
+                Button(action: { createBackup() }) {
                     Label("Create Snapshot", systemImage: "arrow.triangle.2.circlepath")
                 }
                 .buttonStyle(.bordered)
@@ -52,11 +52,11 @@ struct HostsFileView: View {
 
             if !message.isEmpty {
                 HStack(spacing: 6) {
-                    Image(systemName: message.contains("failed") || message.contains("Error") ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
-                        .foregroundStyle(message.contains("failed") || message.contains("Error") ? Color.red : Color.green)
+                    Image(systemName: message.contains("failed") || message.contains("Error") || message.contains("Unable") ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                        .foregroundStyle(message.contains("failed") || message.contains("Error") || message.contains("Unable") ? Color.red : Color.green)
                     Text(message)
                         .font(.caption.bold())
-                        .foregroundStyle(message.contains("failed") || message.contains("Error") ? Color.red : Color.green)
+                        .foregroundStyle(message.contains("failed") || message.contains("Error") || message.contains("Unable") ? Color.red : Color.green)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 4)
@@ -116,12 +116,13 @@ struct HostsFileView: View {
     }
 
     private func loadHostsFile() {
-        if let str = try? String(contentsOfFile: "/etc/hosts", encoding: .utf8) {
+        do {
+            let str = try String(contentsOfFile: "/etc/hosts", encoding: .utf8)
             contents = str
             originalContents = str
             message = ""
-        } else {
-            message = "Unable to read /etc/hosts."
+        } catch {
+            message = "Unable to read /etc/hosts: \(error.localizedDescription)"
         }
     }
 
@@ -129,7 +130,10 @@ struct HostsFileView: View {
         isSaving = true
         message = "Authorizing admin save..."
 
-        createBackup()
+        guard createBackup() else {
+            isSaving = false
+            return
+        }
 
         let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("hosts_temp_\(UUID().uuidString)")
         do {
@@ -143,8 +147,10 @@ struct HostsFileView: View {
                     
                     DispatchQueue.main.async {
                         self.isSaving = false
+                        try? FileManager.default.removeItem(at: tempURL)
                         if let err = error {
-                            self.message = "Save failed: \(err[NSAppleScript.errorMessage] ?? "Authorization cancelled.")"
+                            let errMsg = (err[NSAppleScript.errorMessage] as? String) ?? "Authorization cancelled or privilege error."
+                            self.message = "Save failed: \(errMsg)"
                         } else {
                             self.originalContents = self.contents
                             self.showDiffPreview = false
@@ -154,6 +160,7 @@ struct HostsFileView: View {
                 } else {
                     DispatchQueue.main.async {
                         self.isSaving = false
+                        try? FileManager.default.removeItem(at: tempURL)
                         self.message = "Failed to construct authorization script."
                     }
                 }
@@ -164,8 +171,25 @@ struct HostsFileView: View {
         }
     }
 
-    private func createBackup() {
+    @discardableResult
+    private func createBackup() -> Bool {
+        guard !originalContents.isEmpty else {
+            message = "Backup skipped: Original /etc/hosts content is empty."
+            return false
+        }
         let backupPath = "/tmp/hosts_backup_\(Int(Date().timeIntervalSince1970)).bak"
-        try? originalContents.write(toFile: backupPath, atomically: true, encoding: .utf8)
+        do {
+            try originalContents.write(toFile: backupPath, atomically: true, encoding: .utf8)
+            let attributes = try FileManager.default.attributesOfItem(atPath: backupPath)
+            guard let fileSize = attributes[.size] as? UInt64, fileSize > 0 || originalContents.isEmpty else {
+                message = "Backup verification failed: Snapshot file is empty or unreadable."
+                return false
+            }
+            message = "Snapshot created successfully at \(backupPath)."
+            return true
+        } catch {
+            message = "Backup creation failed: \(error.localizedDescription)"
+            return false
+        }
     }
 }
