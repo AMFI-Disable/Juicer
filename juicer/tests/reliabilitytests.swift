@@ -138,4 +138,18 @@ custom_app 2048 even    5u  IPv4 0x1234567890abcdef      0t0  TCP 192.168.1.50:8
         XCTAssertEqual(customApp?.classification, .specificIP)
         XCTAssertEqual(customApp?.bindAddress, "192.168.1.50")
     }
+
+    func testAPIEnvironmentInterpolator() {
+        let template = "{{baseUrl}}/v1/{{endpoint}}?token={{token}}"
+        let variables = ["baseUrl": "https://api.example.com", "endpoint": "users", "token": "secret123"]
+        let interpolated = APIEnvironmentInterpolator.interpolate(template, variables: variables)
+        XCTAssertEqual(interpolated, "https://api.example.com/v1/users?token=secret123")
+    }
+
+    @MainActor
+    func testPrivilegedOperationManagerStatusCheck() {
+        let manager = PrivilegedOperationManager.shared
+        manager.checkStatus()
+        XCTAssertNotNil(manager.daemonStatus)
+    }
 }
