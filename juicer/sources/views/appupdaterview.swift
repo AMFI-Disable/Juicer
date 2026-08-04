@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 
+@MainActor
 struct appupdaterview: View {
     @StateObject private var manager = AppUpdateManager.shared
     @State private var filterType: SoftwareUpdateItem.UpdateType?
@@ -16,23 +17,44 @@ struct appupdaterview: View {
             Divider()
 
             if manager.isChecking {
+                let clampedProgress = min(1.0, max(0.0, manager.checkProgress))
                 VStack(spacing: 12) {
-                    ProgressView("Checking for software updates…").progressViewStyle(.circular)
-                    Text("Scanning Homebrew repositories and App Store listings…")
-                        .font(.caption).foregroundColor(.secondary)
+                    ProgressView(value: clampedProgress, total: 1.0) {
+                        Text("Checking for software updates…")
+                            .font(.headline)
+                    }
+                    .progressViewStyle(.linear)
+                    .frame(maxWidth: 320)
+
+                    Text("\(Int(clampedProgress * 100))% — Scanning Homebrew repositories and App Store listings…")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Checking for software updates")
+                .accessibilityValue("\(Int(clampedProgress * 100)) percent completed")
             } else if manager.updates.isEmpty {
                 VStack(spacing: 12) {
-                    Image(systemName: "checkmark.shield.fill").font(.system(size: 40)).foregroundStyle(.green)
-                    Text("All Software is Up to Date").font(.headline)
-                    Text("No outdated Homebrew casks, formulae, or App Store items were found.").font(.subheadline).foregroundColor(.secondary)
+                    Image(systemName: "checkmark.shield.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.green)
+                        .accessibilityHidden(true)
+                    Text("All Software is Up to Date")
+                        .font(.headline)
+                    Text("No outdated Homebrew casks, formulae, or App Store items were found.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
                     Button("Scan Again") {
                         manager.checkForUpdates()
                     }
-                    .buttonStyle(.bordered).padding(.top, 8)
+                    .buttonStyle(.bordered)
+                    .padding(.top, 8)
+                    .accessibilityLabel("Scan Again")
+                    .accessibilityHint("Re-scans systems for available software updates")
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityElement(children: .contain)
             } else {
                 updatesList()
             }
@@ -80,6 +102,8 @@ struct appupdaterview: View {
             }
             .buttonStyle(.bordered)
             .disabled(manager.isChecking || manager.isUpdating)
+            .accessibilityLabel("Check for Updates")
+            .accessibilityHint("Scans for outdated Homebrew casks, formulae, and Mac App Store packages")
         }
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
@@ -98,6 +122,8 @@ struct appupdaterview: View {
                         .cornerRadius(20)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Filter by All Updates")
+                .accessibilityHint("Shows all available software updates")
 
                 ForEach(SoftwareUpdateItem.UpdateType.allCases, id: \.self) { type in
                     Button(action: { filterType = type }) {
@@ -108,11 +134,14 @@ struct appupdaterview: View {
                             .cornerRadius(20)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Filter by \(type.rawValue)")
+                    .accessibilityHint("Shows only \(type.rawValue) updates")
                 }
             }
             .padding(.horizontal).padding(.vertical, 8)
         }
         .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
+        .accessibilityLabel("Update categories filter bar")
     }
 
     // MARK: - Updates List
@@ -133,6 +162,8 @@ struct appupdaterview: View {
                     ))
                     .toggleStyle(.checkbox)
                     .disabled(manager.isUpdating)
+                    .accessibilityLabel("Select \(item.name) update")
+                    .accessibilityHint("Toggles selection of \(item.name) for upgrade")
 
                     ZStack {
                         RoundedRectangle(cornerRadius: 6)
@@ -141,6 +172,7 @@ struct appupdaterview: View {
                         Image(systemName: typeIcon(item.type))
                             .font(.caption).foregroundColor(typeColor(item.type))
                     }
+                    .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 8) {
@@ -164,12 +196,17 @@ struct appupdaterview: View {
                         }
                         .buttonStyle(.bordered)
                         .tint(.orange)
+                        .accessibilityLabel("Adopt \(item.name) via Homebrew Cask")
+                        .accessibilityHint("Reinstalls \(item.name) as a Homebrew Cask for unified package management")
                     }
                 }
                 .padding(.vertical, 4)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("\(item.name), \(item.type.rawValue), current version \(item.currentVersion), latest version \(item.latestVersion)")
             }
         }
         .listStyle(.inset)
+        .accessibilityLabel("Software updates list")
     }
 
     // MARK: - Log Console
@@ -204,6 +241,8 @@ struct appupdaterview: View {
             .frame(height: 100)
             .background(Color(NSColor.underPageBackgroundColor).opacity(0.3))
         }
+        .accessibilityLabel("Upgrade Execution Console")
+        .accessibilityHint("Displays live execution logs for software package upgrades")
     }
 
     // MARK: - Action Bar
@@ -213,6 +252,7 @@ struct appupdaterview: View {
             let selectedCount = manager.updates.filter { $0.isSelected }.count
             Text("\(selectedCount) updates selected")
                 .font(.subheadline).foregroundStyle(.secondary)
+                .accessibilityLabel("\(selectedCount) updates selected")
             Spacer()
 
             Button("Select All") {
@@ -220,27 +260,36 @@ struct appupdaterview: View {
             }
             .buttonStyle(.bordered)
             .disabled(manager.isUpdating)
+            .accessibilityLabel("Select All Updates")
+            .accessibilityHint("Selects all available software updates for upgrade")
 
             Button("Select None") {
                 for i in manager.updates.indices { manager.updates[i].isSelected = false }
             }
             .buttonStyle(.bordered)
             .disabled(manager.isUpdating)
+            .accessibilityLabel("Deselect All Updates")
+            .accessibilityHint("Deselects all software updates")
 
+            let clampedUpdateProgress = min(1.0, max(0.0, manager.updateProgress))
             Button(action: {
                 manager.updateSelected { _ in }
             }) {
                 HStack {
                     if manager.isUpdating {
-                        ProgressView().controlSize(.small)
+                        ProgressView(value: clampedUpdateProgress, total: 1.0)
+                            .progressViewStyle(.circular)
+                            .controlSize(.small)
                     } else {
                         Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
                     }
-                    Text("Upgrade Selected Packages")
+                    Text(manager.isUpdating ? "Upgrading (\(Int(clampedUpdateProgress * 100))%)…" : "Upgrade Selected Packages")
                 }
             }
             .buttonStyle(.borderedProminent)
             .disabled(selectedCount == 0 || manager.isUpdating || manager.isChecking)
+            .accessibilityLabel(manager.isUpdating ? "Upgrading selected packages, \(Int(clampedUpdateProgress * 100)) percent completed" : "Upgrade Selected Packages")
+            .accessibilityHint("Upgrades the \(selectedCount) selected software packages")
         }
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
