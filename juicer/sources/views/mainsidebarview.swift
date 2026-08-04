@@ -34,6 +34,7 @@ enum UnifiedStoreItem: String, CaseIterable, Identifiable {
 }
 
 struct mainsidebarview: View {
+    @EnvironmentObject private var studioStateManager: StudioStateManager
     @State private var currentWorkspace: JuicerWorkspace = .hub
     @State private var selectedItem: NavigationItem?
     @State private var selectedMiniApp: sidebarminiapp?
@@ -509,6 +510,15 @@ struct mainsidebarview: View {
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("juicer.action.commandPalette"))) { _ in
             isShowingCommandPalette = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: StudioContextBridgeManager.bridgeNotification)) { notification in
+            if let item = notification.object as? NavigationItem {
+                currentWorkspace = item.workspace
+                selectedItem = item
+            }
+        }
+        .onChange(of: currentWorkspace) { _, workspace in
+            studioStateManager.activateWorkspace(workspace)
+        }
         .onChange(of: selectedItem) { _, item in
             if selectedMiniApp?.primary != item {
                 selectedMiniApp = nil
@@ -516,6 +526,7 @@ struct mainsidebarview: View {
             if let item {
                 navigationPreferences.record(item)
                 currentWorkspace = item.workspace
+                studioStateManager.activateWorkspace(item.workspace)
             }
         }
 
@@ -530,6 +541,7 @@ struct mainsidebarview: View {
         }
 
         .onAppear {
+            studioStateManager.activateWorkspace(currentWorkspace)
             guard !hasAppeared else { return }
             hasAppeared = true
             TrashObserver.shared.startObserving()
@@ -557,9 +569,9 @@ struct mainsidebarview: View {
             userGuideSheet()
         }
         .sheet(isPresented: $isShowingCommandPalette) {
-            commandpaletteview { item in
+            commandpaletteview { workspace, item in
                 selectedMiniApp = nil
-                currentWorkspace = item.workspace
+                currentWorkspace = workspace
                 selectedItem = item
             }
         }

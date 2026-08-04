@@ -36,8 +36,18 @@ final class DockerManager: ObservableObject {
     @Published var statusMessage: String = ""
     @Published var totalReclaimableSpace: String = "0 B"
 
-    private init() {
+    private var isInitialized = false
+
+    private init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
         detectDocker()
+    }
+
+    func purgeMemory() {
+        diskUsage.removeAll(keepingCapacity: false)
     }
 
     func detectDocker() {

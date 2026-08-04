@@ -29,7 +29,18 @@ final class APIManager: ObservableObject {
     @Published var isExecuting = false
     @Published var lastResponse: APIResponseResult?
 
+    private var isInitialized = false
+
     private init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
+    }
+
+    func purgeMemory() {
+        lastResponse = nil
+    }
 
     func executeRequest(method: String, urlString: String, headersText: String, bodyText: String) {
         guard let url = URL(string: urlString) else { return }

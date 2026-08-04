@@ -86,6 +86,9 @@ struct DockerStudioView: View {
                 EmptyView()
             }
         }
+        .onAppear {
+            dockerManager.ensureInitialized()
+        }
         .allowWindowDragAndFit()
         .confirmationDialog(
             "Remove Container?",
@@ -185,6 +188,28 @@ struct DockerStudioView: View {
             Spacer()
 
             HStack(spacing: 8) {
+                if let mappedPort = extractMappedPort(from: container.ports) {
+                    Button(action: {
+                        let urlStr = "http://localhost:\(mappedPort)"
+                        StudioContextBridgeManager.shared.testEndpointInAPIStudio(urlString: urlStr, sourceStudio: .containers)
+                    }) {
+                        Label("Test Endpoint in API Studio", systemImage: "paperplane.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Jump to API Studio to test HTTP endpoint http://localhost:\(mappedPort)")
+                } else {
+                    Button(action: {
+                        let urlStr = "http://localhost:8080"
+                        StudioContextBridgeManager.shared.testEndpointInAPIStudio(urlString: urlStr, sourceStudio: .containers)
+                    }) {
+                        Label("Test Endpoint in API Studio", systemImage: "paperplane.fill")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help("Jump to API Studio to test container HTTP endpoints")
+                }
+
                 Button(action: {
                     selectedContainerID = container.id
                     selectedTab = "Logs"
@@ -212,6 +237,10 @@ struct DockerStudioView: View {
                 }
 
                 Menu {
+                    Button("Inspect Sockets in Network Studio") {
+                        StudioContextBridgeManager.shared.inspectSocketsInNetworkStudio(query: container.name, sourceStudio: .containers)
+                    }
+                    Divider()
                     Button("Restart Container") { dockerManager.restartContainer(id: container.id) }
                     Button("Copy Container ID") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(container.id, forType: .string) }
                     Divider()
@@ -224,6 +253,22 @@ struct DockerStudioView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private func extractMappedPort(from portsString: String) -> String? {
+        let pattern = #"(\d+)->"#
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: portsString, range: NSRange(portsString.startIndex..., in: portsString)),
+           let range = Range(match.range(at: 1), in: portsString) {
+            return String(portsString[range])
+        }
+        let digitsPattern = #"^(\d+)"#
+        if let regex = try? NSRegularExpression(pattern: digitsPattern),
+           let match = regex.firstMatch(in: portsString, range: NSRange(portsString.startIndex..., in: portsString)),
+           let range = Range(match.range(at: 1), in: portsString) {
+            return String(portsString[range])
+        }
+        return nil
     }
 
     @ViewBuilder
