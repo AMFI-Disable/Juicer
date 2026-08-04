@@ -30,11 +30,52 @@ struct DNSDiagnosticResult: Equatable {
 
 enum NetworkInputValidation {
     static func hostname(_ value: String) -> String? {
-        let host = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        var host = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if host.hasPrefix("https://") {
+            host = String(host.dropFirst(8))
+        } else if host.hasPrefix("http://") {
+            host = String(host.dropFirst(7))
+        }
+        if let slashIdx = host.firstIndex(of: "/") {
+            host = String(host[..<slashIdx])
+        }
+        if let colonIdx = host.firstIndex(of: ":"), !host.contains("]") {
+            host = String(host[..<colonIdx])
+        }
+        host = host.trimmingCharacters(in: CharacterSet(charactersIn: "."))
         guard !host.isEmpty, host.count <= 253, !host.contains("..") else { return nil }
-        let pattern = "^[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$"
+        
+        let pattern = "^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$"
         guard host.range(of: pattern, options: .regularExpression) != nil else { return nil }
+        
+        let labels = host.split(separator: ".")
+        for label in labels {
+            guard label.count >= 1 && label.count <= 63 else { return nil }
+            guard !label.hasPrefix("-") && !label.hasSuffix("-") else { return nil }
+        }
         return host
+    }
+
+    static func ipAddress(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 45 else { return nil }
+        
+        let ipv4Parts = trimmed.split(separator: ".", omittingEmptySubsequences: false)
+        if ipv4Parts.count == 4 {
+            for part in ipv4Parts {
+                guard let num = Int(part), (0...255).contains(num),
+                      part == String(num) else { return nil }
+            }
+            return trimmed
+        }
+        
+        if trimmed.contains(":") {
+            let hexChars = CharacterSet(charactersIn: "0123456789abcdefABCDEF:")
+            guard trimmed.unicodeScalars.allSatisfy({ hexChars.contains($0) }) else { return nil }
+            return trimmed
+        }
+        
+        return nil
     }
 
     static func resolver(_ value: String) -> String? {
@@ -57,32 +98,67 @@ enum NetworkInputValidation {
 }
 
 enum DNSDiagnosticParser {
-    static func parse(_ output: String, resolver: String) -> DNSDiagnosticResult {
-        let lines = output.split(whereSeparator: \.isNewline).map(String.init)
+    static func parse(_ output: String, resolver: String, maxRecords: Int = 100) -> DNSDiagnosticResult {
+        let boundedOutput = String(output.prefix(65_536))
+        
+        if output.contains("timed out") || output.contains("no servers could be reached") {
+            return DNSDiagnosticResult(
+                status: "TIMEOUT",
+                resolver: resolver,
+                queryTimeMilliseconds: nil,
+                dnssec: "Not reported",
+                answers: [],
+                error: "DNS query timed out. Server \(resolver) did not respond."
+            )
+        }
+        if output.contains("connection refused") || output.contains("couldn't get address") {
+            return DNSDiagnosticResult(
+                status: "UNREACHABLE",
+                resolver: resolver,
+                queryTimeMilliseconds: nil,
+                dnssec: "Not reported",
+                answers: [],
+                error: "Unable to reach DNS resolver \(resolver)."
+            )
+        }
+
+        let lines = boundedOutput.split(whereSeparator: \.isNewline).prefix(1000).map(String.init)
         let statusLine = lines.first(where: { $0.contains("status:") })
         let status: String
         if let rawStatus = statusLine?.components(separatedBy: "status:").last?.components(separatedBy: ",").first?.trimmingCharacters(in: .whitespaces) {
-            status = rawStatus
+            let sanitizedStatus = rawStatus.components(separatedBy: CharacterSet.alphanumerics.inverted).joined()
+            status = sanitizedStatus.isEmpty ? "UNKNOWN" : String(sanitizedStatus.prefix(20))
         } else {
             status = "UNKNOWN"
         }
+
         var queryTime: Int? = nil
         if let queryLine = lines.first(where: { $0.localizedCaseInsensitiveContains("Query time:") }) {
             let tokens = queryLine.split(whereSeparator: { $0 == " " || $0 == "\t" })
             if let idx = tokens.firstIndex(where: { $0.localizedCaseInsensitiveContains("Query") }), idx + 2 < tokens.count, let val = Int(tokens[idx + 2]) {
-                queryTime = val
+                if (0...300_000).contains(val) {
+                    queryTime = val
+                }
             }
         }
+
         let dnssec = lines.contains(where: { $0.contains(" ad;") || $0.contains(" ad,") }) ? "Validated (AD flag)" : "Not reported"
         var answers: [DNSAnswer] = []
         var inAnswer = false
         for line in lines {
-            if line.trimmingCharacters(in: .whitespaces) == ";; ANSWER SECTION:" { inAnswer = true; continue }
-            if inAnswer && line.hasPrefix(";;") { inAnswer = false; continue }
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed == ";; ANSWER SECTION:" { inAnswer = true; continue }
+            if inAnswer && trimmed.hasPrefix(";;") { inAnswer = false; continue }
             guard inAnswer else { continue }
-            let parts = line.split(whereSeparator: { $0 == " " || $0 == "\t" })
+            let parts = trimmed.split(whereSeparator: { $0 == " " || $0 == "\t" })
             guard parts.count >= 5 else { continue }
-            answers.append(DNSAnswer(name: String(parts[0]), recordType: String(parts[3]), value: parts.dropFirst(4).joined(separator: " ")))
+            let rawName = String(parts[0]).trimmingCharacters(in: CharacterSet(charactersIn: "."))
+            let recordType = String(parts[3]).components(separatedBy: CharacterSet.letters.inverted).joined()
+            let rawValue = parts.dropFirst(4).joined(separator: " ")
+            let sanitizedValue = String(rawValue.prefix(256)).trimmingCharacters(in: .whitespacesAndNewlines)
+            
+            guard !rawName.isEmpty, !recordType.isEmpty, answers.count < maxRecords else { continue }
+            answers.append(DNSAnswer(name: String(rawName.prefix(253)), recordType: String(recordType.prefix(16)), value: sanitizedValue))
         }
         let error: String? = status == "NOERROR" ? nil : "Resolver returned status \(status). Check the hostname, resolver, and network connection."
         return DNSDiagnosticResult(status: status, resolver: resolver, queryTimeMilliseconds: queryTime, dnssec: dnssec, answers: answers, error: error)

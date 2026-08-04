@@ -430,19 +430,19 @@ struct dnseditorview: View {
     private func addRecord() {
         showValidationError = false
 
-        if newIP.split(separator: ".").count != 4 && !newIP.contains(":") {
+        guard let safeIp = NetworkInputValidation.ipAddress(newIP) else {
             validationErrorMessage = "Invalid IP Address format."
             showValidationError = true
             return
         }
 
-        if newDomain.split(separator: ".").count < 2 {
-            validationErrorMessage = "Invalid Hostname format (e.g. need domain extension)."
+        guard let safeDomain = NetworkInputValidation.hostname(newDomain) else {
+            validationErrorMessage = "Invalid Hostname format (e.g. example.com)."
             showValidationError = true
             return
         }
 
-        manager.addRecord(ip: newIP, domain: newDomain)
+        manager.addRecord(ip: safeIp, domain: safeDomain)
         newDomain = ""
     }
 
