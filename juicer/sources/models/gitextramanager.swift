@@ -119,7 +119,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 1. OneFetch Repo Insight Engine
-    private func computeOneFetchOverview() -> GitRepoOverview {
+    nonisolated private func computeOneFetchOverview() -> GitRepoOverview {
         let repoName = (repoPath as NSString).lastPathComponent
         let headBranch = runGitCommand(["rev-parse", "--abbrev-ref", "HEAD"]).trimmingCharacters(in: .whitespacesAndNewlines)
         let commitCountStr = runGitCommand(["rev-list", "--count", "HEAD"]).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -150,7 +150,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 2. Git-Sizer Diagnostic Engine
-    private func computeGitSizerMetrics() -> GitSizerMetrics {
+    nonisolated private func computeGitSizerMetrics() -> GitSizerMetrics {
         let countOutput = runGitCommand(["count-objects", "-v"])
         var packBytes: Int64 = 0
         var totalObjects: Int = 0
@@ -197,7 +197,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 3. Git-Quick-Stats / Author Stats Engine
-    private func computeAuthorStats() -> [GitAuthorStat] {
+    nonisolated private func computeAuthorStats() -> [GitAuthorStat] {
         let shortlog = runGitCommand(["shortlog", "-sn", "HEAD"])
         let lines = shortlog.components(separatedBy: "\n")
         var raw: [(String, Int)] = []
@@ -218,7 +218,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 4. Git Effort Engine
-    private func computeFileEffort() -> [GitFileEffort] {
+    nonisolated private func computeFileEffort() -> [GitFileEffort] {
         let logFiles = runGitCommand(["log", "--name-only", "--pretty=format:__JUICER_AUTHOR__%aN", "-n", "300"])
         var fileCounts: [String: Int] = [:]
         var fileAuthors: [String: Set<String>] = [:]
@@ -298,7 +298,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 7. Secret Scanner (GitLeaks & Git-Secrets)
-    private func scanSecrets() -> [GitSecretIssue] {
+    nonisolated private func scanSecrets() -> [GitSecretIssue] {
         var issues: [GitSecretIssue] = []
         let files = runGitCommand(["ls-files"]).components(separatedBy: "\n")
         let secretPatterns: [(String, String)] = [
@@ -329,7 +329,7 @@ class GitExtraManager: ObservableObject {
     }
 
     // MARK: - 8. Git-Trim Merged Branch Engine
-    private func scanMergedBranches() -> [String] {
+    nonisolated private func scanMergedBranches() -> [String] {
         let merged = runGitCommand(["branch", "--merged"])
         let lines = merged.components(separatedBy: "\n")
         var results: [String] = []
@@ -343,16 +343,21 @@ class GitExtraManager: ObservableObject {
         return results
     }
 
-    func trimMergedBranches() {
-        for branch in mergedBranchesToTrim {
-            guard let safeBranch = Self.sanitizeRefName(branch) else { continue }
+    func trimBranches(_ branches: [String]) {
+        let available = Set(mergedBranchesToTrim)
+        for branch in branches {
+            guard available.contains(branch), let safeBranch = Self.sanitizeRefName(branch) else { continue }
             _ = runGitCommand(["branch", "-d", "--", safeBranch])
         }
         self.mergedBranchesToTrim = scanMergedBranches()
     }
 
+    func trimMergedBranches() {
+        trimBranches(mergedBranchesToTrim)
+    }
+
     // MARK: - Git Command Helper
-    private func runGitCommand(_ args: [String]) -> String {
+    nonisolated private func runGitCommand(_ args: [String]) -> String {
         let sanitizedArgs = args.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
                                 .filter { !$0.isEmpty }
         guard !sanitizedArgs.isEmpty else { return "" }
