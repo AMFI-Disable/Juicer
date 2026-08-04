@@ -19,7 +19,7 @@ struct applanguagestripperview: View {
         let selectedBundles = manager.foundBundles.filter { $0.isSelected }
         var total: Int64 = 0
         for bundle in selectedBundles {
-            let (result, overflow) = total.reportingOverflowingAdd(bundle.size)
+            let (result, overflow) = total.addingReportingOverflow(bundle.size)
             total = overflow ? Int64.max : max(0, result)
         }
         return total

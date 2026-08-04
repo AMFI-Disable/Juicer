@@ -42,6 +42,7 @@ struct BrewGhostHistoryItem: Identifiable, Codable, Hashable {
     }
 }
 
+@MainActor
 class BrewGhostManager: ObservableObject {
     static let shared = BrewGhostManager()
 
@@ -146,34 +147,58 @@ class BrewGhostManager: ObservableObject {
     }
 
     func exorcise(package: String) {
-        guard let brew = BrewManager.brewPath else { return }
+        let cleanPackage = package.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanPackage.isEmpty, let brew = BrewManager.brewPath else { return }
         self.isLoading = true
-        self.statusMessage = "Uninstalling \(package)..."
+        self.statusMessage = "Uninstalling \(cleanPackage)..."
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             do {
-                _ = try Self.runCommand(brew, arguments: ["uninstall", package])
+                _ = try Self.runCommand(brew, arguments: ["uninstall", cleanPackage])
                 await MainActor.run {
                     self.fetchGhosts()
                     self.fetchHistory()
-                    AppLogger.shared.log("Exorcised ghost package: \(package)")
+                    AppLogger.shared.log("Exorcised ghost package: \(cleanPackage)")
                 }
             } catch {
                 await MainActor.run {
                     self.isLoading = false
-                    self.statusMessage = "Failed to exorcise \(package): \(error.localizedDescription)"
+                    self.statusMessage = "Failed to exorcise \(cleanPackage): \(error.localizedDescription)"
                 }
             }
         }
     }
 
+    func exorciseAll() {
+        let targets = ghosts.map { $0.name }.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+        guard !targets.isEmpty, let brew = BrewManager.brewPath else { return }
+        self.isLoading = true
+        self.statusMessage = "Exorcising \(targets.count) idle formulas..."
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self = self else { return }
+            for pkg in targets {
+                _ = try? Self.runCommand(brew, arguments: ["uninstall", pkg])
+            }
+            await MainActor.run {
+                self.fetchGhosts()
+                self.fetchHistory()
+                AppLogger.shared.log("Exorcised \(targets.count) idle ghost formulas: \(targets.joined(separator: ", "))")
+            }
+        }
+    }
+
     func clearHistory() {
+        guard fileManager.fileExists(atPath: historyPath) else {
+            self.historyItems = []
+            return
+        }
         try? fileManager.removeItem(atPath: historyPath)
         self.historyItems = []
     }
 
-    private static func runCommand(_ executable: String, arguments: [String]) throws -> String {
+    nonisolated static func runCommand(_ executable: String, arguments: [String]) throws -> String {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments

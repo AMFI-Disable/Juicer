@@ -17,7 +17,7 @@ class AppLanguageStripperManager: ObservableObject {
     @Published var isStripping = false
     @Published var totalReclaimableSize: Int64 = 0
 
-    private static let systemLanguages: Set<String> = ["en", "Base", "English", "en_US", "en_GB", "en_AU", "zh_CN", "zh_TW", "zh-Hans", "zh-Hant"]
+    nonisolated static let systemLanguages: Set<String> = ["en", "Base", "English", "en_US", "en_GB", "en_AU", "zh_CN", "zh_TW", "zh-Hans", "zh-Hant"]
 
     func scanAppLanguages() {
         isScanning = true
