@@ -198,7 +198,7 @@ struct SystemOptimizerView: View {
                                            msgLower.contains("denied")
                     Text(task.resultMessage)
                         .font(.caption2)
-                        .foregroundStyle(task.status == .failed ? (isPrivilegeError ? Color.red : Color.primary) : Color.tertiary)
+                        .foregroundStyle(task.status == .failed ? (isPrivilegeError ? Color.red : Color.primary) : Color.secondary)
                         .lineLimit(2)
                         .padding(.top, 2)
                 }

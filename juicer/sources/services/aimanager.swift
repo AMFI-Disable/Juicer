@@ -80,9 +80,10 @@ final class AIManager: ObservableObject {
         if let url = URL(string: "http://localhost:11434/api/tags") {
             var request = URLRequest(url: url)
             request.timeoutInterval = 2.5
-            URLSession.shared.dataTask(with: request) { data, _, _ in
+            URLSession.shared.dataTask(with: request) { data, response, error in
                 defer { group.leave() }
-                if let data = data,
+                if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200,
+                   let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let modelsArray = json["models"] as? [[String: Any]] {
                     ollamaOk = true
@@ -101,9 +102,10 @@ final class AIManager: ObservableObject {
         if let url = URL(string: "http://localhost:1234/v1/models") {
             var request = URLRequest(url: url)
             request.timeoutInterval = 2.5
-            URLSession.shared.dataTask(with: request) { data, _, _ in
+            URLSession.shared.dataTask(with: request) { data, response, error in
                 defer { group.leave() }
-                if let data = data,
+                if let httpResp = response as? HTTPURLResponse, httpResp.statusCode == 200,
+                   let data = data,
                    let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let dataArray = json["data"] as? [[String: Any]] {
                     lmStudioOk = true
@@ -132,46 +134,99 @@ final class AIManager: ObservableObject {
         isGenerating = true
 
         let selectedModel = model ?? localModels.first?.name ?? "llama3"
+        let selectedModelObj = localModels.first(where: { $0.name == selectedModel })
+        let isLMStudioModel = selectedModelObj?.provider == "LM Studio"
+        let useLMStudio = isLMStudioModel || (!isOllamaActive && isLMStudioActive)
 
-        // Dispatch generation request to Ollama endpoint if available
-        if isOllamaActive, let url = URL(string: "http://localhost:11434/api/generate") {
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            let payload: [String: Any] = [
+        guard (isOllamaActive || isLMStudioActive),
+              let endpointURL = URL(string: useLMStudio ? "http://localhost:1234/v1/chat/completions" : "http://localhost:11434/api/generate") else {
+            isGenerating = false
+            chatMessages.append(AIChatMessage(
+                isUser: false,
+                text: "No supported local AI engine is available. Start Ollama (`ollama serve`) or LM Studio before sending a prompt."
+            ))
+            return
+        }
+
+        var request = URLRequest(url: endpointURL)
+        request.httpMethod = "POST"
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.timeoutInterval = 30.0
+
+        let payload: [String: Any]
+        if useLMStudio {
+            payload = [
+                "model": selectedModel,
+                "messages": [["role": "user", "content": userText]],
+                "stream": false
+            ]
+        } else {
+            payload = [
                 "model": selectedModel,
                 "prompt": userText,
                 "stream": false
             ]
-            request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+        }
 
-            URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
-                DispatchQueue.main.async {
-                    self?.isGenerating = false
-                    if let data = data,
-                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-                       let responseText = json["response"] as? String {
-                        let aiMsg = AIChatMessage(isUser: false, text: responseText)
-                        self?.chatMessages.append(aiMsg)
+        request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
+
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            DispatchQueue.main.async {
+                self?.isGenerating = false
+
+                if let error = error {
+                    let nsErr = error as NSError
+                    let detail: String
+                    if nsErr.domain == NSURLErrorDomain && nsErr.code == NSURLErrorTimedOut {
+                        detail = "Connection timed out"
                     } else {
-                        let status = (response as? HTTPURLResponse)?.statusCode
-                        let detail = error?.localizedDescription
-                            ?? status.map { "HTTP \($0)" }
-                            ?? "invalid response"
-                        let aiMsg = AIChatMessage(
-                            isUser: false,
-                            text: "Local model request failed (\(detail)). Verify that \(selectedModel) is available in Ollama and try again."
-                        )
-                        self?.chatMessages.append(aiMsg)
+                        detail = error.localizedDescription
+                    }
+                    let aiMsg = AIChatMessage(
+                        isUser: false,
+                        text: "Local model request failed (\(detail)). Verify that \(selectedModel) is available and try again."
+                    )
+                    self?.chatMessages.append(aiMsg)
+                    return
+                }
+
+                let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+                var parsedText: String?
+                var apiError: String?
+
+                if let data = data, let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    if let errStr = json["error"] as? String {
+                        apiError = errStr
+                    } else if let errDict = json["error"] as? [String: Any], let errStr = errDict["message"] as? String {
+                        apiError = errStr
+                    }
+
+                    if useLMStudio {
+                        if let choices = json["choices"] as? [[String: Any]],
+                           let firstChoice = choices.first,
+                           let msgDict = firstChoice["message"] as? [String: Any],
+                           let content = msgDict["content"] as? String {
+                            parsedText = content
+                        }
+                    } else {
+                        if let resp = json["response"] as? String {
+                            parsedText = resp
+                        }
                     }
                 }
-            }.resume()
-        } else {
-            isGenerating = false
-            chatMessages.append(AIChatMessage(
-                isUser: false,
-                text: "No supported local AI engine is available. Start Ollama and install a model before sending a prompt."
-            ))
-        }
+
+                if let text = parsedText, !text.isEmpty {
+                    let aiMsg = AIChatMessage(isUser: false, text: text)
+                    self?.chatMessages.append(aiMsg)
+                } else {
+                    let detail = apiError ?? (statusCode > 0 ? "HTTP \(statusCode)" : "invalid response body")
+                    let aiMsg = AIChatMessage(
+                        isUser: false,
+                        text: "Local model request failed (\(detail)). Verify that \(selectedModel) is available in \(useLMStudio ? "LM Studio" : "Ollama") and try again."
+                    )
+                    self?.chatMessages.append(aiMsg)
+                }
+            }
+        }.resume()
     }
 }
