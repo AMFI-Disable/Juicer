@@ -551,30 +551,52 @@ struct APIStudioView: View {
 
     private func sendRequest() {
         let envVars = ["baseUrl": "https://api.github.com", "endpoint": "zen"]
-        let interpolated = APIEnvironmentInterpolator.interpolate(urlString, variables: envVars)
-        guard let url = URL(string: interpolated), var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else { return }
-        
+        var rawURL = APIEnvironmentInterpolator.interpolate(urlString, variables: envVars).trimmingCharacters(in: .whitespacesAndNewlines)
+        if rawURL.isEmpty {
+            statusCodeValue = 400
+            statusCode = "Bad Request"
+            responseBody = "Error: Target URL cannot be empty."
+            return
+        }
+        if !rawURL.lowercased().hasPrefix("http://") && !rawURL.lowercased().hasPrefix("https://") {
+            rawURL = "https://" + rawURL
+        }
+        guard let parsedURL = URL(string: rawURL),
+              var urlComponents = URLComponents(url: parsedURL, resolvingAgainstBaseURL: true),
+              let host = urlComponents.host, !host.isEmpty else {
+            statusCodeValue = 400
+            statusCode = "Invalid URL"
+            responseBody = "Error: Invalid URL string format '\(urlString)'. Please provide a valid HTTP or HTTPS URL with a valid host."
+            return
+        }
+
         var queryItems = urlComponents.queryItems ?? []
         for p in paramsList where p.isEnabled && !p.key.isEmpty {
             queryItems.append(URLQueryItem(name: p.key, value: p.value))
         }
         if !queryItems.isEmpty { urlComponents.queryItems = queryItems }
-        
-        guard let finalURL = urlComponents.url else { return }
+
+        guard let finalURL = urlComponents.url else {
+            statusCodeValue = 400
+            statusCode = "Invalid URL"
+            responseBody = "Error: Failed to construct valid target URL with query parameters."
+            return
+        }
 
         isExecuting = true
-        responseBody = "Connecting..."
+        responseBody = "Connecting to \(finalURL.host ?? "endpoint")..."
         statusCode = ""
         statusCodeValue = nil
         responseHeaders.removeAll()
 
         var request = URLRequest(url: finalURL)
         request.httpMethod = httpMethod
-        
+        request.timeoutInterval = 30.0
+
         for h in headersList where h.isEnabled && !h.key.isEmpty {
             request.setValue(h.value, forHTTPHeaderField: h.key)
         }
-        
+
         if !requestBody.isEmpty && (httpMethod == "POST" || httpMethod == "PUT" || httpMethod == "PATCH") {
             request.httpBody = requestBody.data(using: .utf8)
         }
@@ -591,17 +613,30 @@ struct APIStudioView: View {
                 if let httpResponse = response as? HTTPURLResponse {
                     statusCodeValue = httpResponse.statusCode
                     statusCode = HTTPURLResponse.localizedString(forStatusCode: httpResponse.statusCode)
-                    
+
                     responseHeaders = httpResponse.allHeaderFields.compactMap { key, val in
                         HTTPHeaderPair(key: String(describing: key), value: String(describing: val), isEnabled: true)
                     }
+                } else if error != nil {
+                    statusCodeValue = 0
+                    statusCode = "Network Error"
                 }
 
-                if let data = data {
+                if let data = data, !data.isEmpty {
                     responseSizeBytes = data.count
-                    responseBody = String(data: data, encoding: .utf8) ?? "Unable to decode text payload"
+                    if let decoded = String(data: data, encoding: .utf8) {
+                        responseBody = decoded
+                    } else if let latin1 = String(data: data, encoding: .isoLatin1) {
+                        responseBody = latin1
+                    } else {
+                        responseBody = "Binary payload (\(data.count) bytes)"
+                    }
                 } else if let error = error {
+                    responseSizeBytes = 0
                     responseBody = "Error: \(error.localizedDescription)"
+                } else {
+                    responseSizeBytes = 0
+                    responseBody = "(Empty response payload)"
                 }
 
                 historyRecords.insert(APIHistoryRecord(
@@ -634,9 +669,21 @@ struct APIStudioView: View {
     }
 
     private func runBenchmark() {
-        guard let count = Int(benchmarkCount), count > 0, let url = URL(string: urlString) else { return }
+        guard let count = Int(benchmarkCount), count > 0 else {
+            benchmarkResults = "Error: Please enter a positive integer request count."
+            return
+        }
+        let envVars = ["baseUrl": "https://api.github.com", "endpoint": "zen"]
+        var rawURL = APIEnvironmentInterpolator.interpolate(urlString, variables: envVars).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !rawURL.lowercased().hasPrefix("http://") && !rawURL.lowercased().hasPrefix("https://") {
+            rawURL = "https://" + rawURL
+        }
+        guard let url = URL(string: rawURL), let host = URLComponents(url: url, resolvingAgainstBaseURL: true)?.host, !host.isEmpty else {
+            benchmarkResults = "Error: Invalid target URL '\(urlString)'. Please enter a valid HTTP or HTTPS URL."
+            return
+        }
         isExecuting = true
-        benchmarkResults = "Running \(count) requests to \(urlString)..."
+        benchmarkResults = "Running \(count) requests to \(url.absoluteString)..."
 
         Task.detached {
             let start = Date()
