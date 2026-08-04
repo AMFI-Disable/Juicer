@@ -254,6 +254,7 @@ final class CommandPaletteManager: ObservableObject {
     func scoreCommand(_ command: CommandItem, query: String) -> Int {
         let titleLower = command.title.lowercased()
         let subtitleLower = command.subtitle.lowercased()
+        let workspaceLower = command.workspace.title.lowercased()
 
         // 1. Exact title match
         if titleLower == query {
@@ -293,8 +294,20 @@ final class CommandPaletteManager: ObservableObject {
         }
 
         // 7. Workspace title contains query
-        if command.workspace.title.lowercased().contains(query) {
+        if workspaceLower.contains(query) {
             return 20
+        }
+
+        // 8. Multi-token query matching across fields
+        let tokens = query.split(separator: " ").map(String.init)
+        if tokens.count > 1 {
+            let searchableText = "\(titleLower) \(subtitleLower) \(workspaceLower) \(command.keywords.joined(separator: " ").lowercased())"
+            let allTokensMatch = tokens.allSatisfy { token in
+                searchableText.contains(token)
+            }
+            if allTokensMatch {
+                return 25
+            }
         }
 
         return 0
