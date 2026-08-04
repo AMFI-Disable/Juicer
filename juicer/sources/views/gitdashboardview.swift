@@ -70,6 +70,26 @@ struct gitdashboardview: View {
                 .buttonStyle(.bordered)
                 .disabled(manager.isLoading || manager.repoPath.isEmpty)
 
+                Button(action: {
+                    guard !manager.repoPath.isEmpty else { return }
+                    StudioContextBridgeManager.shared.serveFolderInDeveloperStudio(url: URL(fileURLWithPath: manager.repoPath), sourceStudio: .git)
+                }) {
+                    Label("Serve Folder", systemImage: "server.rack")
+                }
+                .buttonStyle(.bordered)
+                .disabled(manager.repoPath.isEmpty)
+                .help("Jump to Developer Studio to serve repository folder with local HTTP server")
+
+                Button(action: {
+                    guard !manager.repoPath.isEmpty else { return }
+                    StudioContextBridgeManager.shared.inspectFolderInDiskStudio(url: URL(fileURLWithPath: manager.repoPath), sourceStudio: .git)
+                }) {
+                    Label("Inspect Caches", systemImage: "internaldrive.fill")
+                }
+                .buttonStyle(.bordered)
+                .disabled(manager.repoPath.isEmpty)
+                .help("Jump to Disk Studio to inspect space usage and clean caches")
+
                 Button("Open Repo...") {
                     let panel = NSOpenPanel()
                     panel.canChooseDirectories = true
@@ -176,6 +196,11 @@ struct gitdashboardview: View {
             let gitPath = (sanitizedDir as NSString).appendingPathComponent(".git")
             if manager.repoPath != sanitizedDir && FileManager.default.fileExists(atPath: gitPath) {
                 manager.openRepository(at: sanitizedDir)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: StudioContextBridgeManager.bridgeNotification)) { notification in
+            if let payload = notification.userInfo?["payload"] as? ContextPayload, let folderURL = payload.folderURL {
+                WorkspaceDirectoryManager.shared.currentDirectory = folderURL.path
             }
         }
     }

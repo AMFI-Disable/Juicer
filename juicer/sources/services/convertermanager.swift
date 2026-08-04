@@ -19,7 +19,19 @@ final class ConverterManager: ObservableObject {
     @Published var lastOutputText: String = ""
     @Published var statusMessage: String = ""
 
+    private var isInitialized = false
+
     private init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
+    }
+
+    func purgeMemory() {
+        lastOutputText = ""
+        conversionHistory.removeAll(keepingCapacity: false)
+    }
 
     // MARK: - Document Conversion (Markdown, DOCX, PDF, HTML, RTF, TXT)
     func convertDocument(inputURL: URL, targetFormat: String, outputDirectory: URL? = nil, completion: @escaping (URL?) -> Void) {

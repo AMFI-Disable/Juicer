@@ -198,6 +198,16 @@ struct APIStudioView: View {
             curlImportModal()
         }
         .allowWindowDragAndFit()
+        .onAppear {
+            if let payload = StudioContextBridgeManager.shared.pendingPayload, let targetURL = payload.urlString, !targetURL.isEmpty {
+                urlString = targetURL
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: StudioContextBridgeManager.bridgeNotification)) { notification in
+            if let payload = notification.userInfo?["payload"] as? ContextPayload, let targetURL = payload.urlString, !targetURL.isEmpty {
+                urlString = targetURL
+            }
+        }
     }
 
     @ViewBuilder

@@ -24,6 +24,14 @@ struct networkexposureview: View {
             if case .idle = manager.state {
                 manager.scanSockets()
             }
+            if let payload = StudioContextBridgeManager.shared.pendingPayload, let q = payload.searchQuery, !q.isEmpty {
+                manager.searchQuery = q
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: StudioContextBridgeManager.bridgeNotification)) { notification in
+            if let payload = notification.userInfo?["payload"] as? ContextPayload, let q = payload.searchQuery, !q.isEmpty {
+                manager.searchQuery = q
+            }
         }
     }
 
@@ -197,17 +205,40 @@ struct networkexposureview: View {
 
                     Spacer()
 
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text(item.classification.rawValue.uppercased())
-                            .font(.system(size: 8, weight: .bold))
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(classificationColor(item.classification).opacity(0.15))
-                            .foregroundStyle(classificationColor(item.classification))
-                            .cornerRadius(4)
+                    HStack(spacing: 8) {
+                        Button(action: {
+                            StudioContextBridgeManager.shared.inspectPIDInSystemStudio(pid: item.pid, processName: item.processName, sourceStudio: .network)
+                        }) {
+                            Label("Inspect PID in System Studio", systemImage: "cpu")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Jump to System Studio to inspect and manage process PID \(item.pid)")
 
-                        Text("Protocol: \(item.protocolType)")
-                            .font(.system(size: 9))
-                            .foregroundColor(.secondary)
+                        if item.port > 0 {
+                            Button(action: {
+                                let urlStr = "http://127.0.0.1:\(item.port)"
+                                StudioContextBridgeManager.shared.testEndpointInAPIStudio(urlString: urlStr, sourceStudio: .network)
+                            }) {
+                                Label("Test Endpoint in API Studio", systemImage: "paperplane.fill")
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .help("Jump to API Studio to test HTTP requests on 127.0.0.1:\(item.port)")
+                        }
+
+                        VStack(alignment: .trailing, spacing: 4) {
+                            Text(item.classification.rawValue.uppercased())
+                                .font(.system(size: 8, weight: .bold))
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(classificationColor(item.classification).opacity(0.15))
+                                .foregroundStyle(classificationColor(item.classification))
+                                .cornerRadius(4)
+
+                            Text("Protocol: \(item.protocolType)")
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
                 .padding(.vertical, 4)
@@ -248,3 +279,4 @@ struct networkexposureview: View {
         }
     }
 }
+
