@@ -270,22 +270,22 @@ class EnvProfileManager: ObservableObject {
             let validKeyChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_.-"))
             guard rawKey.unicodeScalars.allSatisfy({ validKeyChars.contains($0) }) else { continue }
 
-            if !rawValue.hasPrefix("\"") && !rawValue.hasPrefix("'") {
+            let quoteChar: Character? = rawValue.hasPrefix("\"") ? "\"" : (rawValue.hasPrefix("'") ? "'" : nil)
+
+            if let q = quoteChar {
+                let inner = rawValue.dropFirst()
+                if let closingIndex = inner.firstIndex(of: q) {
+                    let quotedContent = String(inner[..<closingIndex])
+                    rawValue = quotedContent
+                        .replacingOccurrences(of: "\\n", with: "\n")
+                        .replacingOccurrences(of: "\\\"", with: "\"")
+                        .replacingOccurrences(of: "\\'", with: "'")
+                        .replacingOccurrences(of: "\\\\", with: "\\")
+                }
+            } else {
                 if let commentIndex = rawValue.firstIndex(of: "#") {
                     rawValue = String(rawValue[..<commentIndex]).trimmingCharacters(in: .whitespaces)
                 }
-            }
-
-            if (rawValue.hasPrefix("\"") && rawValue.hasSuffix("\"") && rawValue.count >= 2) ||
-               (rawValue.hasPrefix("'") && rawValue.hasSuffix("'") && rawValue.count >= 2) {
-                let start = rawValue.index(after: rawValue.startIndex)
-                let end = rawValue.index(before: rawValue.endIndex)
-                rawValue = String(rawValue[start..<end])
-                rawValue = rawValue
-                    .replacingOccurrences(of: "\\n", with: "\n")
-                    .replacingOccurrences(of: "\\\"", with: "\"")
-                    .replacingOccurrences(of: "\\'", with: "'")
-                    .replacingOccurrences(of: "\\\\", with: "\\")
             }
 
             guard rawValue.count <= Self.maxValueLength else { continue }
