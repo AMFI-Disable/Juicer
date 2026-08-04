@@ -8,6 +8,7 @@ struct QuickLink: Identifiable, Codable, Hashable {
     let icon: String
 }
 
+@MainActor
 class QuickLinksManager: ObservableObject {
     @Published var links: [QuickLink] = []
     private let storageKey = "juicer.quicklinks"
@@ -26,25 +27,39 @@ class QuickLinksManager: ObservableObject {
     }
 
     func loadLinks() {
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let decoded = try? JSONDecoder().decode([QuickLink].self, from: data) {
-            self.links = decoded
+        guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
+        do {
+            self.links = try JSONDecoder().decode([QuickLink].self, from: data)
+        } catch {
+            AppLogger.shared.log("Failed to load quick links: \(error.localizedDescription)")
+            self.links = []
         }
     }
 
     func saveLinks() {
-        if let data = try? JSONEncoder().encode(links) {
+        do {
+            let data = try JSONEncoder().encode(links)
             UserDefaults.standard.set(data, forKey: storageKey)
+        } catch {
+            AppLogger.shared.log("Failed to save quick links: \(error.localizedDescription)")
         }
     }
 
     func addLink(name: String, path: String) {
-        let expanded = NSString(string: path).expandingTildeInPath
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !trimmedPath.isEmpty else { return }
+
+        if links.contains(where: { $0.path == trimmedPath }) {
+            return
+        }
+
+        let expanded = NSString(string: trimmedPath).expandingTildeInPath
         var isDir: ObjCBool = false
         let exists = FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir)
         let isFolder = exists && isDir.boolValue
         let icon = isFolder ? "folder.fill" : "doc.fill"
-        let newLink = QuickLink(id: UUID(), name: name, path: path, icon: icon)
+        let newLink = QuickLink(id: UUID(), name: trimmedName, path: trimmedPath, icon: icon)
         self.links.append(newLink)
         saveLinks()
     }
@@ -55,6 +70,7 @@ class QuickLinksManager: ObservableObject {
     }
 }
 
+@MainActor
 struct dashboardview: View {
     @State private var totalDiskSpace: String = "Loading..."
     @State private var freeDiskSpace: String = "Loading..."
@@ -84,7 +100,14 @@ struct dashboardview: View {
                 }
 
                 // Bookmarks & Quick Links Section
-                if showBookmarks { bookmarksSection() }
+                if showBookmarks {
+                    bookmarksSection()
+                }
+
+                // Fallback state if all widgets are hidden
+                if !showVitals && !showCuratedTools && !showBookmarks {
+                    hiddenWidgetsFallbackCard()
+                }
             }
             .padding(24)
         }
@@ -114,7 +137,7 @@ struct dashboardview: View {
                     .font(.system(size: 32, weight: .black, design: .rounded))
                     .foregroundStyle(.white)
                 Text("Your ultimate open-source macOS developer utility.")
-                    .font(.title3).medium()
+                    .font(.title3).fontWeight(.medium)
                     .foregroundStyle(.white.opacity(0.9))
             }
 
@@ -136,6 +159,8 @@ struct dashboardview: View {
                         .cornerRadius(20)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Clean Caches")
+                .accessibilityHint("Opens Cache Cleaner view")
 
                 Button(action: {
                     NotificationCenter.default.post(name: NSNotification.Name("juicer.nav.appStore"), object: nil)
@@ -148,6 +173,8 @@ struct dashboardview: View {
                         .cornerRadius(20)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Browse Software Center")
+                .accessibilityHint("Opens Software Center view")
             }
             .padding(.top, 8)
         }
@@ -162,6 +189,8 @@ struct dashboardview: View {
         )
         .cornerRadius(18)
         .shadow(color: Color.black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Welcome to Juicer")
     }
 
     // MARK: - Vitals Card
@@ -188,6 +217,9 @@ struct dashboardview: View {
                     Text("\(Int(usedDiskSpacePercentage * 100))%")
                         .font(.headline).bold()
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Disk usage gauge")
+                .accessibilityValue("\(Int(usedDiskSpacePercentage * 100)) percent used")
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Disk Storage").bold()
@@ -205,6 +237,8 @@ struct dashboardview: View {
         .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
         .cornerRadius(16)
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.secondary.opacity(0.1), lineWidth: 1))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("System Vitals Card")
     }
 
     // MARK: - Curated Tools
@@ -234,6 +268,7 @@ struct dashboardview: View {
                     .fill(color.opacity(0.15)).frame(width: 32, height: 32)
                 Image(systemName: icon).foregroundColor(color).font(.body)
             }
+            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).font(.subheadline).bold()
@@ -247,6 +282,8 @@ struct dashboardview: View {
             }
             .buttonStyle(.bordered)
             .controlSize(.small)
+            .accessibilityLabel("Open \(title)")
+            .accessibilityHint("Navigates to \(title)")
         }
         .padding(.vertical, 4)
     }
@@ -265,16 +302,40 @@ struct dashboardview: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .accessibilityLabel("Add Shortcut")
+                .accessibilityHint("Opens sheet to add a file or folder shortcut")
             }
 
             if quickLinksManager.links.isEmpty {
-                Text("No bookmarks added yet. Drop folders or files here to bookmark them.")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .padding()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
-                    .cornerRadius(8)
+                VStack(spacing: 12) {
+                    Image(systemName: "bookmark.slash")
+                        .font(.largeTitle)
+                        .foregroundColor(.secondary)
+                    Text("No Bookmarks Added Yet")
+                        .font(.headline)
+                    Text("Bookmark your frequently accessed folders or files for instant access from Juicer.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: 360)
+
+                    Button(action: { isShowingAddLink = true }) {
+                        Label("Add First Bookmark", systemImage: "plus.circle.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .padding(.top, 4)
+                    .accessibilityLabel("Add First Bookmark")
+                    .accessibilityHint("Opens shortcut bookmark dialog")
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .background(Color(NSColor.controlBackgroundColor).opacity(0.2))
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.secondary.opacity(0.1), lineWidth: 1)
+                )
             } else {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     ForEach(quickLinksManager.links) { link in
@@ -291,6 +352,32 @@ struct dashboardview: View {
         }
     }
 
+    // MARK: - Hidden Widgets Fallback Card
+    @ViewBuilder
+    private func hiddenWidgetsFallbackCard() -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: "square.grid.2x2")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text("Dashboard Widgets Hidden")
+                .font(.headline)
+            Text("All widget sections are currently hidden in your settings.")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Button("Show System Vitals & Tools") {
+                showVitals = true
+                showCuratedTools = true
+                showBookmarks = true
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .background(Color(NSColor.controlBackgroundColor).opacity(0.15))
+        .cornerRadius(12)
+    }
+
     // MARK: - Add Link Sheet
     @ViewBuilder
     private func addLinkSheet() -> some View {
@@ -302,10 +389,12 @@ struct dashboardview: View {
             Form {
                 TextField("Shortcut Name:", text: $newLinkName)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Shortcut Name")
 
                 HStack {
                     TextField("Path (File or Folder):", text: $newLinkPath)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Shortcut Path")
 
                     Button("Browse...") {
                         let panel = NSOpenPanel()
@@ -315,12 +404,14 @@ struct dashboardview: View {
                         panel.title = "Select File or Folder to Bookmark"
                         if panel.runModal() == .OK, let url = panel.url {
                             newLinkPath = url.path
-                            if newLinkName.isEmpty {
+                            if newLinkName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 newLinkName = url.lastPathComponent
                             }
                         }
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel("Browse File System")
+                    .accessibilityHint("Opens Finder panel to choose a file or folder")
                 }
             }
             .padding(.horizontal)
@@ -335,15 +426,17 @@ struct dashboardview: View {
                 .buttonStyle(.bordered)
 
                 Button("Add Link") {
-                    if !newLinkName.isEmpty && !newLinkPath.isEmpty {
-                        quickLinksManager.addLink(name: newLinkName, path: newLinkPath)
+                    let trimmedName = newLinkName.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let trimmedPath = newLinkPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmedName.isEmpty && !trimmedPath.isEmpty {
+                        quickLinksManager.addLink(name: trimmedName, path: trimmedPath)
                         isShowingAddLink = false
                         newLinkName = ""
                         newLinkPath = ""
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(newLinkName.isEmpty || newLinkPath.isEmpty)
+                .disabled(newLinkName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || newLinkPath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding()
         }
@@ -357,8 +450,9 @@ struct dashboardview: View {
         do {
             let values = try fileManager.attributesOfFileSystem(forPath: path)
             if let totalBytes = values[.systemSize] as? Int64,
-               let freeBytes = values[.systemFreeSize] as? Int64 {
-                let usedBytes = totalBytes - freeBytes
+               let freeBytes = values[.systemFreeSize] as? Int64,
+               totalBytes > 0 {
+                let usedBytes = max(0, totalBytes - freeBytes)
 
                 let formatter = ByteCountFormatter()
                 formatter.countStyle = .file
@@ -366,7 +460,8 @@ struct dashboardview: View {
 
                 totalDiskSpace = formatter.string(fromByteCount: totalBytes)
                 freeDiskSpace = formatter.string(fromByteCount: freeBytes)
-                usedDiskSpacePercentage = Double(usedBytes) / Double(totalBytes)
+                let rawPercentage = Double(usedBytes) / Double(totalBytes)
+                usedDiskSpacePercentage = min(max(rawPercentage, 0.0), 1.0)
             }
         } catch {
             AppLogger.shared.log("Error reading disk metrics: \(error.localizedDescription)")
@@ -374,6 +469,7 @@ struct dashboardview: View {
     }
 }
 
+@MainActor
 struct QuickLinkCard: View {
     let link: QuickLink
     let onNavigate: () -> Void
@@ -386,6 +482,7 @@ struct QuickLinkCard: View {
             Image(systemName: link.icon)
                 .font(.title3)
                 .foregroundColor(.accentColor)
+                .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(link.name)
@@ -407,6 +504,8 @@ struct QuickLinkCard: View {
                 }
                 .buttonStyle(.plain)
                 .transition(.opacity)
+                .accessibilityLabel("Delete \(link.name) shortcut")
+                .accessibilityHint("Removes shortcut from dashboard")
             }
         }
         .padding(12)
@@ -424,6 +523,10 @@ struct QuickLinkCard: View {
         .onTapGesture {
             onNavigate()
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Shortcut: \(link.name)")
+        .accessibilityHint("Path \(link.path). Double click to open location in Finder")
+        .accessibilityAddTraits(.isButton)
     }
 }
 
@@ -432,3 +535,4 @@ extension Text {
         self.fontWeight(.medium)
     }
 }
+

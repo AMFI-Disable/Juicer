@@ -8,11 +8,72 @@ struct ScriptTemplate: Identifiable {
     let icon: String
 }
 
+/// Thread-safe UTF-8 output decoder that buffers partial multi-byte sequences across streaming chunks.
+private final class ScriptOutputDecoder: @unchecked Sendable {
+    private var leftoverData = Data()
+    private let lock = NSLock()
+
+    func decode(_ newData: Data) -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        var combined = leftoverData + newData
+        guard !combined.isEmpty else { return "" }
+
+        let validLength = utf8ValidPrefixLength(in: combined)
+        let validData = combined.prefix(validLength)
+        leftoverData = combined.dropFirst(validLength)
+
+        return String(decoding: validData, as: UTF8.self)
+    }
+
+    func flush() -> String {
+        lock.lock()
+        defer { lock.unlock() }
+
+        guard !leftoverData.isEmpty else { return "" }
+        let str = String(decoding: leftoverData, as: UTF8.self)
+        leftoverData.removeAll()
+        return str
+    }
+
+    private func utf8ValidPrefixLength(in data: Data) -> Int {
+        let count = data.count
+        guard count > 0 else { return 0 }
+
+        var lookback = 1
+        while lookback <= min(4, count) {
+            let byte = data[count - lookback]
+            if (byte & 0x80) == 0 {
+                return count
+            } else if (byte & 0xC0) == 0xC0 {
+                var expectedLength = 1
+                if (byte & 0xE0) == 0xC0 { expectedLength = 2 }
+                else if (byte & 0xF0) == 0xE0 { expectedLength = 3 }
+                else if (byte & 0xF8) == 0xF0 { expectedLength = 4 }
+
+                if lookback < expectedLength {
+                    return count - lookback
+                } else {
+                    return count
+                }
+            }
+            lookback += 1
+        }
+        return count
+    }
+}
+
 struct scriptconsoleview: View {
     @State private var scriptCode: String = ""
     @State private var consoleOutput: String = ""
     @State private var isRunning = false
     @State private var activeProcess: Process?
+    @State private var executionTask: Task<Void, Never>?
+    @State private var isCancelled = false
+
+    private let defaultTimeoutInterval: TimeInterval = 120.0
+    private let maxConsoleLength: Int = 100_000
 
     private let templates = [
         ScriptTemplate(name: "Flush DNS Cache", desc: "Flush macOS resolver and restart mDNSResponder service.", code: "dscacheutil -flushcache; sudo killall -HUP mDNSResponder\necho '✅ DNS Cache flushed successfully.'", icon: "network"),
@@ -123,6 +184,11 @@ struct scriptconsoleview: View {
             }
         }
         .background(Color(NSColor.windowBackgroundColor))
+        .onDisappear {
+            if isRunning {
+                cancelExecution()
+            }
+        }
     }
 
     @ViewBuilder
@@ -141,14 +207,26 @@ struct scriptconsoleview: View {
 
     // MARK: - Process Execution Runner
 
+    private func appendConsoleOutput(_ text: String) {
+        guard !text.isEmpty else { return }
+        consoleOutput += text
+        if consoleOutput.count > maxConsoleLength {
+            let overflow = consoleOutput.count - maxConsoleLength
+            let index = consoleOutput.index(consoleOutput.startIndex, offsetBy: overflow)
+            consoleOutput = "⚠️ [Console output truncated to limit memory usage]\n" + String(consoleOutput[index...])
+        }
+    }
+
     private func runScript() {
         guard !isRunning else { return }
+        let commandStr = scriptCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !commandStr.isEmpty else { return }
+
         isRunning = true
-        consoleOutput = "⏳ Initializing shell execution session...\n\n"
+        isCancelled = false
+        consoleOutput = "⏳ Initializing shell execution session (Timeout: \(Int(defaultTimeoutInterval))s)...\n\n"
 
-        let commandStr = scriptCode
-
-        Task.detached(priority: .userInitiated) {
+        executionTask = Task.detached(priority: .userInitiated) {
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/bin/sh")
             proc.arguments = ["-c", commandStr]
@@ -161,47 +239,97 @@ struct scriptconsoleview: View {
                 self.activeProcess = proc
             }
 
+            let decoder = ScriptOutputDecoder()
             let fileHandle = pipe.fileHandleForReading
+
             fileHandle.readabilityHandler = { handle in
                 let data = handle.availableData
                 guard !data.isEmpty else { return }
-                if let str = String(data: data, encoding: .utf8) {
+                let text = decoder.decode(data)
+                if !text.isEmpty {
                     DispatchQueue.main.async {
-                        self.consoleOutput += str
+                        self.appendConsoleOutput(text)
                     }
                 }
             }
 
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: UInt64(self.defaultTimeoutInterval * 1_000_000_000))
+                if !Task.isCancelled {
+                    await MainActor.run {
+                        if self.isRunning && self.activeProcess === proc {
+                            self.appendConsoleOutput("\n⚠️ Script execution timed out (exceeded limit of \(Int(self.defaultTimeoutInterval))s). Terminating process...\n")
+                            self.terminateProcess(proc)
+                        }
+                    }
+                }
+            }
+
+            var startError: Error? = nil
             do {
                 try proc.run()
                 proc.waitUntilExit()
-                fileHandle.readabilityHandler = nil
-
-                let exitStatus = proc.terminationStatus
-                await MainActor.run {
-                    self.isRunning = false
-                    self.activeProcess = nil
-                    if exitStatus == 0 {
-                        self.consoleOutput += "\n✅ Script completed successfully (Exit Code 0).\n"
-                    } else {
-                        self.consoleOutput += "\n❌ Script terminated with non-zero exit code \(exitStatus).\n"
-                    }
-                }
             } catch {
-                fileHandle.readabilityHandler = nil
+                startError = error
+            }
+
+            timeoutTask.cancel()
+
+            fileHandle.readabilityHandler = nil
+            let remainingData = (try? fileHandle.readToEnd()) ?? Data()
+            let finalOutput = decoder.decode(remainingData) + decoder.flush()
+
+            if !finalOutput.isEmpty {
                 await MainActor.run {
-                    self.isRunning = false
-                    self.activeProcess = nil
-                    self.consoleOutput += "\n❌ System execution error: \(error.localizedDescription)\n"
+                    self.appendConsoleOutput(finalOutput)
+                }
+            }
+            try? fileHandle.close()
+
+            let exitStatus = proc.terminationStatus
+
+            await MainActor.run {
+                guard self.activeProcess === proc || self.isRunning else { return }
+                let processWasCancelled = self.isCancelled
+                self.isRunning = false
+                self.activeProcess = nil
+                self.executionTask = nil
+
+                if let err = startError {
+                    self.appendConsoleOutput("\n❌ System execution error: \(err.localizedDescription)\n")
+                } else if processWasCancelled {
+                    self.appendConsoleOutput("\n🛑 Execution aborted by user.\n")
+                } else if exitStatus == 0 {
+                    self.appendConsoleOutput("\n✅ Script completed successfully (Exit Code 0).\n")
+                } else {
+                    self.appendConsoleOutput("\n❌ Script terminated with non-zero exit code \(exitStatus).\n")
                 }
             }
         }
     }
 
     private func cancelExecution() {
-        activeProcess?.terminate()
-        activeProcess = nil
-        isRunning = false
-        consoleOutput += "\n🛑 Execution aborted by user.\n"
+        guard isRunning else { return }
+        isCancelled = true
+        if let proc = activeProcess {
+            terminateProcess(proc)
+        }
+        executionTask?.cancel()
+        executionTask = nil
+    }
+
+    private func terminateProcess(_ proc: Process) {
+        guard proc.isRunning else { return }
+        proc.terminate()
+
+        let pid = proc.processIdentifier
+        if pid > 0 {
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1.5) {
+                if proc.isRunning {
+                    kill(pid, SIGKILL)
+                }
+            }
+        }
     }
 }
+
