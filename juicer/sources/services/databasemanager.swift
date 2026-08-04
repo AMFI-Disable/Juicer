@@ -101,8 +101,18 @@ final class DatabaseManager: ObservableObject {
     @Published var isRefreshing = false
     @Published var activeCount = 0
 
-    private init() {
+    private var isInitialized = false
+
+    private init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
         refreshAll()
+    }
+
+    func purgeMemory() {
+        sqliteFiles.removeAll(keepingCapacity: false)
     }
 
     func refreshAll() {

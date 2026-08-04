@@ -142,6 +142,27 @@ struct portlistenerview: View {
             let filterDevSaved = UserDefaults.standard.bool(forKey: "juicer.settings.defaultToDevPorts")
             self.showArgs = showArgsSaved
             self.filterToDevPorts = filterDevSaved
+
+            if let payload = StudioContextBridgeManager.shared.pendingPayload {
+                if let pid = payload.pid {
+                    self.filterToDevPorts = false
+                    self.searchText = "\(pid)"
+                } else if let q = payload.searchQuery, !q.isEmpty {
+                    self.filterToDevPorts = false
+                    self.searchText = q
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: StudioContextBridgeManager.bridgeNotification)) { notification in
+            if let payload = notification.userInfo?["payload"] as? ContextPayload {
+                if let pid = payload.pid {
+                    self.filterToDevPorts = false
+                    self.searchText = "\(pid)"
+                } else if let q = payload.searchQuery, !q.isEmpty {
+                    self.filterToDevPorts = false
+                    self.searchText = q
+                }
+            }
         }
         .alert("Terminate Process?", isPresented: $showFirstAlert) {
             Button("Terminate Process", role: .destructive) {
@@ -216,14 +237,34 @@ struct portlistenerview: View {
                         Spacer()
                     }
 
-                    Button("Kill") {
-                        self.selectedPort = item
-                        self.showFirstAlert = true
+                    HStack(spacing: 6) {
+                        Button(action: {
+                            StudioContextBridgeManager.shared.testEndpointInAPIStudio(urlString: "http://127.0.0.1:\(item.port)", sourceStudio: .system)
+                        }) {
+                            Image(systemName: "paperplane.fill")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Test Endpoint in API Studio (http://127.0.0.1:\(item.port))")
+
+                        Button(action: {
+                            StudioContextBridgeManager.shared.inspectSocketsInNetworkStudio(query: "\(item.port)", sourceStudio: .system)
+                        }) {
+                            Image(systemName: "network")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                        .help("Inspect Exposure in Network Studio for port \(item.port)")
+
+                        Button("Kill") {
+                            self.selectedPort = item
+                            self.showFirstAlert = true
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .disabled(isKilling)
                     }
-                    .buttonStyle(.bordered)
-                    .tint(.red)
-                    .frame(width: 100, alignment: .center)
-                    .disabled(isKilling)
+                    .frame(width: 170, alignment: .trailing)
                 }
                 .padding(.vertical, 6)
                 Divider()

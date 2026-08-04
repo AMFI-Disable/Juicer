@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct juicerapp: App {
+    @StateObject private var studioStateManager = StudioStateManager.shared
     @State private var hasAccess = false
     @State private var isCheckingAccess = true
     @State private var didStartServices = false
@@ -68,6 +69,7 @@ struct juicerapp: App {
                         .frame(minWidth: 500, minHeight: 300)
                 } else if hasAccess {
                 mainsidebarview()
+                    .environmentObject(studioStateManager)
                     .frame(minWidth: 950, maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                 onboardingview(isAccessGranted: $hasAccess)

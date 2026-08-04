@@ -30,8 +30,19 @@ class DatabaseStudioManager: ObservableObject {
     @Published var dumpMessage: String = ""
     @Published var isDumping = false
 
-    init() {
+    private var isInitialized = false
+
+    init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
         self.scanDaemons()
+    }
+
+    func purgeMemory() {
+        selectedTableRows.removeAll(keepingCapacity: false)
+        selectedTableColumns.removeAll(keepingCapacity: false)
     }
 
     func scanDaemons() {
@@ -218,6 +229,9 @@ struct DatabaseStudioView: View {
             default:
                 dumpStudioView()
             }
+        }
+        .onAppear {
+            manager.ensureInitialized()
         }
         .allowWindowDragAndFit()
     }

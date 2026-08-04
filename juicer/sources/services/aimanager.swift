@@ -63,8 +63,20 @@ final class AIManager: ObservableObject {
         )
     ]
 
-    private init() {
+    private var isInitialized = false
+
+    private init() {}
+
+    func ensureInitialized() {
+        guard !isInitialized else { return }
+        isInitialized = true
         checkLocalServices()
+    }
+
+    func purgeMemory() {
+        if chatMessages.count > 10 {
+            chatMessages = Array(chatMessages.prefix(5))
+        }
     }
 
     func checkLocalServices() {
