@@ -59,13 +59,38 @@ final class reliabilitytests: XCTestCase {
 
     func testNetworkValidationAndDNSParsing() {
         XCTAssertEqual(NetworkInputValidation.hostname("example.com"), "example.com")
-        XCTAssertNil(NetworkInputValidation.hostname("bad host"))
+        XCTAssertEqual(NetworkInputValidation.hostname("https://sub.domain.com/path"), "sub.domain.com")
+        XCTAssertNil(NetworkInputValidation.hostname("bad host with spaces"))
+        XCTAssertNil(NetworkInputValidation.hostname("-invalid.com"))
+        XCTAssertEqual(NetworkInputValidation.ipAddress("127.0.0.1"), "127.0.0.1")
+        XCTAssertEqual(NetworkInputValidation.ipAddress("::1"), "::1")
+        XCTAssertNil(NetworkInputValidation.ipAddress("256.0.0.1"))
+        XCTAssertNil(NetworkInputValidation.ipAddress("invalid-ip"))
         XCTAssertEqual(NetworkInputValidation.ports("443, 80, 443, 0, 70000"), [80, 443])
+
         let output = ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1\n;; ANSWER SECTION:\nexample.com. 60 IN A 93.184.216.34\n;; Query time: 12 msec\n;; SERVER: 1.1.1.1#53\n"
         let parsed = DNSDiagnosticParser.parse(output, resolver: "1.1.1.1")
         XCTAssertEqual(parsed.status, "NOERROR")
         XCTAssertEqual(parsed.queryTimeMilliseconds, 12)
         XCTAssertEqual(parsed.answers.first?.value, "93.184.216.34")
+    }
+
+    func testDNSDiagnosticParserErrorBoundsAndLimits() {
+        let timeoutOutput = "dig: connection timed out; no servers could be reached"
+        let timeoutResult = DNSDiagnosticParser.parse(timeoutOutput, resolver: "8.8.8.8")
+        XCTAssertEqual(timeoutResult.status, "TIMEOUT")
+        XCTAssertNotNil(timeoutResult.error)
+
+        let unreachableOutput = "dig: couldn't get address 'invalid': name or service not known"
+        let unreachableResult = DNSDiagnosticParser.parse(unreachableOutput, resolver: "8.8.8.8")
+        XCTAssertEqual(unreachableResult.status, "UNREACHABLE")
+
+        var hugeAnswerOutput = ";; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 1\n;; ANSWER SECTION:\n"
+        for i in 1...200 {
+            hugeAnswerOutput += "node\(i).example.com. 60 IN A 192.168.1.\(i % 250)\n"
+        }
+        let cappedParsed = DNSDiagnosticParser.parse(hugeAnswerOutput, resolver: "1.1.1.1", maxRecords: 50)
+        XCTAssertEqual(cappedParsed.answers.count, 50)
     }
 
     func testNetworkParsersAndOperationIDs() {
@@ -308,6 +333,81 @@ invalid3   -10  user   18u  IPv4 0x8888888888888888      0t0  TCP 127.0.0.1:8000
         XCTAssertEqual(app5?.interface, "Loopback (lo0)")
     }
 
+    func testEnvProfilePathValidationAndBounds() {
+        // Empty path
+        guard case .failure(let err1) = EnvProfileManager.normalizeAndValidatePath("") else {
+            return XCTFail("Expected emptyPath error")
+        }
+        XCTAssertEqual(err1, .emptyPath)
+
+        // Null byte in path
+        guard case .failure(let err2) = EnvProfileManager.normalizeAndValidatePath("/path/to\0/file") else {
+            return XCTFail("Expected nullByteInPath error")
+        }
+        XCTAssertEqual(err2, .nullByteInPath)
+
+        // Forbidden system directory
+        guard case .failure(let err3) = EnvProfileManager.normalizeAndValidatePath("/System") else {
+            return XCTFail("Expected systemPathForbidden error")
+        }
+        XCTAssertEqual(err3, .systemPathForbidden("/System"))
+
+        // Valid path expansion
+        if case .success(let url) = EnvProfileManager.normalizeAndValidatePath("~/Projects/App") {
+            XCTAssertTrue(url.path.contains("/Projects/App"))
+            XCTAssertFalse(url.path.hasPrefix("~"))
+        } else {
+            XCTFail("Failed to normalize valid tilde path")
+        }
+    }
+
+    func testEnvProfileKeyValueParsingBoundsAndQuotes() {
+        let manager = EnvProfileManager()
+        let sample = """
+        # Comment line
+        // Another comment
+        export PORT=3000
+        NODE_ENV="production"
+        API_KEY='sk-123456' # inline comment ignored for quotes
+        DATABASE_URL=postgres://localhost:5432/db # inline comment stripped
+        INVALID KEY = 123
+        """
+        let vars = manager.parseEnvFile(content: sample)
+        XCTAssertEqual(vars.count, 4)
+        XCTAssertEqual(vars.first(where: { $0.key == "PORT" })?.value, "3000")
+        XCTAssertEqual(vars.first(where: { $0.key == "NODE_ENV" })?.value, "production")
+        XCTAssertEqual(vars.first(where: { $0.key == "API_KEY" })?.value, "sk-123456")
+        XCTAssertEqual(vars.first(where: { $0.key == "DATABASE_URL" })?.value, "postgres://localhost:5432/db")
+        XCTAssertNil(vars.first(where: { $0.key == "INVALID KEY" }))
+    }
+
+    func testEnvProfileAtomicExportAndImport() throws {
+        try withTemporaryDirectory { tempDir in
+            let manager = EnvProfileManager()
+            let profile = EnvProfile(
+                name: "Test Profile",
+                projectPath: tempDir.path,
+                variables: [
+                    EnvVariable(key: "APP_NAME", value: "JuicerTest"),
+                    EnvVariable(key: "SECRET_TOKEN", value: "secret_abc", isSecret: true)
+                ],
+                updatedAt: Date()
+            )
+
+            let targetFile = tempDir.appendingPathComponent(".env")
+            try manager.exportProfileToEnvFile(profile: profile, to: targetFile.path)
+
+            XCTAssertTrue(FileManager.default.fileExists(atPath: targetFile.path))
+            let content = try String(contentsOf: targetFile, encoding: .utf8)
+            XCTAssertTrue(content.contains("APP_NAME=JuicerTest"))
+            XCTAssertTrue(content.contains("SECRET_TOKEN=secret_abc"))
+
+            let imported = try manager.importProfileFromEnvFile(at: targetFile.path, name: "Imported Profile")
+            XCTAssertEqual(imported.name, "Imported Profile")
+            XCTAssertEqual(imported.variables.count, 2)
+        }
+    }
+
     private func withTemporaryDirectory(_ body: (URL) throws -> Void) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("juicer-rel-tests-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -315,4 +415,5 @@ invalid3   -10  user   18u  IPv4 0x8888888888888888      0t0  TCP 127.0.0.1:8000
         try body(directory)
     }
 }
+
 

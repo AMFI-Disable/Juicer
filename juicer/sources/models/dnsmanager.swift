@@ -154,10 +154,12 @@ class DNSManager: ObservableObject {
 
         Task.detached(priority: .userInitiated) {
             var parsed: [HostRecord] = []
+            let maxRecords = 5_000
             do {
                 let content = try String(contentsOfFile: self.hostsPath, encoding: .utf8)
                 let lines = content.components(separatedBy: "\n")
                 for line in lines {
+                    guard parsed.count < maxRecords else { break }
                     var trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { continue }
 
@@ -170,12 +172,14 @@ class DNSManager: ObservableObject {
                     let parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
                     guard parts.count >= 2 else { continue }
 
-                    let ip = parts[0]
-                    let domain = parts[1]
-                    if ip.contains(".") || ip.contains(":") {
-                        let isSystem = (domain == "localhost" || domain == "broadcasthost" || ip == "255.255.255.255" || ip == "::1" || domain.hasSuffix(".local"))
-                        parsed.append(HostRecord(ip: ip, domain: domain, isEnabled: isEnabled, isSystem: isSystem))
-                    }
+                    let rawIp = parts[0]
+                    let rawDomain = parts[1]
+                    
+                    guard let ip = NetworkInputValidation.ipAddress(rawIp) else { continue }
+                    guard let domain = NetworkInputValidation.hostname(rawDomain) else { continue }
+                    
+                    let isSystem = (domain == "localhost" || domain == "broadcasthost" || ip == "255.255.255.255" || ip == "::1" || domain.hasSuffix(".local"))
+                    parsed.append(HostRecord(ip: ip, domain: domain, isEnabled: isEnabled, isSystem: isSystem))
                 }
             } catch {
                 AppLogger.shared.log("Failed to read /etc/hosts: \(error.localizedDescription)")
@@ -197,14 +201,25 @@ class DNSManager: ObservableObject {
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             do {
-                let (data, _) = try await URLSession.shared.data(from: url)
+                let (data, response) = try await URLSession.shared.data(from: url)
+                let maxSizeBytes = 5 * 1024 * 1024
+                guard data.count <= maxSizeBytes else {
+                    throw NSError(domain: "DNSManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "Subscription list exceeds maximum size limit of 5 MB."])
+                }
+                
+                if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+                    throw NSError(domain: "DNSManager", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP error \(httpResponse.statusCode) when downloading subscription."])
+                }
+
                 guard let content = String(data: data, encoding: .utf8) else {
                     throw NSError(domain: "DNSManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Failed to decode subscription content as UTF-8"])
                 }
 
                 var parsed: [HostRecord] = []
+                let maxRecords = 5_000
                 let lines = content.components(separatedBy: "\n")
                 for line in lines {
+                    guard parsed.count < maxRecords else { break }
                     var trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
                     guard !trimmed.isEmpty else { continue }
                     if trimmed.hasPrefix("#") && !trimmed.contains(" ") { continue }
@@ -218,12 +233,15 @@ class DNSManager: ObservableObject {
                     let parts = trimmed.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
                     guard parts.count >= 2 else { continue }
 
-                    let ip = parts[0]
-                    let domain = parts[1]
-                    if (ip.contains(".") || ip.contains(":")) && !domain.hasPrefix("#") {
-                        let isSystem = (domain == "localhost" || domain == "broadcasthost" || ip == "255.255.255.255" || ip == "::1" || domain.hasSuffix(".local"))
-                        parsed.append(HostRecord(ip: ip, domain: domain, isEnabled: isEnabled, isSystem: isSystem))
-                    }
+                    let rawIp = parts[0]
+                    let rawDomain = parts[1]
+                    guard !rawDomain.hasPrefix("#") else { continue }
+
+                    guard let ip = NetworkInputValidation.ipAddress(rawIp) else { continue }
+                    guard let domain = NetworkInputValidation.hostname(rawDomain) else { continue }
+
+                    let isSystem = (domain == "localhost" || domain == "broadcasthost" || ip == "255.255.255.255" || ip == "::1" || domain.hasSuffix(".local"))
+                    parsed.append(HostRecord(ip: ip, domain: domain, isEnabled: isEnabled, isSystem: isSystem))
                 }
 
                 await MainActor.run {
@@ -231,7 +249,6 @@ class DNSManager: ObservableObject {
                     self.isDownloading = false
                     AppLogger.shared.log("Downloaded \(parsed.count) host records successfully.")
 
-                    // Save to profile
                     if let idx = self.profiles.firstIndex(where: { $0.id == profile.id }) {
                         self.profiles[idx].records = parsed
                         self.saveProfiles()
@@ -241,22 +258,20 @@ class DNSManager: ObservableObject {
                 await MainActor.run {
                     self.isDownloading = false
                     AppLogger.shared.log("Failed to download hosts: \(error.localizedDescription)")
-                    self.records = profile.records // fallback to previous records
+                    self.records = profile.records
                 }
             }
         }
     }
 
     func addRecord(ip: String, domain: String) {
-        let cleanIp = ip.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanDomain = domain.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanIp.isEmpty, !cleanDomain.isEmpty else { return }
+        guard let cleanIp = NetworkInputValidation.ipAddress(ip),
+              let cleanDomain = NetworkInputValidation.hostname(domain) else { return }
 
         let record = HostRecord(ip: cleanIp, domain: cleanDomain, isEnabled: true, isSystem: false)
         self.records.append(record)
         AppLogger.shared.log("Added mapping: \(cleanIp) -> \(cleanDomain) (unsaved)")
 
-        // Update profile
         if let activeId = activeProfileId,
            let idx = profiles.firstIndex(where: { $0.id == activeId }) {
             profiles[idx].records = self.records
@@ -287,8 +302,10 @@ class DNSManager: ObservableObject {
             let currentRecords = await MainActor.run { self.records }
             for record in currentRecords {
                 if record.isSystem { continue }
+                guard let safeIp = NetworkInputValidation.ipAddress(record.ip),
+                      let safeDomain = NetworkInputValidation.hostname(record.domain) else { continue }
                 let comment = record.isEnabled ? "" : "# "
-                userRecords += "\(comment)\(record.ip)\t\(record.domain)\n"
+                userRecords += "\(comment)\(safeIp)\t\(safeDomain)\n"
             }
 
             let finalContent = header + userRecords
