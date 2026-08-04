@@ -17,6 +17,7 @@ struct SoftwareUpdateItem: Identifiable, Codable {
     }
 }
 
+@MainActor
 class AppUpdateManager: ObservableObject {
     static let shared = AppUpdateManager()
 
@@ -24,6 +25,8 @@ class AppUpdateManager: ObservableObject {
     @Published var isChecking: Bool = false
     @Published var isUpdating: Bool = false
     @Published var updateLog: [String] = []
+    @Published var checkProgress: Double = 0.0
+    @Published var updateProgress: Double = 0.0
 
     private let fm = FileManager.default
 
@@ -31,6 +34,7 @@ class AppUpdateManager: ObservableObject {
 
     func checkForUpdates() {
         isChecking = true
+        checkProgress = 0.0
         updates = []
         updateLog = []
 
@@ -44,11 +48,15 @@ class AppUpdateManager: ObservableObject {
                 let casksOutput = self.runShellCommand(brewPath, args: ["outdated", "--cask"])
                 let parsedCasks = self.parseBrewOutdated(casksOutput, type: .cask)
                 found.append(contentsOf: parsedCasks)
+                await MainActor.run { self.checkProgress = min(1.0, max(0.0, 0.35)) }
 
                 // 2. Formulae
                 let formulaeOutput = self.runShellCommand(brewPath, args: ["outdated", "--formula"])
                 let parsedFormulae = self.parseBrewOutdated(formulaeOutput, type: .formula)
                 found.append(contentsOf: parsedFormulae)
+                await MainActor.run { self.checkProgress = min(1.0, max(0.0, 0.70)) }
+            } else {
+                await MainActor.run { self.checkProgress = min(1.0, max(0.0, 0.70)) }
             }
 
             let masPath = self.findMasPath()
@@ -57,6 +65,7 @@ class AppUpdateManager: ObservableObject {
                 let parsedMas = self.parseMasOutdated(masOutput)
                 found.append(contentsOf: parsedMas)
             }
+            await MainActor.run { self.checkProgress = min(1.0, max(0.0, 0.90)) }
 
             if found.isEmpty {
                 found.append(SoftwareUpdateItem(name: "Figma", currentVersion: "116.15.4", latestVersion: "116.16.2", type: .sparkle))
@@ -66,22 +75,26 @@ class AppUpdateManager: ObservableObject {
 
             await MainActor.run {
                 self.updates = found
+                self.checkProgress = 1.0
                 self.isChecking = false
             }
         }
     }
 
-    func updateSelected(completion: @escaping (Bool) -> Void) {
+    func updateSelected(completion: @escaping @MainActor (Bool) -> Void) {
         isUpdating = true
+        updateProgress = 0.0
         let toUpdate = updates.filter { $0.isSelected }
+        let totalCount = max(1, toUpdate.count)
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
             let brewPath = self.findBrewPath()
 
-            for item in toUpdate {
+            for (index, item) in toUpdate.enumerated() {
                 await MainActor.run {
                     self.updateLog.append("Updating \(item.name) (\(item.currentVersion) ➔ \(item.latestVersion))…")
+                    self.updateProgress = min(1.0, max(0.0, Double(index) / Double(totalCount)))
                 }
 
                 switch item.type {
@@ -101,10 +114,12 @@ class AppUpdateManager: ObservableObject {
 
                 await MainActor.run {
                     self.updateLog.append("✅ Finished updating \(item.name).")
+                    self.updateProgress = min(1.0, max(0.0, Double(index + 1) / Double(totalCount)))
                 }
             }
 
             await MainActor.run {
+                self.updateProgress = 1.0
                 self.isUpdating = false
                 self.checkForUpdates()
                 completion(true)
@@ -112,7 +127,7 @@ class AppUpdateManager: ObservableObject {
         }
     }
 
-    func adoptViaHomebrewCask(_ item: SoftwareUpdateItem, completion: @escaping (Bool, String) -> Void) {
+    func adoptViaHomebrewCask(_ item: SoftwareUpdateItem, completion: @escaping @MainActor (Bool, String) -> Void) {
         let brewPath = findBrewPath()
         guard !brewPath.isEmpty else {
             completion(false, "Homebrew is not installed.")
@@ -138,7 +153,7 @@ class AppUpdateManager: ObservableObject {
         }
     }
 
-    private func findBrewPath() -> String {
+    nonisolated private func findBrewPath() -> String {
         for path in ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"] {
             if fm.fileExists(atPath: path) {
                 return path
@@ -147,7 +162,7 @@ class AppUpdateManager: ObservableObject {
         return ""
     }
 
-    private func findMasPath() -> String {
+    nonisolated private func findMasPath() -> String {
         for path in ["/opt/homebrew/bin/mas", "/usr/local/bin/mas", "/usr/bin/mas"] {
             if fm.fileExists(atPath: path) {
                 return path
@@ -156,7 +171,7 @@ class AppUpdateManager: ObservableObject {
         return ""
     }
 
-    private func runShellCommand(_ cmd: String, args: [String]) -> String {
+    nonisolated private func runShellCommand(_ cmd: String, args: [String]) -> String {
         let task = Process()
         task.launchPath = cmd
         task.arguments = args
@@ -170,7 +185,7 @@ class AppUpdateManager: ObservableObject {
         return String(data: data, encoding: .utf8) ?? ""
     }
 
-    private func parseBrewOutdated(_ output: String, type: SoftwareUpdateItem.UpdateType) -> [SoftwareUpdateItem] {
+    nonisolated private func parseBrewOutdated(_ output: String, type: SoftwareUpdateItem.UpdateType) -> [SoftwareUpdateItem] {
         var results: [SoftwareUpdateItem] = []
         let lines = output.components(separatedBy: .newlines)
         for line in lines {
@@ -195,7 +210,7 @@ class AppUpdateManager: ObservableObject {
         return results
     }
 
-    private func parseMasOutdated(_ output: String) -> [SoftwareUpdateItem] {
+    nonisolated private func parseMasOutdated(_ output: String) -> [SoftwareUpdateItem] {
         var results: [SoftwareUpdateItem] = []
         let lines = output.components(separatedBy: .newlines)
         for line in lines {
