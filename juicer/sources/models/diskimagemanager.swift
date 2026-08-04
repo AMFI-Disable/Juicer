@@ -7,6 +7,7 @@ struct DiskImage: Identifiable {
     var mounted = false
 }
 
+@MainActor
 final class DiskImageManager: ObservableObject {
     @Published var images: [DiskImage] = []
     @Published var selectedURL: URL?
@@ -29,6 +30,7 @@ final class DiskImageManager: ObservableObject {
     }
 
     func mount() { run(["attach"], action: "Mount") }
+    func unmount() { run(["detach"], action: "Unmount") }
     func verify() { run(["verify"], action: "Verification") }
     func convert(to format: String, destination: URL) {
         guard let selectedURL else { return }
