@@ -1,53 +1,90 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
+
+typealias EnvProfileManagerView = envprofilemanagerview
 
 struct envprofilemanagerview: View {
     @StateObject private var manager = EnvProfileManager()
     @State private var maskSecrets = true
     @State private var searchText = ""
     @State private var newProfileName = ""
+    @State private var newProjectPath = ""
     @State private var showAddProfileSheet = false
+    @State private var editProjectPath = ""
+    @State private var showEditPathSheet = false
     @State private var newKey = ""
     @State private var newValue = ""
     @State private var isNewSecret = false
-    @State private var copiedNotice = ""
+    @State private var noticeMessage = ""
+    @State private var isNoticeError = false
+
+    var filteredProfiles: [EnvProfile] {
+        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return manager.profiles
+        }
+        return manager.profiles.filter {
+            $0.name.localizedCaseInsensitiveContains(searchText) ||
+            $0.projectPath.localizedCaseInsensitiveContains(searchText)
+        }
+    }
 
     var selectedProfile: EnvProfile? {
         manager.profiles.first(where: { $0.id == manager.selectedProfileID })
     }
 
+    private var isKeyValid: Bool {
+        let trimmed = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= EnvProfileManager.maxKeyLength else { return false }
+        let validKeyChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_.-"))
+        return trimmed.unicodeScalars.allSatisfy({ validKeyChars.contains($0) })
+    }
+
     var body: some View {
         NavigationSplitView {
-            List(selection: $manager.selectedProfileID) {
-                Section("Profiles") {
-                    ForEach(manager.profiles) { profile in
-                        HStack {
-                            Image(systemName: "slider.horizontal.3")
-                                .foregroundStyle(Color.accentColor)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(profile.name)
-                                    .font(.headline)
-                                Text("\(profile.variables.count) variables")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+            VStack(spacing: 0) {
+                List(selection: $manager.selectedProfileID) {
+                    Section("Profiles") {
+                        ForEach(filteredProfiles) { profile in
+                            HStack {
+                                Image(systemName: "slider.horizontal.3")
+                                    .foregroundStyle(Color.accentColor)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(profile.name)
+                                        .font(.headline)
+                                    Text("\(profile.variables.count) variables")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .tag(profile.id)
                         }
-                        .tag(profile.id)
-                    }
-                    .onDelete { indexSet in
-                        for idx in indexSet {
-                            manager.deleteProfile(id: manager.profiles[idx].id)
+                        .onDelete { indexSet in
+                            let idsToDelete = indexSet.compactMap { idx in
+                                idx < manager.profiles.count ? manager.profiles[idx].id : nil
+                            }
+                            for id in idsToDelete {
+                                manager.deleteProfile(id: id)
+                            }
                         }
                     }
                 }
+                .listStyle(.sidebar)
+                .searchable(text: $searchText, prompt: "Search Profiles")
             }
-            .listStyle(.sidebar)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showAddProfileSheet = true }) {
-                        Image(systemName: "plus")
+                    HStack(spacing: 8) {
+                        Button(action: importEnvFileModal) {
+                            Label("Import", systemImage: "square.and.arrow.down")
+                        }
+                        .help("Import .env File")
+
+                        Button(action: { showAddProfileSheet = true }) {
+                            Image(systemName: "plus")
+                        }
+                        .help("Create New Env Profile")
                     }
-                    .help("Create New Env Profile")
                 }
             }
         } detail: {
@@ -59,10 +96,26 @@ struct envprofilemanagerview: View {
                             Text(profile.name)
                                 .font(.title2)
                                 .bold()
-                            if !profile.projectPath.isEmpty {
-                                Text(profile.projectPath)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            HStack(spacing: 4) {
+                                if profile.projectPath.isEmpty {
+                                    Text("No project path set")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                } else {
+                                    Text(profile.projectPath)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Button(action: {
+                                    editProjectPath = profile.projectPath
+                                    showEditPathSheet = true
+                                }) {
+                                    Image(systemName: "pencil.circle")
+                                        .font(.caption)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Edit Project Path")
                             }
                         }
 
@@ -72,11 +125,18 @@ struct envprofilemanagerview: View {
                             .toggleStyle(.switch)
 
                         Button(action: {
+                            exportToEnvFileModal(for: profile)
+                        }) {
+                            Label("Save .env", systemImage: "square.and.arrow.up")
+                        }
+                        .buttonStyle(.bordered)
+                        .help("Save atomically to .env file")
+
+                        Button(action: {
                             let str = manager.exportAsEnvString(profile: profile)
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(str, forType: .string)
-                            copiedNotice = "Copied .env format!"
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copiedNotice = "" }
+                            showNotice("Copied .env format!", isError: false)
                         }) {
                             Label("Copy .env", systemImage: "doc.on.doc")
                         }
@@ -86,8 +146,7 @@ struct envprofilemanagerview: View {
                             let str = manager.exportAsShellExport(profile: profile)
                             NSPasteboard.general.clearContents()
                             NSPasteboard.general.setString(str, forType: .string)
-                            copiedNotice = "Copied export commands!"
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copiedNotice = "" }
+                            showNotice("Copied export commands!", isError: false)
                         }) {
                             Label("Copy export", systemImage: "terminal")
                         }
@@ -96,17 +155,17 @@ struct envprofilemanagerview: View {
                     .padding()
                     .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
 
-                    if !copiedNotice.isEmpty {
+                    if !noticeMessage.isEmpty {
                         HStack {
                             Spacer()
-                            Text(copiedNotice)
+                            Text(noticeMessage)
                                 .font(.caption)
                                 .bold()
-                                .foregroundStyle(.green)
+                                .foregroundStyle(isNoticeError ? .red : .green)
                                 .padding(6)
                             Spacer()
                         }
-                        .background(Color.green.opacity(0.1))
+                        .background(isNoticeError ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
                     }
 
                     Divider()
@@ -121,9 +180,17 @@ struct envprofilemanagerview: View {
                             .toggleStyle(.checkbox)
 
                         Button("Add Variable") {
-                            guard !newKey.isEmpty else { return }
+                            let trimmedKey = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard isKeyValid else { return }
+                            let trimmedVal = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+
                             var updatedVars = profile.variables
-                            updatedVars.append(EnvVariable(key: newKey, value: newValue, isSecret: isNewSecret))
+                            if let idx = updatedVars.firstIndex(where: { $0.key == trimmedKey }) {
+                                updatedVars[idx].value = trimmedVal
+                                updatedVars[idx].isSecret = isNewSecret
+                            } else {
+                                updatedVars.append(EnvVariable(key: trimmedKey, value: trimmedVal, isSecret: isNewSecret))
+                            }
                             profile.variables = updatedVars
                             manager.updateProfile(profile)
                             newKey = ""
@@ -131,7 +198,7 @@ struct envprofilemanagerview: View {
                             isNewSecret = false
                         }
                         .buttonStyle(.borderedProminent)
-                        .disabled(newKey.trimmingCharacters(in: .whitespaces).isEmpty)
+                        .disabled(!isKeyValid)
                     }
                     .padding()
 
@@ -139,8 +206,7 @@ struct envprofilemanagerview: View {
 
                     // Variables Table
                     List {
-                        ForEach(profile.variables.indices, id: \.self) { idx in
-                            let item = profile.variables[idx]
+                        ForEach(profile.variables) { item in
                             HStack {
                                 Text(item.key)
                                     .font(.system(.body, design: .monospaced))
@@ -163,7 +229,7 @@ struct envprofilemanagerview: View {
 
                                 Button(action: {
                                     var updatedVars = profile.variables
-                                    updatedVars.remove(at: idx)
+                                    updatedVars.removeAll { $0.id == item.id }
                                     profile.variables = updatedVars
                                     manager.updateProfile(profile)
                                 }) {
@@ -196,21 +262,136 @@ struct envprofilemanagerview: View {
 
                 TextField("Profile Name (e.g. Staging Local)", text: $newProfileName)
                     .textFieldStyle(.roundedBorder)
-                    .frame(width: 300)
+                    .frame(width: 340)
 
                 HStack {
-                    Button("Cancel") { showAddProfileSheet = false }
+                    TextField("Project Path (e.g. ~/Projects/MyApp)", text: $newProjectPath)
+                        .textFieldStyle(.roundedBorder)
+                    Button("Browse...") {
+                        selectDirectory { path in
+                            newProjectPath = path
+                        }
+                    }
+                }
+                .frame(width: 340)
+
+                HStack {
+                    Button("Cancel") {
+                        showAddProfileSheet = false
+                        newProfileName = ""
+                        newProjectPath = ""
+                    }
                     Button("Create") {
-                        if !newProfileName.isEmpty {
-                            manager.addProfile(name: newProfileName)
+                        if !newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            manager.addProfile(name: newProfileName, projectPath: newProjectPath)
                             newProfileName = ""
+                            newProjectPath = ""
                             showAddProfileSheet = false
                         }
                     }
                     .buttonStyle(.borderedProminent)
+                    .disabled(newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
             }
             .padding(24)
         }
+        .sheet(isPresented: $showEditPathSheet) {
+            if var profile = selectedProfile {
+                VStack(spacing: 16) {
+                    Text("Edit Project Path")
+                        .font(.headline)
+
+                    HStack {
+                        TextField("Project Path", text: $editProjectPath)
+                            .textFieldStyle(.roundedBorder)
+                        Button("Browse...") {
+                            selectDirectory { path in
+                                editProjectPath = path
+                            }
+                        }
+                    }
+                    .frame(width: 360)
+
+                    HStack {
+                        Button("Cancel") { showEditPathSheet = false }
+                        Button("Save") {
+                            profile.projectPath = editProjectPath
+                            manager.updateProfile(profile)
+                            showEditPathSheet = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding(24)
+            }
+        }
+    }
+
+    private func showNotice(_ msg: String, isError: Bool) {
+        noticeMessage = msg
+        isNoticeError = isError
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            if noticeMessage == msg {
+                noticeMessage = ""
+            }
+        }
+    }
+
+    private func selectDirectory(completion: @escaping (String) -> Void) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            completion(url.path)
+        }
+    }
+
+    private func importEnvFileModal() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.showsHiddenFiles = true
+        if panel.runModal() == .OK, let url = panel.url {
+            do {
+                let imported = try manager.importProfileFromEnvFile(at: url.path)
+                showNotice("Imported profile '\(imported.name)' safely!", isError: false)
+            } catch {
+                showNotice("Import failed: \(error.localizedDescription)", isError: true)
+            }
+        }
+    }
+
+    private func exportToEnvFileModal(for profile: EnvProfile) {
+        var targetFilePath = ""
+        if !profile.projectPath.isEmpty {
+            let expanded = (profile.projectPath as NSString).expandingTildeInPath
+            var isDir: ObjCBool = false
+            if FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir) && isDir.boolValue {
+                targetFilePath = (expanded as NSString).appendingPathComponent(".env")
+            } else {
+                targetFilePath = expanded
+            }
+        }
+
+        if targetFilePath.isEmpty {
+            let panel = NSSavePanel()
+            panel.nameFieldStringValue = ".env"
+            panel.showsHiddenFiles = true
+            if panel.runModal() == .OK, let url = panel.url {
+                targetFilePath = url.path
+            } else {
+                return
+            }
+        }
+
+        do {
+            try manager.exportProfileToEnvFile(profile: profile, to: targetFilePath)
+            showNotice("Saved profile atomically to \(targetFilePath)", isError: false)
+        } catch {
+            showNotice("Save failed: \(error.localizedDescription)", isError: true)
+        }
     }
 }
+
