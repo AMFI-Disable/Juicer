@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct brewservicesview: View {
     @StateObject private var manager = BrewServicesManager.shared
     @State private var searchText = ""
@@ -10,6 +11,10 @@ struct brewservicesview: View {
     // Custom Link state
     @State private var customLinkLabel = ""
     @State private var customLinkURL = ""
+
+    // In-flight service operation bounds tracking
+    @State private var operatingServices: Set<String> = []
+    @State private var isBulkOperating = false
 
     var filteredServices: [BrewService] {
         if searchText.isEmpty {
@@ -39,18 +44,24 @@ struct brewservicesview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 320)
+                .accessibilityLabel("Service domain selection")
+                .accessibilityHint("Switch between user services and system services requiring elevated privileges")
                 .onChange(of: manager.isSystemDomain) { _ in
                     manager.loadServices()
                 }
 
                 if manager.isLoading {
-                    ProgressView().controlSize(.small)
+                    ProgressView()
+                        .controlSize(.small)
+                        .accessibilityLabel("Loading services")
                 } else {
                     Button(action: { manager.loadServices() }) {
                         Image(systemName: "arrow.clockwise")
                     }
                     .buttonStyle(.bordered)
                     .help("Refresh Services")
+                    .accessibilityLabel("Refresh Homebrew services")
+                    .accessibilityHint("Reloads all services and status information from launchd")
                 }
             }
             .padding()
@@ -66,12 +77,18 @@ struct brewservicesview: View {
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.green)
+                    .disabled(isBulkOperating || manager.isLoading)
+                    .accessibilityLabel("Start all stopped services")
+                    .accessibilityHint("Attempts to start all currently stopped Homebrew services")
 
                     Button(action: { runBulkAction("stop") }) {
                         Label("Stop All", systemImage: "stop.fill")
                     }
                     .buttonStyle(.bordered)
                     .foregroundColor(.red)
+                    .disabled(isBulkOperating || manager.isLoading)
+                    .accessibilityLabel("Stop all running services")
+                    .accessibilityHint("Attempts to stop all currently running Homebrew services")
                 }
 
                 Spacer()
@@ -79,9 +96,12 @@ struct brewservicesview: View {
                 HStack(spacing: 6) {
                     Image(systemName: "magnifyingglass")
                         .foregroundColor(.secondary)
+                        .accessibilityHidden(true)
                     TextField("Search service...", text: $searchText)
                         .textFieldStyle(.roundedBorder)
                         .frame(width: 220)
+                        .accessibilityLabel("Search service by name")
+                        .accessibilityHint("Filters the list of displayed Homebrew services")
                 }
             }
             .padding(.horizontal)
@@ -95,6 +115,7 @@ struct brewservicesview: View {
                     Image(systemName: "cpu.slash")
                         .font(.system(size: 48))
                         .foregroundColor(.secondary)
+                        .accessibilityHidden(true)
                     Text(searchText.isEmpty ? "No Homebrew Services Found" : "No Matches Found")
                         .font(.headline)
                         .foregroundColor(.secondary)
@@ -132,12 +153,15 @@ struct brewservicesview: View {
     // Row Builder
     @ViewBuilder
     private func serviceRow(_ service: BrewService) -> some View {
+        let isOperating = operatingServices.contains(service.name)
+
         HStack(spacing: 16) {
             // Status bulb
             Circle()
                 .fill(statusColor(service.status))
                 .frame(width: 10, height: 10)
                 .shadow(color: statusColor(service.status).opacity(0.5), radius: 3)
+                .accessibilityLabel("Status: \(service.status.rawValue)")
 
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 8) {
@@ -153,6 +177,8 @@ struct brewservicesview: View {
                         }
                         .buttonStyle(.plain)
                         .help("Open \(link.label): \(link.urlString)")
+                        .accessibilityLabel("Open \(link.label) for \(service.name)")
+                        .accessibilityHint("Opens \(link.urlString) in default web browser")
                     }
                 }
 
@@ -164,11 +190,13 @@ struct brewservicesview: View {
                         .padding(.vertical, 2)
                         .background(statusColor(service.status).opacity(0.15))
                         .cornerRadius(4)
+                        .accessibilityLabel("Service status: \(service.status.rawValue)")
 
                     if let user = service.user {
                         Text("User: \(user)")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .accessibilityLabel("Running under user: \(user)")
                     }
 
                     if !service.ports.isEmpty {
@@ -176,6 +204,7 @@ struct brewservicesview: View {
                             .font(.caption)
                             .foregroundColor(.teal)
                             .bold()
+                            .accessibilityLabel("Listening ports: \(service.ports.map(String.init).joined(separator: ", "))")
                     }
                 }
             }
@@ -190,31 +219,48 @@ struct brewservicesview: View {
                     .lineLimit(1)
                     .frame(maxWidth: 150, alignment: .trailing)
                     .help(path)
+                    .accessibilityLabel("Configuration path: \(path)")
             }
 
             // Actions
             HStack(spacing: 8) {
-                if service.status == .started {
-                    Button(action: { stopService(service) }) {
-                        Image(systemName: "stop.fill")
-                            .foregroundColor(.red)
-                    }
-                    .buttonStyle(.bordered)
-                    .help("Stop Service")
-
-                    Button(action: { restartService(service) }) {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.orange)
-                    }
-                    .buttonStyle(.bordered)
-                    .help("Restart Service")
+                if isOperating {
+                    ProgressView()
+                        .controlSize(.small)
+                        .frame(width: 32, height: 24)
+                        .accessibilityLabel("Service operation in progress for \(service.name)")
                 } else {
-                    Button(action: { startService(service) }) {
-                        Image(systemName: "play.fill")
-                            .foregroundColor(.green)
+                    if service.status == .started {
+                        Button(action: { stopService(service) }) {
+                            Image(systemName: "stop.fill")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.bordered)
+                        .help("Stop Service")
+                        .disabled(isBulkOperating)
+                        .accessibilityLabel("Stop \(service.name)")
+                        .accessibilityHint("Stops \(service.name) service via launchd")
+
+                        Button(action: { restartService(service) }) {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.orange)
+                        }
+                        .buttonStyle(.bordered)
+                        .help("Restart Service")
+                        .disabled(isBulkOperating)
+                        .accessibilityLabel("Restart \(service.name)")
+                        .accessibilityHint("Restarts \(service.name) service via launchd")
+                    } else {
+                        Button(action: { startService(service) }) {
+                            Image(systemName: "play.fill")
+                                .foregroundColor(.green)
+                        }
+                        .buttonStyle(.bordered)
+                        .help("Start Service")
+                        .disabled(isBulkOperating)
+                        .accessibilityLabel("Start \(service.name)")
+                        .accessibilityHint("Starts \(service.name) service via launchd")
                     }
-                    .buttonStyle(.bordered)
-                    .help("Start Service")
                 }
 
                 Button(action: { showingLinkManager = service }) {
@@ -222,6 +268,9 @@ struct brewservicesview: View {
                 }
                 .buttonStyle(.bordered)
                 .help("Manage Web Links")
+                .disabled(isOperating)
+                .accessibilityLabel("Manage web links for \(service.name)")
+                .accessibilityHint("Opens sheet to add or remove custom web interface URLs for \(service.name)")
             }
         }
         .padding()
@@ -241,65 +290,104 @@ struct brewservicesview: View {
 
     // Actions Execution
     private func startService(_ service: BrewService) {
+        let name = service.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !operatingServices.contains(name) else { return }
+
+        operatingServices.insert(name)
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
+
         manager.startService(service) { success in
+            operatingServices.remove(name)
             if !success {
-                statusMessage = "Failed to start service \(service.name)."
+                statusMessage = "Failed to start service '\(name)'."
                 showStatusAlert = true
             }
         }
     }
 
     private func stopService(_ service: BrewService) {
+        let name = service.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !operatingServices.contains(name) else { return }
+
+        operatingServices.insert(name)
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
+
         manager.stopService(service) { success in
+            operatingServices.remove(name)
             if !success {
-                statusMessage = "Failed to stop service \(service.name)."
+                statusMessage = "Failed to stop service '\(name)'."
                 showStatusAlert = true
             }
         }
     }
 
     private func restartService(_ service: BrewService) {
+        let name = service.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, !operatingServices.contains(name) else { return }
+
+        operatingServices.insert(name)
         NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
+
         manager.restartService(service) { success in
+            operatingServices.remove(name)
             if !success {
-                statusMessage = "Failed to restart service \(service.name)."
+                statusMessage = "Failed to restart service '\(name)'."
                 showStatusAlert = true
             }
         }
     }
 
     private func runBulkAction(_ action: String) {
-        let targets = filteredServices.filter {
-            action == "start" ? ($0.status != .started) : ($0.status == .started)
+        guard action == "start" || action == "stop" else { return }
+        guard !isBulkOperating else { return }
+
+        let targets = filteredServices.filter { service in
+            let name = service.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !name.isEmpty, !operatingServices.contains(name) else { return false }
+            return action == "start" ? (service.status != .started) : (service.status == .started)
         }
         guard !targets.isEmpty else { return }
 
+        isBulkOperating = true
+        for service in targets {
+            operatingServices.insert(service.name)
+        }
+
         let dispatchGroup = DispatchGroup()
-        var failedCount = 0
+        var failedServices: [String] = []
+        let lock = NSLock()
 
         for service in targets {
             dispatchGroup.enter()
+            let name = service.name
+            let completionHandler: (Bool) -> Void = { success in
+                lock.withLock {
+                    if !success {
+                        failedServices.append(name)
+                    }
+                }
+                dispatchGroup.leave()
+            }
+
             if action == "start" {
-                manager.startService(service) { success in
-                    if !success { failedCount += 1 }
-                    dispatchGroup.leave()
-                }
+                manager.startService(service, completion: completionHandler)
             } else {
-                manager.stopService(service) { success in
-                    if !success { failedCount += 1 }
-                    dispatchGroup.leave()
-                }
+                manager.stopService(service, completion: completionHandler)
             }
         }
 
         dispatchGroup.notify(queue: .main) {
-            if failedCount > 0 {
-                statusMessage = "Bulk \(action) finished. \(failedCount) services failed to transition."
-                showStatusAlert = true
+            for service in targets {
+                self.operatingServices.remove(service.name)
             }
-            manager.loadServices()
+            self.isBulkOperating = false
+
+            if !failedServices.isEmpty {
+                let namesStr = failedServices.joined(separator: ", ")
+                self.statusMessage = "Bulk \(action) finished. Failed to transition \(failedServices.count) service(s): \(namesStr)."
+                self.showStatusAlert = true
+            }
+            self.manager.loadServices()
         }
     }
 
@@ -317,13 +405,21 @@ struct brewservicesview: View {
                 HStack {
                     TextField("Label (e.g. Admin UI)", text: $customLinkLabel)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Custom link label")
+                        .accessibilityHint("Enter descriptive label such as Admin Console")
+
                     TextField("URL (e.g. http://localhost:8080)", text: $customLinkURL)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Custom link URL")
+                        .accessibilityHint("Enter full web address including http:// or https://")
+
                     Button("Add") {
                         addCustomLink(for: service)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(customLinkLabel.isEmpty || customLinkURL.isEmpty)
+                    .disabled(customLinkLabel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || customLinkURL.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel("Add custom link for \(service.name)")
+                    .accessibilityHint("Saves the specified custom link")
                 }
 
                 // Suggestions based on ports
@@ -338,6 +434,8 @@ struct brewservicesview: View {
                                 }
                                 .buttonStyle(.bordered)
                                 .controlSize(.small)
+                                .accessibilityLabel("Use suggested URL http://localhost:\(port)")
+                                .accessibilityHint("Populates label and URL input fields with port \(port)")
                             }
                         }
                     }
@@ -366,6 +464,8 @@ struct brewservicesview: View {
                                 removeCustomLink(link, for: service)
                             }
                             .buttonStyle(.bordered)
+                            .accessibilityLabel("Remove link \(link.label)")
+                            .accessibilityHint("Deletes \(link.label) custom link configuration")
                         }
                     }
                 }
@@ -380,6 +480,8 @@ struct brewservicesview: View {
                     showingLinkManager = nil
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Close web links sheet")
+                .accessibilityHint("Dismisses the web link manager dialog")
             }
         }
         .padding()
@@ -387,12 +489,28 @@ struct brewservicesview: View {
     }
 
     private func addCustomLink(for service: BrewService) {
+        let trimmedLabel = customLinkLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        var trimmedURL = customLinkURL.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard !trimmedLabel.isEmpty, !trimmedURL.isEmpty else { return }
+
+        if !trimmedURL.lowercased().hasPrefix("http://") && !trimmedURL.lowercased().hasPrefix("https://") {
+            trimmedURL = "http://" + trimmedURL
+        }
+
+        guard let validURL = URL(string: trimmedURL),
+              let scheme = validURL.scheme?.lowercased(),
+              ["http", "https"].contains(scheme) else {
+            return
+        }
+
         var currentLinks = service.customLinks
-        let newLink = ServiceLink(label: customLinkLabel, urlString: customLinkURL)
+        let newLink = ServiceLink(label: trimmedLabel, urlString: validURL.absoluteString)
         currentLinks.append(newLink)
         manager.saveCustomLinks(for: service.name, links: currentLinks)
         customLinkLabel = ""
         customLinkURL = ""
+
         // Update temporary sheet state
         if let idx = manager.services.firstIndex(where: { $0.id == service.id }) {
             showingLinkManager = manager.services[idx]
@@ -408,8 +526,12 @@ struct brewservicesview: View {
     }
 
     private func launchURL(_ urlString: String) {
-        if let url = URL(string: urlString) {
-            NSWorkspace.shared.open(url)
+        guard let url = URL(string: urlString),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme) else {
+            return
         }
+        NSWorkspace.shared.open(url)
     }
 }
+

@@ -23,6 +23,7 @@ struct ServiceLink: Identifiable, Hashable, Codable {
     let urlString: String
 }
 
+@MainActor
 class BrewServicesManager: ObservableObject {
     static let shared = BrewServicesManager()
 
@@ -37,6 +38,7 @@ class BrewServicesManager: ObservableObject {
     func loadServices() {
         guard let brew = BrewManager.brewPath else { return }
         self.isLoading = true
+        let systemDomain = self.isSystemDomain
 
         Task.detached(priority: .userInitiated) {
             var loadedServices: [BrewService] = []
@@ -44,11 +46,7 @@ class BrewServicesManager: ObservableObject {
             // 1. Query brew services list
             let process = Process()
             process.executableURL = URL(fileURLWithPath: brew)
-            var args = ["services", "list"]
-            if self.isSystemDomain {
-                // To list system services, we could run sudo, but standard list shows both with status.
-                // We'll parse standard list output.
-            }
+            let args = ["services", "list"]
             process.arguments = args
 
             let pipe = Pipe()
@@ -92,7 +90,6 @@ class BrewServicesManager: ObservableObject {
             let listeningPorts = self.scanListeningPorts()
             for i in 0..<loadedServices.count {
                 if loadedServices[i].status == .started {
-                    // Try to match process ports by service name
                     let serviceName = loadedServices[i].name
                     if let matchedPorts = listeningPorts[serviceName] {
                         loadedServices[i].ports = Array(matchedPorts).sorted()
@@ -129,20 +126,37 @@ class BrewServicesManager: ObservableObject {
     }
 
     private func runServiceCommand(_ command: String, name: String, completion: @escaping (Bool) -> Void) {
-        guard let brew = BrewManager.brewPath else { return }
+        guard let brew = BrewManager.brewPath else {
+            completion(false)
+            return
+        }
 
-        AppLogger.shared.log("Running brew services \(command) for \(name)...")
+        // Validate launchd service command & service name bounds
+        let allowedCommands: Set<String> = ["start", "stop", "restart"]
+        guard allowedCommands.contains(command) else {
+            completion(false)
+            return
+        }
+
+        let sanitizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !sanitizedName.isEmpty, !sanitizedName.hasPrefix("-") else {
+            completion(false)
+            return
+        }
+
+        let systemDomain = self.isSystemDomain
+        AppLogger.shared.log("Running brew services \(command) for \(sanitizedName)...")
 
         Task.detached(priority: .userInitiated) {
             let process = Process()
 
-            if self.isSystemDomain {
+            if systemDomain {
                 // Run using sudo with privileges escalation
                 process.executableURL = URL(fileURLWithPath: "/usr/bin/sudo")
-                process.arguments = [brew, "services", command, name]
+                process.arguments = [brew, "services", command, sanitizedName]
             } else {
                 process.executableURL = URL(fileURLWithPath: brew)
-                process.arguments = ["services", command, name]
+                process.arguments = ["services", command, sanitizedName]
             }
 
             let pipe = Pipe()
@@ -161,7 +175,7 @@ class BrewServicesManager: ObservableObject {
                     } else {
                         let errData = pipe.fileHandleForReading.readDataToEndOfFile()
                         let errMsg = String(data: errData, encoding: .utf8) ?? ""
-                        AppLogger.shared.log("Failed to run services \(command) for \(name): \(errMsg)")
+                        AppLogger.shared.log("Failed to run services \(command) for \(sanitizedName): \(errMsg)")
                         completion(false)
                     }
                 }
@@ -174,7 +188,7 @@ class BrewServicesManager: ObservableObject {
     }
 
     // Scan listening processes via lsof
-    private func scanListeningPorts() -> [String: Set<Int>] {
+    nonisolated private func scanListeningPorts() -> [String: Set<Int>] {
         var results: [String: Set<Int>] = [:]
 
         let process = Process()
@@ -204,7 +218,6 @@ class BrewServicesManager: ObservableObject {
                     guard let portString = hostParts.last, let port = Int(portString) else { continue }
 
                     // Clean up command name to match homebrew services
-                    // E.g. "postgres" -> "postgresql", "redis-serv" -> "redis"
                     var matchedService = commandName
                     if commandName.contains("postgres") { matchedService = "postgresql" } else if commandName.contains("redis") { matchedService = "redis" } else if commandName.contains("nginx") { matchedService = "nginx" } else if commandName.contains("mysql") { matchedService = "mysql" } else if commandName.contains("mongod") { matchedService = "mongodb" } else if commandName.contains("sync") { matchedService = "syncthing" } else if commandName.contains("dnsmasq") { matchedService = "dnsmasq" }
 
@@ -223,7 +236,7 @@ class BrewServicesManager: ObservableObject {
 
     // MARK: - Custom Links persistence
 
-    private func loadCustomLinksMap() -> [String: [ServiceLink]] {
+    nonisolated private func loadCustomLinksMap() -> [String: [ServiceLink]] {
         guard let data = UserDefaults.standard.data(forKey: "juicer.brew.services.customlinks") else { return [:] }
         return (try? JSONDecoder().decode([String: [ServiceLink]].self, from: data)) ?? [:]
     }
