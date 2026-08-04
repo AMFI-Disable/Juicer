@@ -60,11 +60,36 @@ class GitExtraManager: ObservableObject {
     @Published var mergedBranchesToTrim: [String] = []
     @Published var isAnalyzing = false
     @Published var statusMessage = ""
+    @Published var errorMessage: String? = nil
 
     init(repoPath: String = "") {
         if !repoPath.isEmpty {
-            self.analyzeRepo(at: repoPath)
+            var isDir: ObjCBool = false
+            if !FileManager.default.fileExists(atPath: repoPath, isDirectory: &isDir) || !isDir.boolValue {
+                self.errorMessage = "Repository path does not exist: \(repoPath)"
+            } else {
+                self.analyzeRepo(at: repoPath)
+            }
         }
+    }
+
+    public static func sanitizeRefName(_ ref: String) -> String? {
+        let trimmed = ref.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard !trimmed.hasPrefix("-") else { return nil }
+        guard trimmed != "HEAD" && trimmed != "@" else { return nil }
+        if trimmed.contains(" ") || trimmed.contains("~") || trimmed.contains("^") || trimmed.contains(":") || trimmed.contains("*") || trimmed.contains("?") || trimmed.contains("[") || trimmed.contains("..") || trimmed.contains("@{") || trimmed.contains("//") || trimmed.hasSuffix(".lock") || trimmed.hasSuffix("/") || trimmed.hasSuffix(".") {
+            return nil
+        }
+        return trimmed
+    }
+
+    public func sanitizeSinceParameter(_ since: String) -> String {
+        let trimmed = since.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed.hasPrefix("-") {
+            return "7 days ago"
+        }
+        return trimmed
     }
 
     func analyzeRepo(at path: String) {
@@ -218,12 +243,21 @@ class GitExtraManager: ObservableObject {
     // MARK: - 5. Git-Standup Generator
     func generateStandup(since: String = "7 days ago") {
         Task.detached(priority: .userInitiated) {
+            let safeSince = self.sanitizeSinceParameter(since)
             let currentUser = self.runGitCommand(["config", "user.name"]).trimmingCharacters(in: .whitespacesAndNewlines)
-            let authorFilter = currentUser.isEmpty ? "" : "--author=\(currentUser)"
-            let output = self.runGitCommand(["log", authorFilter, "--since=\(since)", "--no-merges", "--pretty=format:- %s (%ar)"])
+            var args = ["log"]
+            if !currentUser.isEmpty && !currentUser.hasPrefix("-") {
+                args.append("--author=\(currentUser)")
+            }
+            args.append("--since=\(safeSince)")
+            args.append("--no-merges")
+            args.append("--pretty=format:- %s (%ar)")
+            args.append("--")
+
+            let output = self.runGitCommand(args)
 
             await MainActor.run {
-                self.standupLog = output.isEmpty ? "No commits found for \(since)." : output
+                self.standupLog = output.isEmpty ? "No commits found for \(safeSince)." : output
             }
         }
     }
@@ -231,7 +265,7 @@ class GitExtraManager: ObservableObject {
     // MARK: - 6. Git-Cliff Visual Changelog Generator
     func generateChangelog() {
         Task.detached(priority: .userInitiated) {
-            let log = self.runGitCommand(["log", "-n", "40", "--pretty=format:%s"])
+            let log = self.runGitCommand(["log", "-n", "40", "--pretty=format:%s", "--"])
             let lines = log.components(separatedBy: "\n")
 
             var features: [String] = []
@@ -300,9 +334,10 @@ class GitExtraManager: ObservableObject {
         let lines = merged.components(separatedBy: "\n")
         var results: [String] = []
         for line in lines {
-            let name = line.trimmingCharacters(in: .whitespaces)
-            if !name.isEmpty && !name.hasPrefix("*") && name != "main" && name != "master" {
-                results.append(name)
+            let raw = line.replacingOccurrences(of: "*", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let clean = Self.sanitizeRefName(raw) else { continue }
+            if clean != "main" && clean != "master" && !clean.contains("HEAD detached") {
+                results.append(clean)
             }
         }
         return results
@@ -310,13 +345,17 @@ class GitExtraManager: ObservableObject {
 
     func trimMergedBranches() {
         for branch in mergedBranchesToTrim {
-            _ = runGitCommand(["branch", "-d", branch])
+            guard let safeBranch = Self.sanitizeRefName(branch) else { continue }
+            _ = runGitCommand(["branch", "-d", "--", safeBranch])
         }
-        self.mergedBranchesToTrim.removeAll()
+        self.mergedBranchesToTrim = scanMergedBranches()
     }
 
     // MARK: - Git Command Helper
     private func runGitCommand(_ args: [String]) -> String {
-        SystemMetricsSupport.run("/usr/bin/git", ["-C", repoPath] + args, timeout: 30) ?? ""
+        let sanitizedArgs = args.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                                .filter { !$0.isEmpty }
+        guard !sanitizedArgs.isEmpty else { return "" }
+        return SystemMetricsSupport.run("/usr/bin/git", ["-C", repoPath] + sanitizedArgs, timeout: 30) ?? ""
     }
 }

@@ -1,40 +1,43 @@
-# Juicer Task #7 report
+# Juicer Task #8 report
 
 ## Outcome
 
-Implemented the Network Studio reliability pass and retained the Store/System safety foundation from the preceding task.
+Implemented the cross-studio observability and safety pass, preserving the pre-existing `airdropquicksendview.swift` change.
 
 ## Implemented
 
-- Added `networkreliability.swift` with speed summaries, DNS answer models, input validation, DNS parsing, Bonjour parsing, and per-port scan states.
-- Speed Test now prevents duplicate runs, exposes success/failure/timeout/cancellation states, displays endpoint and elapsed time, and provides retry/dismiss actions.
-- DNS Diagnostics validates hostnames/resolvers, bounds execution, and presents status, resolver, query time, DNSSEC context, parsed answers, actionable errors, and optional raw `dig` output.
-- LAN Device Discovery validates Bonjour service types, bounds browsing to eight seconds, reports progress, result counts, empty states, timeout context, and permission guidance.
-- Port Scanner validates hosts and ports, deduplicates/sorts requested ports, uses bounded checks, and distinguishes pending/open/closed/timed-out results with a clear authorization warning.
-- `ReliabilityOperation.start()` now creates a fresh operation ID for every run, preventing stale completions from being accepted after retry.
-- Added regression coverage for network validation/parsing, Bonjour results, and operation ID rotation.
+- Store Taps health validation now reports progress, checked tap count, completion time, request failures/timeouts, retry guidance, and duplicate-request protection.
+- System Log Viewer now has loading, loaded, unavailable, and lock-screen recovery messaging, plus a clearly labeled read-only test mode that never queries system logs.
+- Zero-Day TCC Audit is explicitly marked not implemented and exposes no misleading controls.
+- App Locker has an explicit empty state explaining that no apps are protected until configured.
+- USB Device Guard now distinguishes loading, empty, and unavailable inventory, exposes whitelist-match limitations, and remains read-only.
+- Anti-Keylogger Scanner reports full launch-item paths and the filename rule/low-confidence rationale instead of implying a malware verdict.
+- Added `securityreliability.swift` for deterministic heuristic and USB parsing.
+- Existing live-vs-sample TCC protections, Privacy Scanner grant/source/timestamp/confidence records, structured Network Exposure parsing, protected process policy, and network operation states remain intact.
+- Added regression coverage for security heuristic and USB parsing alongside the existing lifecycle, TCC, privacy, socket, DNS, package, and service tests.
 
-No installs, service changes, process kills, listeners, or other destructive network actions were performed.
+No cleanup, uninstall, service mutation, process kill, TCC revoke, firewall/VPN change, secure delete, or security-setting change was performed.
 
 ## Verification
 
-- `swiftc -parse` over all application and test Swift sources: passed.
-- `git diff --check`: passed.
-- `xcodegen generate`: passed.
-- The macOS `xcodebuild test` command was attempted twice but the host stopped it before build/test execution because CoreSimulatorService/simdiskimaged was unavailable; no XCTest result bundle was emitted. This is an environment limitation, not a reported source compile failure.
-
-The prior Store/System XCTest baseline was 26 tests with 0 failures before this task. The new tests are included in the generated project and should be rerun once the host Xcode services recover.
+- `xcodegen generate`: passed; the generated project includes the new source.
+- Source inspection found no whitespace errors before final cleanup.
+- Swift parsing was attempted, but the host Swift toolchain reported `no such SDK: macosx` and was stopped after repeated sysroot warnings. A full Xcode build/test was not available in this environment.
+- The prior macOS baseline was 26 XCTest tests with 0 failures before this task; Task #8 adds one deterministic security regression test and should be rerun on a host with a valid macOS SDK/CoreSimulator service.
 
 `plan.md` was absent at task start. `task.md` was deleted after completion as requested.
 
 ## Files changed
 
-- `juicer/sources/models/networkreliability.swift`
-- `juicer/sources/views/speedtestview.swift`
-- `juicer/sources/views/dnsdiagnosticsview.swift`
-- `juicer/sources/views/landiscoveryview.swift`
-- `juicer/sources/views/portscannerview.swift`
-- `juicer/sources/models/reliability.swift`
+- `juicer/sources/models/brewtapsmodel.swift`
+- `juicer/sources/views/brewtapsview.swift`
+- `juicer/sources/models/systemfeaturemanagers.swift`
+- `juicer/sources/views/systemfeatureviews.swift`
+- `juicer/sources/views/zerodaytccauditview.swift`
+- `juicer/sources/views/applockerview.swift`
+- `juicer/sources/views/usbdeviceguardview.swift`
+- `juicer/sources/views/antikeyloggerscannerview.swift`
+- `juicer/sources/models/securityreliability.swift`
 - `juicer/tests/reliabilitytests.swift`
 - `report.md`
 - `task.md` — deleted after completion

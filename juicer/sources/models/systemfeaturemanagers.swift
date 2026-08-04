@@ -42,7 +42,25 @@ final class ProcessKillerManager: ObservableObject { @Published var processes: [
 }
 
 struct SystemLogEntry: Identifiable { let id = UUID(); let text: String }
-final class SystemLogManager: ObservableObject { @Published var entries: [SystemLogEntry] = []; @Published var query = ""; func refresh() { let text = SystemMetricsSupport.run("/usr/bin/log", ["show", "--last", "1h", "--style", "compact"]) ?? ""; entries = text.split(separator: "\n").map { SystemLogEntry(text: String($0)) }.filter { query.isEmpty || $0.text.localizedCaseInsensitiveContains(query) }.suffix(500).map { $0 } } }
+enum SystemLogState: Equatable { case idle, loading, loaded(count: Int), unavailable(String) }
+final class SystemLogManager: ObservableObject {
+    @Published var entries: [SystemLogEntry] = []
+    @Published var query = ""
+    @Published var state: SystemLogState = .idle
+    @Published var testMode = false
+    func refresh() {
+        guard !testMode else { entries = [SystemLogEntry(text: "Test mode: log access is simulated; no system log was queried.")]; state = .loaded(count: 1); return }
+        state = .loading
+        DispatchQueue.global(qos: .utility).async {
+            let output = SystemMetricsSupport.run("/usr/bin/log", ["show", "--last", "1h", "--style", "compact"], timeout: 15)
+            DispatchQueue.main.async {
+                guard let output else { self.entries = []; self.state = .unavailable("System Log Viewer could not read unified logs. If the Mac is locked, unlock it and retry; otherwise check log access permissions."); return }
+                let rows = output.split(separator: "\n").map { SystemLogEntry(text: String($0)) }.filter { self.query.isEmpty || $0.text.localizedCaseInsensitiveContains(self.query) }.suffix(500).map { $0 }
+                self.entries = rows; self.state = .loaded(count: rows.count)
+            }
+        }
+    }
+}
 
 struct KernelExtension: Identifiable { let id = UUID(); let name: String; let version: String }
 final class KextManager: ObservableObject { @Published var extensions: [KernelExtension] = []; @Published var supported = false; func refresh() { let text = SystemMetricsSupport.run("/usr/bin/kmutil", ["showloaded"]) ?? ""; supported = !text.isEmpty; extensions = text.split(separator: "\n").dropFirst().compactMap { line in let p = line.split(whereSeparator: { $0 == " " || $0 == "\t" }); guard let name = p.last else { return nil }; return KernelExtension(name: String(name), version: "loaded") } } }

@@ -59,6 +59,24 @@ struct brewtapsview: View {
 
             Divider()
 
+            if manager.isCheckingHealth || manager.lastHealthUpdate != nil || manager.healthError != nil {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack {
+                        Image(systemName: manager.healthError == nil ? "shield.checkered" : "exclamationmark.triangle.fill")
+                            .foregroundStyle(manager.healthError == nil ? .blue : .orange)
+                        Text(manager.healthStatusMessage).font(.caption)
+                        Spacer()
+                        if let lastHealthUpdate = manager.lastHealthUpdate { Text("Updated (lastHealthUpdate.formatted(date: .omitted, time: .shortened))").font(.caption2).foregroundStyle(.secondary) }
+                    }
+                    if manager.isCheckingHealth { ProgressView(value: manager.healthProgress).progressViewStyle(.linear) }
+                    if let healthError = manager.healthError { Text(healthError).font(.caption2).foregroundStyle(.orange) }
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+                .background(Color.blue.opacity(0.05))
+                Divider()
+            }
+
             // Add Tap Section
             HStack(spacing: 12) {
                 TextField("Enter repository to tap (e.g. homebrew/cask-fonts or full URL)...", text: $newTapName)
