@@ -13,7 +13,8 @@ struct LipoAppItem: Identifiable, Hashable {
     var isThinned: Bool
 }
 
-class AppLipoManager: ObservableObject {
+@MainActor
+final class AppLipoManager: ObservableObject {
     @Published var universalApps: [LipoAppItem] = []
     @Published var isScanning = false
     @Published var isThinning = false
@@ -50,13 +51,13 @@ class AppLipoManager: ObservableObject {
 
             for basePath in scanPaths {
                 let baseFolder = URL(fileURLWithPath: basePath)
-                guard let enumerator = self.fileManager.enumerator(
+                guard let enumerator = FileManager.default.enumerator(
                     at: baseFolder,
                     includingPropertiesForKeys: [.isDirectoryKey],
                     options: [.skipsSubdirectoryDescendants, .skipsHiddenFiles]
                 ) else { continue }
 
-                for case let fileURL as URL in enumerator {
+                while let fileURL = enumerator.nextObject() as? URL {
                     if fileURL.pathExtension == "app" {
                         self.processAppBundle(fileURL, discovered: &discovered)
                     }
@@ -73,7 +74,7 @@ class AppLipoManager: ObservableObject {
         }
     }
 
-    private func processAppBundle(_ bundleURL: URL, discovered: inout [LipoAppItem]) {
+    private nonisolated func processAppBundle(_ bundleURL: URL, discovered: inout [LipoAppItem]) {
         let info = AppInfo(path: bundleURL)
         guard !info.appName.isEmpty else { return }
 
@@ -89,7 +90,13 @@ class AppLipoManager: ObservableObject {
         let macosDir = bundleURL.appendingPathComponent("Contents/MacOS").resolvingSymlinksInPath()
         let execURL = macosDir.appendingPathComponent(execName).resolvingSymlinksInPath()
         guard execURL.path.hasPrefix(macosDir.path + "/"),
-              fileManager.fileExists(atPath: execURL.path) else { return }
+              FileManager.default.fileExists(atPath: execURL.path),
+              let attributes = try? FileManager.default.attributesOfItem(atPath: execURL.path),
+              let fileSizeNum = attributes[.size] as? NSNumber else { return }
+
+        let fileSize = fileSizeNum.uint64Value
+        // Minimum valid FAT binary: FAT header (8 bytes) + at least 1 FatArch struct (20 bytes) = 28 bytes
+        guard fileSize >= 28 else { return }
 
         // Parse Mach-O header
         guard let fileHandle = try? FileHandle(forReadingFrom: execURL) else { return }
@@ -102,6 +109,9 @@ class AppLipoManager: ObservableObject {
         if magic == FAT_MAGIC || magic == FAT_CIGAM {
             // It is a FAT / Universal binary!
             let numArchs = headerData.withUnsafeBytes { $0.load(fromByteOffset: 4, as: UInt32.self).bigEndian }
+
+            // Guard against invalid or malicious architecture counts
+            guard numArchs > 0 && numArchs <= 64, UInt64(8 + numArchs * 20) <= fileSize else { return }
 
             var archs: [FatArch] = []
             for _ in 0..<numArchs {
@@ -116,6 +126,12 @@ class AppLipoManager: ObservableObject {
                         align: ptr.load(fromByteOffset: 16, as: UInt32.self).bigEndian
                     )
                 }
+
+                // Strict bounds checking: slice offset & size must fit within binary file length
+                guard UInt64(arch.offset) >= 28,
+                      UInt64(arch.size) > 0,
+                      UInt64(arch.offset) + UInt64(arch.size) <= fileSize else { return }
+
                 archs.append(arch)
             }
 
@@ -160,7 +176,7 @@ class AppLipoManager: ObservableObject {
         }
     }
 
-    func thinApplication(_ app: LipoAppItem, completion: @escaping (Bool) -> Void) {
+    func thinApplication(_ app: LipoAppItem, completion: @escaping @MainActor (Bool) -> Void) {
         self.isThinning = true
         AppLogger.shared.log("Thinning application binary: \(app.appName)...")
 
@@ -168,41 +184,71 @@ class AppLipoManager: ObservableObject {
             let infoPlistURL = app.path.appendingPathComponent("Contents/Info.plist")
             guard let plist = NSDictionary(contentsOf: infoPlistURL),
                   let execName = plist["CFBundleExecutable"] as? String else {
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
 
             // Strict whitelist validation for executable name to prevent path injection
             let allowedChars = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: " .-_\n\r"))
             guard execName.unicodeScalars.allSatisfy({ allowedChars.contains($0) }) else {
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
 
             let macosDir = app.path.appendingPathComponent("Contents/MacOS").resolvingSymlinksInPath()
             let execURL = macosDir.appendingPathComponent(execName).resolvingSymlinksInPath()
-            guard execURL.path.hasPrefix(macosDir.path + "/") else {
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+            guard execURL.path.hasPrefix(macosDir.path + "/"),
+                  let attributes = try? FileManager.default.attributesOfItem(atPath: execURL.path),
+                  let fileSizeNum = attributes[.size] as? NSNumber else {
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
+
+            let fileSize = fileSizeNum.uint64Value
+            guard fileSize >= 28 else {
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
+
             guard let fileHandle = try? FileHandle(forReadingFrom: execURL) else {
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
 
             // Read headers to find native offset
             guard let headerData = try? fileHandle.read(upToCount: 8), headerData.count == 8 else {
                 try? fileHandle.close()
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
 
             let numArchs = headerData.withUnsafeBytes { $0.load(fromByteOffset: 4, as: UInt32.self).bigEndian }
+            guard numArchs > 0 && numArchs <= 64, UInt64(8 + numArchs * 20) <= fileSize else {
+                try? fileHandle.close()
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
 
             var targetArch: FatArch?
 
@@ -219,6 +265,11 @@ class AppLipoManager: ObservableObject {
                     )
                 }
 
+                // Verify slice bounds
+                guard UInt64(arch.offset) >= 28,
+                      UInt64(arch.size) > 0,
+                      UInt64(arch.offset) + UInt64(arch.size) <= fileSize else { continue }
+
                 #if arch(arm64)
                 if arch.cpuType == self.CPU_TYPE_ARM64 {
                     targetArch = arch
@@ -234,55 +285,114 @@ class AppLipoManager: ObservableObject {
 
             guard let target = targetArch else {
                 try? fileHandle.close()
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
+
+            // Harden bounds check for slice extraction
+            let sliceOffset = UInt64(target.offset)
+            let sliceSize = UInt64(target.size)
+            guard sliceOffset >= 28, sliceSize > 0, sliceOffset + sliceSize <= fileSize else {
+                try? fileHandle.close()
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
 
             // Extract the slice bytes
-            try? fileHandle.seek(toOffset: UInt64(target.offset))
-            guard let sliceData = try? fileHandle.read(upToCount: Int(target.size)) else {
+            do {
+                try fileHandle.seek(toOffset: sliceOffset)
+            } catch {
                 try? fileHandle.close()
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
+
+            guard let sliceData = try? fileHandle.read(upToCount: Int(target.size)),
+                  sliceData.count == Int(target.size) else {
+                try? fileHandle.close()
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
                 return
             }
             try? fileHandle.close()
 
+            // Verify extracted slice has valid Mach-O header magic number before overwriting executable
+            guard sliceData.count >= 4 else {
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
+
+            let sliceMagic = sliceData.withUnsafeBytes { $0.load(fromByteOffset: 0, as: UInt32.self) }
+            let sliceMagicBig = sliceMagic.bigEndian
+            let validMagics: Set<UInt32> = [
+                0xfeedfacf, // MH_MAGIC_64
+                0xcffaedfe, // MH_CIGAM_64
+                0xfeedface, // MH_MAGIC
+                0xcefaedfe  // MH_CIGAM
+            ]
+            guard validMagics.contains(sliceMagic) || validMagics.contains(sliceMagicBig) else {
+                AppLogger.shared.log("Extracted binary slice failed Mach-O magic validation.")
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
+                return
+            }
+
+            // Preserve executable permissions
+            let posixPermissions = attributes[.posixPermissions] as? NSNumber ?? NSNumber(value: 0o755)
+
             // Overwrite binary with native slice
             do {
-                try sliceData.write(to: execURL)
+                try sliceData.write(to: execURL, options: .atomic)
+                try? FileManager.default.setAttributes([.posixPermissions: posixPermissions], ofItemAtPath: execURL.path)
+
                 AppLogger.shared.log("Successfully thinned binary for \(app.appName). Saved \(self.formatBytes(app.estimatedSavings))!")
 
-                // Update local status
+                // Update local status on MainActor
                 await MainActor.run {
                     if let index = self.universalApps.firstIndex(where: { $0.id == app.id }) {
                         self.universalApps[index].isThinned = true
                     }
                     self.isThinning = false
-                    // Refresh app details
                     self.scanForUniversalApps()
+                    completion(true)
                 }
-                completion(true)
             } catch {
                 AppLogger.shared.log("Failed to write thinned slice: \(error.localizedDescription)")
-                await MainActor.run { self.isThinning = false }
-                completion(false)
+                await MainActor.run {
+                    self.isThinning = false
+                    completion(false)
+                }
             }
         }
     }
 
-    private func getPathSize(_ url: URL) -> Int64 {
+    private nonisolated func getPathSize(_ url: URL) -> Int64 {
         var size: Int64 = 0
         let keys: [URLResourceKey] = [.fileSizeKey, .isDirectoryKey]
 
-        guard let enumerator = fileManager.enumerator(
+        guard let enumerator = FileManager.default.enumerator(
             at: url,
             includingPropertiesForKeys: keys,
             options: []
         ) else { return 0 }
 
-        for case let fileURL as URL in enumerator {
+        while let fileURL = enumerator.nextObject() as? URL {
             if let resourceValues = try? fileURL.resourceValues(forKeys: Set(keys)) {
                 let isDirectory = resourceValues.isDirectory ?? false
                 if !isDirectory {
@@ -294,9 +404,10 @@ class AppLipoManager: ObservableObject {
         return size
     }
 
-    private func formatBytes(_ bytes: Int64) -> String {
+    private nonisolated func formatBytes(_ bytes: Int64) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
         return formatter.string(fromByteCount: bytes)
     }
 }
+
