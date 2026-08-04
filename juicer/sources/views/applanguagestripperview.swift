@@ -16,7 +16,13 @@ struct applanguagestripperview: View {
     }
 
     var selectedSize: Int64 {
-        max(0, manager.foundBundles.filter { $0.isSelected }.reduce(0) { $0 + $1.size })
+        let selectedBundles = manager.foundBundles.filter { $0.isSelected }
+        var total: Int64 = 0
+        for bundle in selectedBundles {
+            let (result, overflow) = total.reportingOverflowingAdd(bundle.size)
+            total = overflow ? Int64.max : max(0, result)
+        }
+        return total
     }
 
     private var allFilteredSelected: Bool {
@@ -24,6 +30,7 @@ struct applanguagestripperview: View {
     }
 
     private func updateSelection(for bundle: AppLanguageBundle, isSelected: Bool) {
+        guard !manager.foundBundles.isEmpty else { return }
         if let origIdx = manager.foundBundles.firstIndex(where: { $0.id == bundle.id }),
            manager.foundBundles.indices.contains(origIdx) {
             manager.foundBundles[origIdx].isSelected = isSelected
@@ -31,10 +38,11 @@ struct applanguagestripperview: View {
     }
 
     private func toggleSelectAllFiltered() {
+        guard !manager.foundBundles.isEmpty else { return }
         let targetState = !allFilteredSelected
         let filteredIDs = Set(filteredBundles.map { $0.id })
         for idx in manager.foundBundles.indices {
-            if filteredIDs.contains(manager.foundBundles[idx].id) {
+            if manager.foundBundles.indices.contains(idx) && filteredIDs.contains(manager.foundBundles[idx].id) {
                 manager.foundBundles[idx].isSelected = targetState
             }
         }
@@ -48,6 +56,7 @@ struct applanguagestripperview: View {
                     Text("App Language Asset Stripper")
                         .font(.title2)
                         .bold()
+                        .accessibilityAddTraits(.isHeader)
                     Text("Strip unused localization files (.lproj) from installed applications to reclaim disk space.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -82,8 +91,8 @@ struct applanguagestripperview: View {
                 TextField("Search App Name or Language...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 250)
-                    .accessibilityLabel("Search App Name or Language")
-                    .accessibilityHint("Filters the list by application name or localization language code")
+                    .accessibilityLabel("Search application name or language code")
+                    .accessibilityHint("Filters the list of unused language files by app name or language code")
 
                 if !filteredBundles.isEmpty {
                     Button(action: toggleSelectAllFiltered) {
@@ -101,7 +110,7 @@ struct applanguagestripperview: View {
                     .font(.callout)
                     .bold()
                     .foregroundStyle(.secondary)
-                    .accessibilityLabel("Selected size \(ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file))")
+                    .accessibilityLabel("Selected size: \(ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file))")
 
                 Button(action: { showConfirmAlert = true }) {
                     Label("Strip Selected", systemImage: "scissors")
@@ -139,35 +148,33 @@ struct applanguagestripperview: View {
                 List {
                     ForEach(filteredBundles) { bundle in
                         HStack {
-                            Toggle("", isOn: Binding(
+                            Toggle(isOn: Binding(
                                 get: { bundle.isSelected },
                                 set: { val in
                                     updateSelection(for: bundle, isSelected: val)
                                 }
-                            ))
-                            .labelsHidden()
-                            .disabled(manager.isStripping)
-                            .accessibilityLabel("Select \(bundle.appName) (\(bundle.languageCode))")
-                            .accessibilityHint("Toggles selection of \(bundle.appName) \(bundle.languageCode) language file for removal")
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(bundle.appName)
-                                    .font(.headline)
-                                Text("Language: \(bundle.languageCode).lproj")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            )) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(bundle.appName)
+                                        .font(.headline)
+                                    Text("Language: \(bundle.languageCode).lproj")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
+                            .disabled(manager.isStripping)
+                            .accessibilityLabel("\(bundle.appName), \(bundle.languageCode) localization package")
+                            .accessibilityValue(bundle.isSelected ? "Selected for removal" : "Not selected")
+                            .accessibilityHint("Double tap to toggle selection of \(bundle.appName) \(bundle.languageCode) package for removal")
 
                             Spacer()
 
                             Text(ByteCountFormatter.string(fromByteCount: bundle.size, countStyle: .file))
                                 .font(.system(.body, design: .monospaced))
                                 .foregroundStyle(.secondary)
-                                .accessibilityLabel("Size \(ByteCountFormatter.string(fromByteCount: bundle.size, countStyle: .file))")
+                                .accessibilityLabel("Size: \(ByteCountFormatter.string(fromByteCount: bundle.size, countStyle: .file))")
                         }
                         .padding(.vertical, 4)
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(bundle.appName), language \(bundle.languageCode), \(ByteCountFormatter.string(fromByteCount: bundle.size, countStyle: .file))")
                     }
                 }
                 .listStyle(.inset)

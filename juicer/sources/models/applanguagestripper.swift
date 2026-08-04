@@ -72,11 +72,19 @@ class AppLanguageStripperManager: ObservableObject {
         Task.detached(priority: .userInitiated) {
             var successCount = 0
             for item in selected {
+                let normalizedPath = (item.path as NSString).standardizingPath
+                guard normalizedPath.hasSuffix(".lproj"),
+                      normalizedPath.contains(".app/Contents/Resources/"),
+                      !normalizedPath.contains(".."),
+                      FileManager.default.fileExists(atPath: normalizedPath) else {
+                    AppLogger.shared.log("Skipping invalid or unsafe lproj path: \(item.path)")
+                    continue
+                }
                 do {
-                    try FileManager.default.removeItem(atPath: item.path)
+                    try FileManager.default.removeItem(atPath: normalizedPath)
                     successCount += 1
                 } catch {
-                    AppLogger.shared.log("Failed to remove lproj at \(item.path): \(error.localizedDescription)")
+                    AppLogger.shared.log("Failed to remove lproj at \(normalizedPath): \(error.localizedDescription)")
                 }
             }
 
