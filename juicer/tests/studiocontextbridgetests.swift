@@ -46,7 +46,7 @@ final class studiocontextbridgetests: XCTestCase {
                 return
             }
             XCTAssertEqual(target, .portListener)
-            XCTAssertEqual(target.workspace, .system)
+            XCTAssertEqual(target.workspace, .network)
             
             if let payload = notification.userInfo?["payload"] as? ContextPayload {
                 XCTAssertEqual(payload.pid, 999)
