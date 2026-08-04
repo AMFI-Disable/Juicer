@@ -71,4 +71,56 @@ final class PrivilegedOperationsTests: XCTestCase {
         XCTAssertFalse(success)
         XCTAssertTrue(message.contains("outside safe cache purge scope"))
     }
+
+    @MainActor
+    func testPrivilegedOperationManagerDaemonStatusTransitions() async {
+        let manager = PrivilegedOperationManager.shared
+
+        // 1. DaemonStatus enum case equality
+        XCTAssertEqual(DaemonStatus.notInstalled, DaemonStatus.notInstalled)
+        XCTAssertEqual(DaemonStatus.enabled, DaemonStatus.enabled)
+        XCTAssertEqual(DaemonStatus.requiresApproval, DaemonStatus.requiresApproval)
+        XCTAssertEqual(DaemonStatus.failed("err"), DaemonStatus.failed("err"))
+        XCTAssertNotEqual(DaemonStatus.notInstalled, DaemonStatus.enabled)
+        XCTAssertNotEqual(DaemonStatus.failed("err1"), DaemonStatus.failed("err2"))
+
+        // 2. Initial checkStatus execution
+        manager.checkStatus()
+        let status = manager.daemonStatus
+        let isValidStatus = status == .notInstalled || status == .enabled || status == .requiresApproval || isFailedStatus(status)
+        XCTAssertTrue(isValidStatus)
+
+        // 3. Register daemon transition behavior
+        let registered = await manager.registerDaemon()
+        let postRegister = manager.daemonStatus
+        if registered {
+            XCTAssertTrue(postRegister == .enabled || postRegister == .requiresApproval)
+        } else {
+            if case .failed(let errStr) = postRegister {
+                XCTAssertEqual(manager.lastError, errStr)
+            }
+        }
+
+        // 4. Unregister daemon transition behavior
+        let unregistered = await manager.unregisterDaemon()
+        let postUnregister = manager.daemonStatus
+        if unregistered {
+            XCTAssertEqual(postUnregister, .notInstalled)
+            XCTAssertFalse(manager.isConnected)
+        } else {
+            if case .failed(let errStr) = postUnregister {
+                XCTAssertFalse(errStr.isEmpty)
+            }
+        }
+
+        // 5. Re-check status consistency
+        manager.checkStatus()
+        XCTAssertNotNil(manager.daemonStatus)
+    }
+
+    private func isFailedStatus(_ status: DaemonStatus) -> Bool {
+        if case .failed = status { return true }
+        return false
+    }
 }
+

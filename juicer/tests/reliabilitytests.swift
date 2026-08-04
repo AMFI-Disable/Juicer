@@ -152,4 +152,167 @@ custom_app 2048 even    5u  IPv4 0x1234567890abcdef      0t0  TCP 192.168.1.50:8
         manager.checkStatus()
         XCTAssertNotNil(manager.daemonStatus)
     }
+
+    func testCommandExecutorTimeoutHandling() {
+        let executor = CommandExecutor.shared
+
+        // 1. Command exceeding timeout
+        let timeoutResult = executor.run(
+            executablePath: "/bin/sleep",
+            arguments: ["2"],
+            timeout: 0.05
+        )
+        XCTAssertFalse(timeoutResult.succeeded)
+        XCTAssertTrue(timeoutResult.didTimeOut)
+        XCTAssertTrue(timeoutResult.wasTerminated)
+        XCTAssertFalse(timeoutResult.wasCancelled)
+        XCTAssertNil(timeoutResult.launchError)
+
+        // 2. Command completing within timeout
+        let successResult = executor.run(
+            executablePath: "/bin/echo",
+            arguments: ["timeout-test"],
+            timeout: 5.0
+        )
+        XCTAssertTrue(successResult.succeeded)
+        XCTAssertFalse(successResult.didTimeOut)
+        XCTAssertFalse(successResult.wasTerminated)
+        XCTAssertFalse(successResult.wasCancelled)
+        XCTAssertEqual(successResult.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines), "timeout-test")
+
+        // 3. Cancellation taking precedence during execution
+        let cancelledResult = executor.run(
+            executablePath: "/bin/sleep",
+            arguments: ["2"],
+            timeout: 5.0,
+            cancellationCheck: { true }
+        )
+        XCTAssertFalse(cancelledResult.succeeded)
+        XCTAssertFalse(cancelledResult.didTimeOut)
+        XCTAssertTrue(cancelledResult.wasCancelled)
+        XCTAssertTrue(cancelledResult.wasTerminated)
+    }
+
+    func testDestructivePathValidatorProtectedPathBounds() throws {
+        try withTemporaryDirectory { directory in
+            let home = directory.appendingPathComponent("user_home")
+            let workspace = directory.appendingPathComponent("workspace_root")
+            let allowedFolder = directory.appendingPathComponent("allowed_cache")
+            let explicitlyAuthFile = directory.appendingPathComponent("authorized_special.log")
+
+            try FileManager.default.createDirectory(at: home, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: allowedFolder, withIntermediateDirectories: true)
+            FileManager.default.createFile(atPath: explicitlyAuthFile.path, contents: nil)
+
+            let validator = DestructivePathValidator(
+                homeDirectory: home,
+                workspaceRoot: workspace,
+                allowedRoots: [allowedFolder],
+                explicitlyAuthorizedPaths: [explicitlyAuthFile.path]
+            )
+
+            // Protected root bounds
+            XCTAssertThrowsError(try validator.validate("/")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .unsafeProtectedPath("/"))
+            }
+            XCTAssertThrowsError(try validator.validate("//")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .unsafeProtectedPath("/"))
+            }
+            XCTAssertThrowsError(try validator.validate(home.path)) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .unsafeProtectedPath(home.resolvingSymlinksInPath().path))
+            }
+            XCTAssertThrowsError(try validator.validate(home.path + "/")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .unsafeProtectedPath(home.resolvingSymlinksInPath().path))
+            }
+            XCTAssertThrowsError(try validator.validate(workspace.path)) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .unsafeProtectedPath(workspace.resolvingSymlinksInPath().path))
+            }
+
+            // Explicitly authorized override
+            XCTAssertEqual(try validator.validate(explicitlyAuthFile.path).path, explicitlyAuthFile.resolvingSymlinksInPath().path)
+
+            // Allowed roots scope bounds
+            let insideAllowed = allowedFolder.appendingPathComponent("sub/data.tmp")
+            XCTAssertEqual(try validator.validate(insideAllowed.path).path, insideAllowed.resolvingSymlinksInPath().path)
+
+            let siblingFolder = directory.appendingPathComponent("allowed_cache_sibling")
+            XCTAssertThrowsError(try validator.validate(siblingFolder.path)) { error in
+                guard case .outsideAllowedScope = error as? DestructivePathValidationError else {
+                    return XCTFail("Expected outsideAllowedScope, got \(error)")
+                }
+            }
+
+            // Invalid format bounds
+            XCTAssertThrowsError(try validator.validate("")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .emptyPath)
+            }
+            XCTAssertThrowsError(try validator.validate("   \n")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .emptyPath)
+            }
+            XCTAssertThrowsError(try validator.validate("relative/path")) { error in
+                XCTAssertEqual(error as? DestructivePathValidationError, .pathMustBeAbsolute("relative/path"))
+            }
+        }
+    }
+
+    func testNetworkExposureParserSocketAddressNormalization() {
+        let lsofOutput = """
+COMMAND     PID USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME
+app1       1001 user   10u  IPv6 0x1111111111111111      0t0  TCP [::1]:8080 (LISTEN)
+app2       1002 user   11u  IPv6 0x2222222222222222      0t0  TCP [::]:443 (LISTEN)
+app3       1003 user   12u  IPv6 0x3333333333333333      0t0  TCP [fe80::1]:2222 (LISTEN)
+app4       1004 user   14u  IPv4 0x4444444444444444      0t0  TCP 0.0.0.0:80 (LISTEN)
+app5       1005 user   15u  IPv4 0x5555555555555555      0t0  TCP localhost:3000 (LISTEN)
+invalid1   1006 user   16u  IPv4 0x6666666666666666      0t0  TCP 127.0.0.1:invalid (LISTEN)
+invalid2   1007 user   17u  IPv4 0x7777777777777777      0t0  TCP 127.0.0.1:70000 (LISTEN)
+invalid3   -10  user   18u  IPv4 0x8888888888888888      0t0  TCP 127.0.0.1:8000 (LISTEN)
+"""
+        let parsed = NetworkExposureParser.parseLsofOutput(lsofOutput)
+
+        // Should parse the 5 valid records and filter out invalid ones
+        XCTAssertEqual(parsed.count, 5)
+
+        // Records should be sorted by port (80, 443, 2222, 3000, 8080)
+        XCTAssertEqual(parsed.map(\.port), [80, 443, 2222, 3000, 8080])
+
+        // Bracketed IPv6 loopback [::1]:8080
+        let app1 = parsed.first { $0.processName == "app1" }
+        XCTAssertNotNil(app1)
+        XCTAssertEqual(app1?.classification, .localLoopback)
+        XCTAssertEqual(app1?.interface, "Loopback (lo0)")
+        XCTAssertEqual(app1?.bindAddress, "[::1]")
+
+        // Bracketed IPv6 wildcard [::]:443
+        let app2 = parsed.first { $0.processName == "app2" }
+        XCTAssertNotNil(app2)
+        XCTAssertEqual(app2?.classification, .wildcardPublic)
+        XCTAssertEqual(app2?.interface, "All Interfaces (*)")
+
+        // Bracketed IPv6 specific IP [fe80::1]:2222
+        let app3 = parsed.first { $0.processName == "app3" }
+        XCTAssertNotNil(app3)
+        XCTAssertEqual(app3?.classification, .specificIP)
+        XCTAssertEqual(app3?.interface, "[fe80::1]")
+
+        // IPv4 wildcard 0.0.0.0:80
+        let app4 = parsed.first { $0.processName == "app4" }
+        XCTAssertNotNil(app4)
+        XCTAssertEqual(app4?.classification, .wildcardPublic)
+        XCTAssertEqual(app4?.interface, "All Interfaces (*)")
+
+        // Localhost name localhost:3000
+        let app5 = parsed.first { $0.processName == "app5" }
+        XCTAssertNotNil(app5)
+        XCTAssertEqual(app5?.classification, .localLoopback)
+        XCTAssertEqual(app5?.interface, "Loopback (lo0)")
+    }
+
+    private func withTemporaryDirectory(_ body: (URL) throws -> Void) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("juicer-rel-tests-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try body(directory)
+    }
 }
+
