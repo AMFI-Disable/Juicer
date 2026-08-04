@@ -32,6 +32,10 @@ class BrewTapsManager: ObservableObject {
     @Published var taps: [BrewTap] = []
     @Published var isLoading = false
     @Published var isCheckingHealth = false
+    @Published var healthProgress: Double = 0
+    @Published var healthStatusMessage = "Health has not been validated."
+    @Published var healthError: String?
+    @Published var lastHealthUpdate: Date?
 
     private init() {
         loadCachedTaps()
@@ -134,12 +138,20 @@ class BrewTapsManager: ObservableObject {
     }
 
     func checkTapsHealth() {
-        guard !taps.isEmpty else { return }
+        guard !isCheckingHealth else { return }
+        guard !taps.isEmpty else { healthStatusMessage = "No taps are loaded; refresh the tap list first."; return }
         self.isCheckingHealth = true
+        self.healthProgress = 0
+        self.healthError = nil
+        self.healthStatusMessage = "Checking (taps.count) tap repositories…"
 
         Task.detached(priority: .background) {
             var updatedTaps = self.taps
-            let session = URLSession(configuration: .ephemeral)
+            var failedCount = 0
+            let configuration = URLSessionConfiguration.ephemeral
+            configuration.timeoutIntervalForRequest = 10
+            configuration.timeoutIntervalForResource = 15
+            let session = URLSession(configuration: configuration)
 
             for i in 0..<updatedTaps.count {
                 let tap = updatedTaps[i]
@@ -184,15 +196,26 @@ class BrewTapsManager: ObservableObject {
                         }
                     }
                 } catch {
+                    failedCount += 1
                     AppLogger.shared.log("Error checking tap health for \(tap.name): \(error.localizedDescription)")
                 }
 
                 updatedTaps[i].healthStatus = TapHealthStatus(status: status, movedTo: movedTo, lastChecked: Date())
+
+                let progress = Double(i + 1) / Double(max(updatedTaps.count, 1))
+                await MainActor.run {
+                    self.healthProgress = progress
+                    self.healthStatusMessage = "Checked (i + 1) of (updatedTaps.count): (tap.name)"
+                }
             }
 
             await MainActor.run {
                 self.taps = updatedTaps
                 self.isCheckingHealth = false
+                self.healthProgress = 1
+                self.lastHealthUpdate = Date()
+                self.healthStatusMessage = failedCount == 0 ? "Tap health validation completed." : "Tap health completed with (failedCount) request error(s). Retry to recheck them."
+                self.healthError = failedCount == 0 ? nil : "(failedCount) tap health request(s) failed or timed out."
                 self.saveCachedTaps()
             }
         }
