@@ -10,13 +10,14 @@ struct AppLanguageBundle: Identifiable, Hashable {
     var isSelected: Bool = true
 }
 
+@MainActor
 class AppLanguageStripperManager: ObservableObject {
     @Published var foundBundles: [AppLanguageBundle] = []
     @Published var isScanning = false
     @Published var isStripping = false
     @Published var totalReclaimableSize: Int64 = 0
 
-    private let systemLanguages: Set<String> = ["en", "Base", "English", "en_US", "en_GB", "en_AU", "zh_CN", "zh_TW", "zh-Hans", "zh-Hant"]
+    private static let systemLanguages: Set<String> = ["en", "Base", "English", "en_US", "en_GB", "en_AU", "zh_CN", "zh_TW", "zh-Hans", "zh-Hant"]
 
     func scanAppLanguages() {
         isScanning = true
@@ -37,7 +38,7 @@ class AppLanguageStripperManager: ObservableObject {
                     for item in contents where item.hasSuffix(".lproj") {
                         let langCode = String(item.dropLast(6))
                         // Ignore system / essential language packs
-                        if !self.systemLanguages.contains(langCode) {
+                        if !AppLanguageStripperManager.systemLanguages.contains(langCode) {
                             let lprojPath = "\(resourcesPath)/\(item)"
                             let size = self.getFolderSize(path: lprojPath)
                             if size > 0 {
@@ -87,7 +88,7 @@ class AppLanguageStripperManager: ObservableObject {
         }
     }
 
-    private func getFolderSize(path: String) -> Int64 {
+    nonisolated private func getFolderSize(path: String) -> Int64 {
         let url = URL(fileURLWithPath: path)
         guard let enumerator = FileManager.default.enumerator(at: url, includingPropertiesForKeys: [.fileSizeKey]) else { return 0 }
         var size: Int64 = 0
