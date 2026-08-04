@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct applipoview: View {
     @StateObject private var manager = AppLipoManager()
     @State private var searchText = ""
@@ -23,8 +24,11 @@ struct applipoview: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(.secondary)
+                    .accessibilityHidden(true)
                 TextField("Search universal applications...", text: $searchText)
                     .textFieldStyle(.plain)
+                    .accessibilityLabel("Search universal applications")
+                    .accessibilityHint("Filters the application list by name or bundle identifier")
 
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {
@@ -32,6 +36,8 @@ struct applipoview: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Clear search")
+                    .accessibilityHint("Clears current search text")
                 }
             }
             .padding()
@@ -61,6 +67,7 @@ struct applipoview: View {
                 Text("App Lipo Slicer")
                     .font(.title2)
                     .bold()
+                    .accessibilityAddTraits(.isHeader)
                 Text("Strip non-native CPU architectures (e.g. Intel x86_64 on Apple Silicon) from Universal binaries to save storage space.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
@@ -70,11 +77,14 @@ struct applipoview: View {
             Button(action: { manager.scanForUniversalApps() }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
+                        .accessibilityHidden(true)
                     Text("Rescan")
                 }
             }
             .buttonStyle(.bordered)
             .disabled(manager.isScanning)
+            .accessibilityLabel("Rescan universal applications")
+            .accessibilityHint("Scans installed applications for universal binaries")
         }
         .padding()
         .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
@@ -86,11 +96,14 @@ struct applipoview: View {
         VStack(spacing: 16) {
             ProgressView()
                 .progressViewStyle(.circular)
+                .accessibilityLabel("Scanning progress indicator")
             Text("Scanning executable headers for FAT binaries...")
                 .font(.headline)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Scanning executable headers for FAT binaries...")
     }
 
     // MARK: - Empty State UI
@@ -101,6 +114,7 @@ struct applipoview: View {
             Image(systemName: "cpu")
                 .font(.system(size: 48))
                 .foregroundStyle(.secondary.opacity(0.6))
+                .accessibilityHidden(true)
             Text("No Universal Applications Found")
                 .font(.headline)
             Text("All installed applications are already optimized for your CPU architecture.")
@@ -111,6 +125,8 @@ struct applipoview: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No Universal Applications Found. All installed applications are already optimized for your CPU architecture.")
     }
 
     // MARK: - Applications List
@@ -137,6 +153,8 @@ struct applipoview: View {
             }
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Total potential storage recovery: \(formatBytes(manager.universalApps.reduce(0) { $0 + $1.estimatedSavings })) across \(manager.universalApps.count) applications")
         }
     }
 
@@ -161,6 +179,7 @@ struct applipoview: View {
                 .frame(width: 120, alignment: .trailing)
         }
         .padding(.vertical, 4)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -172,6 +191,7 @@ struct applipoview: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 32, height: 32)
+                    .accessibilityLabel("\(item.appName) icon")
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.appName)
@@ -195,6 +215,7 @@ struct applipoview: View {
             Text(formatBytes(item.totalSize))
                 .font(.system(.body, design: .monospaced))
                 .frame(width: 100, alignment: .trailing)
+                .accessibilityLabel("Current size \(formatBytes(item.totalSize))")
 
             Spacer()
 
@@ -204,6 +225,7 @@ struct applipoview: View {
                 .bold()
                 .foregroundColor(.green)
                 .frame(width: 100, alignment: .trailing)
+                .accessibilityLabel("Estimated savings \(formatBytes(item.estimatedSavings))")
 
             // Action
             Button(item.isThinned ? "Thinned" : "Thin App") {
@@ -214,6 +236,8 @@ struct applipoview: View {
             .controlSize(.small)
             .disabled(item.isThinned || manager.isThinning)
             .frame(width: 120, alignment: .trailing)
+            .accessibilityLabel(item.isThinned ? "\(item.appName) is thinned" : "Thin \(item.appName)")
+            .accessibilityHint("Strips non-native architecture slice to save \(formatBytes(item.estimatedSavings))")
         }
         .padding(.vertical, 4)
     }
@@ -238,3 +262,4 @@ struct applipoview: View {
         return formatter.string(fromByteCount: bytes)
     }
 }
+
