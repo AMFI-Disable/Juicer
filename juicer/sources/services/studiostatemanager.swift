@@ -67,4 +67,9 @@ final class StudioStateManager: ObservableObject {
             }
         }
     }
+
+    func reset() {
+        activeWorkspace = nil
+        activeStudioManagerNames.removeAll()
+    }
 }

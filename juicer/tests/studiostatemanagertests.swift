@@ -2,6 +2,16 @@ import XCTest
 @testable import Juicer
 
 final class studiostatemanagertests: XCTestCase {
+    override func setUp() {
+        super.setUp()
+        StudioStateManager.shared.reset()
+    }
+
+    override func tearDown() {
+        StudioStateManager.shared.reset()
+        super.tearDown()
+    }
+
     func testLazyLoadingInitialState() {
         let manager = StudioStateManager.shared
         XCTAssertNil(manager.activeWorkspace)
