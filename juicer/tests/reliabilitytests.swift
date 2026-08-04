@@ -164,6 +164,14 @@ custom_app 2048 even    5u  IPv4 0x1234567890abcdef      0t0  TCP 192.168.1.50:8
         XCTAssertEqual(customApp?.bindAddress, "192.168.1.50")
     }
 
+    func testSecurityHeuristicAndUSBParsersAreExplicit() {
+        let findings = SecurityHeuristicParser.launchItemFindings(paths: ["/Library/LaunchAgents/com.example.InputHook.plist", "/Library/LaunchAgents/com.example.safe.plist"])
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertEqual(findings.first?.confidence, "Low")
+        let usb = USBInventoryParser.deviceNames("USB:\n    Apple Keyboard:\n    External SSD:\n")
+        XCTAssertEqual(usb, ["Apple Keyboard", "External SSD"])
+    }
+
     func testAPIEnvironmentInterpolator() {
         let template = "{{baseUrl}}/v1/{{endpoint}}?token={{token}}"
         let variables = ["baseUrl": "https://api.example.com", "endpoint": "users", "token": "secret123"]
@@ -415,5 +423,4 @@ invalid3   -10  user   18u  IPv4 0x8888888888888888      0t0  TCP 127.0.0.1:8000
         try body(directory)
     }
 }
-
 
