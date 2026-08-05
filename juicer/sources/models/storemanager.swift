@@ -435,22 +435,151 @@ class StoreManager: ObservableObject {
         return .other
     }
 
-    // MARK: - Scan File System Installation Status
+    // MARK: - Scan File System & All Installed Apps
+    
+    struct HomebrewLockDiagnosis: Identifiable {
+        let id = UUID()
+        let lockPath: String
+        let processName: String?
+        let pid: Int32?
+        let reason: String
+    }
+
+    @Published var detectedLocks: [HomebrewLockDiagnosis] = []
+    @Published var isLockChecking: Bool = false
+
+    func diagnoseHomebrewLocks() {
+        isLockChecking = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            var locks: [HomebrewLockDiagnosis] = []
+            let possibleLockPaths = [
+                "/opt/homebrew/var/homebrew/locks",
+                "/usr/local/var/homebrew/locks"
+            ]
+            let fm = FileManager.default
+            for rootPath in possibleLockPaths {
+                if let files = try? fm.contentsOfDirectory(atPath: rootPath) {
+                    for file in files {
+                        let fullPath = "\(rootPath)/\(file)"
+                        locks.append(HomebrewLockDiagnosis(
+                            lockPath: fullPath,
+                            processName: "brew lock",
+                            pid: nil,
+                            reason: "Stale or active Homebrew lock file detected: \(file)"
+                        ))
+                    }
+                }
+            }
+            await MainActor.run {
+                self.detectedLocks = locks
+                self.isLockChecking = false
+            }
+        }
+    }
+
+    func fixHomebrewLocks() {
+        guard !isRunningAction else { return }
+        isRunningAction = true
+        progressLog = "🔧 Repairing Homebrew Locks & Unlocking Database...\n\n"
+
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/sh")
+            proc.arguments = ["-c", "rm -rf /opt/homebrew/var/homebrew/locks/* /usr/local/var/homebrew/locks/* 2>&1"]
+            
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+            
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                await MainActor.run {
+                    self.isRunningAction = false
+                    self.progressLog += "✅ Successfully purged all stale Homebrew locks!\n"
+                    self.diagnoseHomebrewLocks()
+                }
+            } catch {
+                await MainActor.run {
+                    self.isRunningAction = false
+                    self.progressLog += "❌ Failed to clear locks: \(error.localizedDescription)\n"
+                }
+            }
+        }
+    }
+
+    func migrateToHomebrewCask(app: StoreApp) {
+        guard !isRunningAction else { return }
+        isRunningAction = true
+        progressLog = "🔄 Converting \(app.name) to Homebrew Cask management...\n\n"
+        
+        let token = app.id
+        Task.detached(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+            let proc = Process()
+            proc.executableURL = URL(fileURLWithPath: "/bin/sh")
+            proc.arguments = ["-c", "/opt/homebrew/bin/brew install --cask --force \(token) 2>&1"]
+            
+            let pipe = Pipe()
+            proc.standardOutput = pipe
+            proc.standardError = pipe
+            
+            await MainActor.run {
+                self.actionProcess = proc
+            }
+            
+            let handle = pipe.fileHandleForReading
+            handle.readabilityHandler = { h in
+                let data = h.availableData
+                guard !data.isEmpty else { return }
+                if let str = String(data: data, encoding: .utf8) {
+                    DispatchQueue.main.async {
+                        self.progressLog += str
+                    }
+                }
+            }
+            
+            do {
+                try proc.run()
+                proc.waitUntilExit()
+                handle.readabilityHandler = nil
+                await MainActor.run {
+                    self.isRunningAction = false
+                    self.actionProcess = nil
+                    self.progressLog += "\n✅ Successfully linked \(app.name) to Homebrew Cask!\n"
+                    self.loadStore()
+                }
+            } catch {
+                handle.readabilityHandler = nil
+                await MainActor.run {
+                    self.isRunningAction = false
+                    self.actionProcess = nil
+                    self.progressLog += "\n❌ Migration failed: \(error.localizedDescription)\n"
+                }
+            }
+        }
+    }
 
     private func scanStatuses(for list: [StoreApp]) -> [StoreApp] {
         var updated = list
         let homeDir = fm.homeDirectoryForCurrentUser.path
 
-        // Query folders contents exactly once to avoid filesystem overhead
         let localAppsDir = "/Applications"
         let userAppsDir = "\(homeDir)/Applications"
 
-        let installedApps: Set<String> = {
-            var set = Set<String>()
-            if let local = try? fm.contentsOfDirectory(atPath: localAppsDir) { set.formUnion(local) }
-            if let user = try? fm.contentsOfDirectory(atPath: userAppsDir) { set.formUnion(user) }
-            return set
+        let installedAppsDict: [String: String] = {
+            var dict: [String: String] = [:]
+            if let local = try? fm.contentsOfDirectory(atPath: localAppsDir) {
+                for item in local { dict[item] = "\(localAppsDir)/\(item)" }
+            }
+            if let user = try? fm.contentsOfDirectory(atPath: userAppsDir) {
+                for item in user { dict[item] = "\(userAppsDir)/\(item)" }
+            }
+            return dict
         }()
+        let installedAppsSet = Set(installedAppsDict.keys)
 
         let caskroomInstalled: Set<String> = {
             if let contents = try? fm.contentsOfDirectory(atPath: "/opt/homebrew/Caskroom") {
@@ -480,6 +609,8 @@ class StoreManager: ObservableObject {
             return []
         }()
 
+        var matchedAppNameSet = Set<String>()
+
         for i in updated.indices {
             let app = updated[i]
             let lowerId = app.id.lowercased()
@@ -487,9 +618,14 @@ class StoreManager: ObservableObject {
             if app.isCask {
                 if caskroomInstalled.contains(lowerId) {
                     updated[i].status = .installedViaHomebrew
+                    for appName in app.appNames { matchedAppNameSet.insert(appName) }
                 } else {
                     let existsInApps = app.appNames.contains { appName in
-                        installedApps.contains(appName)
+                        if installedAppsSet.contains(appName) {
+                            matchedAppNameSet.insert(appName)
+                            return true
+                        }
+                        return false
                     }
                     if existsInApps {
                         updated[i].status = .installedExternally
@@ -509,6 +645,30 @@ class StoreManager: ObservableObject {
                     } else {
                         updated[i].status = .notInstalled
                     }
+                }
+            }
+        }
+
+        // Add ALL non-Homebrew standalone macOS applications
+        for (appName, appPath) in installedAppsDict {
+            if appName.hasSuffix(".app") && !matchedAppNameSet.contains(appName) {
+                let cleanName = appName.replacingOccurrences(of: ".app", with: "")
+                let dummyId = "ext-\(cleanName.lowercased().replacingOccurrences(of: " ", with: "-"))"
+                
+                // Avoid duplicating if already present
+                if !updated.contains(where: { $0.id == dummyId || $0.name == cleanName }) {
+                    updated.append(StoreApp(
+                        id: dummyId,
+                        name: cleanName,
+                        desc: "Standalone Application installed at \(appPath)",
+                        homepage: "",
+                        version: "1.0",
+                        isCask: true,
+                        appNames: [appName],
+                        pricing: .free,
+                        status: .installedExternally,
+                        category: classifyCategory(token: cleanName, desc: cleanName, homepage: "")
+                    ))
                 }
             }
         }
