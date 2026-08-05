@@ -73,6 +73,7 @@ struct storeview: View {
         }
         .onAppear {
             manager.loadStore()
+            manager.diagnoseHomebrewLocks()
         }
     }
 
@@ -500,8 +501,46 @@ struct storeview: View {
 
                     Divider()
 
+                    // Lock Diagnostic Banner & One-Click Fix
+                    if !manager.detectedLocks.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "lock.trianglebadge.exclamationmark.fill")
+                                    .foregroundStyle(.orange)
+                                Text("Homebrew Locks Detected (\(manager.detectedLocks.count))")
+                                    .font(.headline)
+                                Spacer()
+                                Button("Auto-Fix & Purge Locks") {
+                                    JuicerHaptic.performClick()
+                                    manager.fixHomebrewLocks()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.orange)
+                            }
+                            Text("Stale Homebrew lock files may prevent package installations or upgrades.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(10)
+                        .background(Color.orange.opacity(0.12))
+                        .cornerRadius(8)
+                    }
+
                     // Action triggers
                     HStack(spacing: 12) {
+                        if app.status == .installedExternally && app.isCask && !app.id.hasPrefix("ext-") {
+                            Button(action: {
+                                JuicerHaptic.performClick()
+                                manager.migrateToHomebrewCask(app: app)
+                                showLogs = true
+                            }) {
+                                Label("1-Click Migrate to Homebrew Cask", systemImage: "arrow.triangle.2.circlepath.circle.fill")
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.purple)
+                            .disabled(manager.isRunningAction)
+                        }
+
                         if app.status == .notInstalled {
                             Button(action: {
                                 manager.runAction(action: "install", app: app)
