@@ -42,6 +42,7 @@ struct DiskEntry: Identifiable {
 
 // MARK: - Manager
 
+@MainActor
 class DiskExplorerManager: ObservableObject {
     @Published var volumes: [DiskVolume] = []
     @Published var entries: [DiskEntry] = []
@@ -133,7 +134,8 @@ class DiskExplorerManager: ObservableObject {
         scanTask = Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
 
-            guard let contents = try? self.fileManager.contentsOfDirectory(atPath: resolvedPath) else {
+            let fm = FileManager.default
+            guard let contents = try? fm.contentsOfDirectory(atPath: resolvedPath) else {
                 await MainActor.run {
                     self.errorMessage = "Cannot read directory: \(resolvedPath)"
                     self.isScanning = false
@@ -151,13 +153,13 @@ class DiskExplorerManager: ObservableObject {
 
                 let fullPath = (resolvedPath as NSString).appendingPathComponent(name)
                 var isDir: ObjCBool = false
-                self.fileManager.fileExists(atPath: fullPath, isDirectory: &isDir)
+                fm.fileExists(atPath: fullPath, isDirectory: &isDir)
 
                 let size: Int64
                 if isDir.boolValue {
-                    size = self.directorySize(path: fullPath, maxDepth: 3)
+                    size = Self.computeDirectorySize(path: fullPath, maxDepth: 3)
                 } else {
-                    size = (try? self.fileManager.attributesOfItem(atPath: fullPath))?[.size] as? Int64 ?? 0
+                    size = (try? fm.attributesOfItem(atPath: fullPath))?[.size] as? Int64 ?? 0
                 }
 
                 let entry = DiskEntry(name: name, path: fullPath, sizeBytes: size, isDirectory: isDir.boolValue)
@@ -187,16 +189,21 @@ class DiskExplorerManager: ObservableObject {
 
     // MARK: - Directory Size (bounded depth)
 
-    private func directorySize(path: String, maxDepth: Int) -> Int64 {
+    static nonisolated func computeDirectorySize(path: String, maxDepth: Int) -> Int64 {
         var size: Int64 = 0
         let resourceKeys: Set<URLResourceKey> = [.fileSizeKey, .isDirectoryKey, .isSymbolicLinkKey]
-        guard let enumerator = fileManager.enumerator(
-            at: URL(fileURLWithPath: path),
+        let targetURL = URL(fileURLWithPath: path).standardized
+        let fm = FileManager.default
+        guard let enumerator = fm.enumerator(
+            at: targetURL,
             includingPropertiesForKeys: Array(resourceKeys),
             options: [.skipsHiddenFiles, .skipsPackageDescendants]
         ) else { return 0 }
 
+        var itemLimit = 50_000
         for case let url as URL in enumerator {
+            itemLimit -= 1
+            if itemLimit <= 0 { enumerator.skipDescendants(); break }
             if enumerator.level > maxDepth { enumerator.skipDescendants(); continue }
             if let vals = try? url.resourceValues(forKeys: resourceKeys),
                !(vals.isDirectory ?? false),
