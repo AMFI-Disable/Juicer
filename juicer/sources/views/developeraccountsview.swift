@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 
+@MainActor
 struct developeraccountsview: View {
     @StateObject private var manager = KeychainAccountManager()
     @State private var selectedProvider = "GitHub"
@@ -8,6 +9,23 @@ struct developeraccountsview: View {
     @State private var tokenInput = ""
     @State private var showAddAccountSheet = false
     @State private var selectedTab = "Accounts"
+
+    // Bounds & limit guards
+    private let maxAccountLimit = 50
+    private let maxUsernameLength = 128
+    private let maxTokenLength = 2048
+
+    private var trimmedUsername: String {
+        String(usernameInput.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxUsernameLength))
+    }
+
+    private var trimmedToken: String {
+        String(tokenInput.trimmingCharacters(in: .whitespacesAndNewlines).prefix(maxTokenLength))
+    }
+
+    private var isInputValid: Bool {
+        !trimmedUsername.isEmpty && !trimmedToken.isEmpty && manager.accounts.count < maxAccountLimit
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,6 +38,7 @@ struct developeraccountsview: View {
             )
             .padding()
             .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
+            .accessibilityLabel("Developer Accounts Header")
 
             Divider()
 
@@ -30,6 +49,8 @@ struct developeraccountsview: View {
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 320)
+                .accessibilityLabel("View Mode Picker")
+                .accessibilityHint("Switches view between connected developer accounts and integrations overview")
 
                 Spacer()
 
@@ -37,6 +58,9 @@ struct developeraccountsview: View {
                     showAddAccountSheet = true
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(manager.accounts.count >= maxAccountLimit)
+                .accessibilityLabel("Connect New Account")
+                .accessibilityHint(manager.accounts.count >= maxAccountLimit ? "Maximum account limit (\(maxAccountLimit)) reached" : "Opens sheet to add a new developer account token")
             }
             .padding()
 
@@ -66,9 +90,12 @@ struct developeraccountsview: View {
                         .font(.system(size: 38))
                         .foregroundStyle(Color.accentColor)
                 }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("No accounts icon")
 
                 Text("No Connected Developer Accounts")
                     .font(.title3.bold())
+                    .accessibilityAddTraits(.isHeader)
 
                 Text("Connect GitHub, Docker Hub, or AI service keys to unlock PR management, private container pulls, and cloud LLM benchmarks.")
                     .font(.body)
@@ -80,17 +107,20 @@ struct developeraccountsview: View {
                     showAddAccountSheet = true
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityLabel("Connect GitHub or Service Account")
+                .accessibilityHint("Opens account credential setup dialog")
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding()
         } else {
-            List(manager.accounts) { account in
+            List(manager.accounts.prefix(maxAccountLimit)) { account in
                 HStack(spacing: 14) {
                     Image(systemName: providerIcon(for: account.provider))
                         .font(.title2)
                         .foregroundStyle(providerColor(for: account.provider))
                         .frame(width: 38, height: 38)
                         .background(providerColor(for: account.provider).opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .accessibilityHidden(true)
 
                     VStack(alignment: .leading, spacing: 3) {
                         HStack {
@@ -110,6 +140,8 @@ struct developeraccountsview: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(account.username), \(account.provider) account. Type: \(account.tokenType), Keychain Secured")
 
                     Spacer()
 
@@ -117,20 +149,25 @@ struct developeraccountsview: View {
                         JuicerHaptic.performClick()
                     }
                     .buttonStyle(.bordered)
+                    .accessibilityLabel("Test Connection for \(account.username)")
+                    .accessibilityHint("Validates \(account.provider) keychain credential")
 
                     Button(action: {
-                        JuicerHaptic.performClick()
-                        manager.removeAccount(account)
+                        removeAccountSafely(account)
                     }) {
                         Image(systemName: "trash")
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
                     .help("Disconnect Account & Purge Keychain Token")
+                    .accessibilityLabel("Disconnect \(account.username) \(account.provider) account")
+                    .accessibilityHint("Removes credentials from macOS Keychain")
+                    .accessibilityIdentifier("delete_account_\(account.id)")
                 }
                 .padding(.vertical, 6)
             }
             .listStyle(.inset)
+            .accessibilityLabel("Connected Developer Accounts List")
         }
     }
 
@@ -181,6 +218,7 @@ struct developeraccountsview: View {
                 Image(systemName: icon)
                     .font(.title2)
                     .foregroundStyle(color)
+                    .accessibilityHidden(true)
                 Text(title)
                     .font(.headline)
                 Spacer()
@@ -200,6 +238,8 @@ struct developeraccountsview: View {
         .padding()
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(color.opacity(0.3), lineWidth: 1))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), \(isConnected ? "Connected" : "Not Linked"). \(desc)")
     }
 
     @ViewBuilder
@@ -209,11 +249,15 @@ struct developeraccountsview: View {
                 Image(systemName: "key.fill")
                     .font(.title2)
                     .foregroundStyle(Color.accentColor)
+                    .accessibilityHidden(true)
                 Text("Connect Developer Account")
                     .font(.title3.bold())
+                    .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button("Cancel") { showAddAccountSheet = false }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("Cancel")
+                    .accessibilityHint("Dismisses the account setup dialog without saving")
             }
 
             VStack(alignment: .leading, spacing: 12) {
@@ -227,37 +271,63 @@ struct developeraccountsview: View {
                     Text("Google Gemini").tag("Gemini")
                 }
                 .pickerStyle(.segmented)
+                .accessibilityLabel("Select Service Provider")
+                .accessibilityHint("Choose the platform or service for this credential")
 
-                Text("Account Username / Identifer:").bold()
+                Text("Account Username / Identifier:").bold()
                 TextField("e.g. octocat or developer@company.com", text: $usernameInput)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Account Username or Identifier")
+                    .accessibilityHint("Type your username, organization, or account email")
 
                 Text("Personal Access Token (PAT) / API Key:").bold()
                 SecureField("ghp_xxxx or sk-proj-xxxx", text: $tokenInput)
                     .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Personal Access Token or API Key")
+                    .accessibilityHint("Type your authentication token or private API key")
 
                 Text("Tokens are hardware-encrypted directly inside the macOS System Keychain using SecItemAdd.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
+            if manager.accounts.count >= maxAccountLimit {
+                Text("Account limit (\(maxAccountLimit)) reached. Disconnect an account to add another.")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .accessibilityLabel("Maximum account limit reached")
+            }
+
             HStack {
                 Spacer()
                 Button("Save Account to Keychain") {
-                    if !usernameInput.isEmpty && !tokenInput.isEmpty {
+                    if isInputValid {
                         JuicerHaptic.performSuccess()
-                        manager.saveToken(provider: selectedProvider, username: usernameInput, token: tokenInput)
+                        manager.saveToken(
+                            provider: selectedProvider,
+                            username: trimmedUsername,
+                            token: trimmedToken
+                        )
                         usernameInput = ""
                         tokenInput = ""
                         showAddAccountSheet = false
                     }
                 }
                 .buttonStyle(.borderedProminent)
-                .disabled(usernameInput.isEmpty || tokenInput.isEmpty)
+                .disabled(!isInputValid)
+                .accessibilityLabel("Save Account to Keychain")
+                .accessibilityHint("Encrypts and saves token in macOS System Keychain")
+                .accessibilityIdentifier("save_account_button")
             }
         }
         .padding(24)
         .frame(width: 520)
+    }
+
+    private func removeAccountSafely(_ account: DeveloperAccount) {
+        guard manager.accounts.contains(where: { $0.id == account.id }) else { return }
+        JuicerHaptic.performClick()
+        manager.removeAccount(account)
     }
 
     private func providerIcon(for provider: String) -> String {
@@ -281,3 +351,4 @@ struct developeraccountsview: View {
         }
     }
 }
+

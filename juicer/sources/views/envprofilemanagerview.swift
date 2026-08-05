@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 typealias EnvProfileManagerView = envprofilemanagerview
 
+@MainActor
 struct envprofilemanagerview: View {
     @StateObject private var manager = EnvProfileManager()
     @State private var maskSecrets = true
@@ -18,6 +19,9 @@ struct envprofilemanagerview: View {
     @State private var isNewSecret = false
     @State private var noticeMessage = ""
     @State private var isNoticeError = false
+
+    private static let maxPathLength = 2048
+    private static let maxProfileNameLength = 128
 
     var filteredProfiles: [EnvProfile] {
         if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -49,6 +53,7 @@ struct envprofilemanagerview: View {
                             HStack {
                                 Image(systemName: "slider.horizontal.3")
                                     .foregroundStyle(Color.accentColor)
+                                    .accessibilityHidden(true)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(profile.name)
                                         .font(.headline)
@@ -57,6 +62,9 @@ struct envprofilemanagerview: View {
                                         .foregroundStyle(.secondary)
                                 }
                             }
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("\(profile.name), \(profile.variables.count) variables")
+                            .accessibilityHint("Selects this environment profile")
                             .tag(profile.id)
                         }
                         .onDelete { indexSet in
@@ -71,6 +79,7 @@ struct envprofilemanagerview: View {
                 }
                 .listStyle(.sidebar)
                 .searchable(text: $searchText, prompt: "Search Profiles")
+                .accessibilityLabel("Environment Profiles List")
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -79,11 +88,15 @@ struct envprofilemanagerview: View {
                             Label("Import", systemImage: "square.and.arrow.down")
                         }
                         .help("Import .env File")
+                        .accessibilityLabel("Import .env File")
+                        .accessibilityHint("Opens file picker to import an environment profile from a .env file")
 
                         Button(action: { showAddProfileSheet = true }) {
                             Image(systemName: "plus")
                         }
                         .help("Create New Env Profile")
+                        .accessibilityLabel("Add New Profile")
+                        .accessibilityHint("Opens dialog to create a new environment profile")
                     }
                 }
             }
@@ -96,16 +109,21 @@ struct envprofilemanagerview: View {
                             Text(profile.name)
                                 .font(.title2)
                                 .bold()
+                                .accessibilityAddTraits(.isHeader)
+                                .accessibilityLabel("Profile: \(profile.name)")
+
                             HStack(spacing: 4) {
                                 if profile.projectPath.isEmpty {
                                     Text("No project path set")
                                         .font(.caption)
                                         .foregroundStyle(.tertiary)
+                                        .accessibilityLabel("No project path set")
                                 } else {
                                     Text(profile.projectPath)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                         .lineLimit(1)
+                                        .accessibilityLabel("Project path: \(profile.projectPath)")
                                 }
                                 Button(action: {
                                     editProjectPath = profile.projectPath
@@ -116,6 +134,8 @@ struct envprofilemanagerview: View {
                                 }
                                 .buttonStyle(.plain)
                                 .help("Edit Project Path")
+                                .accessibilityLabel("Edit Project Path")
+                                .accessibilityHint("Opens dialog to edit project path for this profile")
                             }
                         }
 
@@ -123,6 +143,8 @@ struct envprofilemanagerview: View {
 
                         Toggle("Mask Secrets", isOn: $maskSecrets)
                             .toggleStyle(.switch)
+                            .accessibilityLabel("Mask Secrets")
+                            .accessibilityHint("Toggles visibility of secret variable values")
 
                         Button(action: {
                             exportToEnvFileModal(for: profile)
@@ -131,6 +153,8 @@ struct envprofilemanagerview: View {
                         }
                         .buttonStyle(.bordered)
                         .help("Save atomically to .env file")
+                        .accessibilityLabel("Save to .env file")
+                        .accessibilityHint("Saves profile variables atomically to .env file at project path")
 
                         Button(action: {
                             let str = manager.exportAsEnvString(profile: profile)
@@ -141,6 +165,8 @@ struct envprofilemanagerview: View {
                             Label("Copy .env", systemImage: "doc.on.doc")
                         }
                         .buttonStyle(.bordered)
+                        .accessibilityLabel("Copy .env format")
+                        .accessibilityHint("Copies variables formatted for .env to clipboard")
 
                         Button(action: {
                             let str = manager.exportAsShellExport(profile: profile)
@@ -151,6 +177,8 @@ struct envprofilemanagerview: View {
                             Label("Copy export", systemImage: "terminal")
                         }
                         .buttonStyle(.bordered)
+                        .accessibilityLabel("Copy export commands")
+                        .accessibilityHint("Copies shell export commands to clipboard")
                     }
                     .padding()
                     .background(Color(NSColor.windowBackgroundColor).opacity(0.5))
@@ -166,6 +194,8 @@ struct envprofilemanagerview: View {
                             Spacer()
                         }
                         .background(isNoticeError ? Color.red.opacity(0.1) : Color.green.opacity(0.1))
+                        .accessibilityLabel("Notice: \(noticeMessage)")
+                        .accessibilityAddTraits(.isStaticText)
                     }
 
                     Divider()
@@ -174,15 +204,27 @@ struct envprofilemanagerview: View {
                     HStack(spacing: 10) {
                         TextField("KEY_NAME", text: $newKey)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("New Variable Key Name")
+                            .accessibilityHint("Enter upper case variable key name")
+
                         TextField("Value", text: $newValue)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("New Variable Value")
+                            .accessibilityHint("Enter environment variable value")
+
                         Toggle("Secret", isOn: $isNewSecret)
                             .toggleStyle(.checkbox)
+                            .accessibilityLabel("Mark as Secret")
+                            .accessibilityHint("Hides variable value when secrets are masked")
 
                         Button("Add Variable") {
                             let trimmedKey = newKey.trimmingCharacters(in: .whitespacesAndNewlines)
                             guard isKeyValid else { return }
                             let trimmedVal = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard trimmedVal.count <= EnvProfileManager.maxValueLength else {
+                                showNotice("Value exceeds maximum allowed length (\(EnvProfileManager.maxValueLength) chars).", isError: true)
+                                return
+                            }
 
                             var updatedVars = profile.variables
                             if let idx = updatedVars.firstIndex(where: { $0.key == trimmedKey }) {
@@ -199,6 +241,8 @@ struct envprofilemanagerview: View {
                         }
                         .buttonStyle(.borderedProminent)
                         .disabled(!isKeyValid)
+                        .accessibilityLabel("Add Variable")
+                        .accessibilityHint("Adds or updates variable in the selected profile")
                     }
                     .padding()
 
@@ -212,12 +256,14 @@ struct envprofilemanagerview: View {
                                     .font(.system(.body, design: .monospaced))
                                     .bold()
                                     .frame(width: 200, alignment: .leading)
+                                    .accessibilityLabel("Key: \(item.key)")
 
                                 Spacer()
 
                                 Text(maskSecrets && item.isSecret ? "••••••••••••••••" : item.value)
                                     .font(.system(.body, design: .monospaced))
                                     .foregroundStyle(item.isSecret ? Color.orange : Color.primary)
+                                    .accessibilityLabel(maskSecrets && item.isSecret ? "Value: Hidden Secret" : "Value: \(item.value)")
 
                                 Spacer()
 
@@ -225,6 +271,7 @@ struct envprofilemanagerview: View {
                                     Image(systemName: "lock.fill")
                                         .font(.caption)
                                         .foregroundStyle(.orange)
+                                        .accessibilityLabel("Secret Variable")
                                 }
 
                                 Button(action: {
@@ -237,20 +284,25 @@ struct envprofilemanagerview: View {
                                         .foregroundStyle(.red)
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel("Delete variable \(item.key)")
+                                .accessibilityHint("Removes \(item.key) from current profile")
                             }
                             .padding(.vertical, 4)
                         }
                     }
                     .listStyle(.inset)
+                    .accessibilityLabel("Variables list for \(profile.name)")
                 }
             } else {
                 VStack(spacing: 12) {
                     Image(systemName: "slider.horizontal.3")
                         .font(.system(size: 48))
                         .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
                     Text("Select or Create an Environment Profile")
                         .font(.headline)
                         .foregroundStyle(.secondary)
+                        .accessibilityAddTraits(.isHeader)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -259,19 +311,24 @@ struct envprofilemanagerview: View {
             VStack(spacing: 16) {
                 Text("New Environment Profile")
                     .font(.headline)
+                    .accessibilityAddTraits(.isHeader)
 
                 TextField("Profile Name (e.g. Staging Local)", text: $newProfileName)
                     .textFieldStyle(.roundedBorder)
                     .frame(width: 340)
+                    .accessibilityLabel("Profile Name")
 
                 HStack {
                     TextField("Project Path (e.g. ~/Projects/MyApp)", text: $newProjectPath)
                         .textFieldStyle(.roundedBorder)
+                        .accessibilityLabel("Project Path")
                     Button("Browse...") {
                         selectDirectory { path in
                             newProjectPath = path
                         }
                     }
+                    .accessibilityLabel("Browse Directory")
+                    .accessibilityHint("Opens folder picker to select project path")
                 }
                 .frame(width: 340)
 
@@ -281,16 +338,36 @@ struct envprofilemanagerview: View {
                         newProfileName = ""
                         newProjectPath = ""
                     }
+                    .accessibilityLabel("Cancel profile creation")
+
                     Button("Create") {
-                        if !newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                            manager.addProfile(name: newProfileName, projectPath: newProjectPath)
-                            newProfileName = ""
-                            newProjectPath = ""
-                            showAddProfileSheet = false
+                        let trimmedName = newProfileName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedName.isEmpty, trimmedName.count <= Self.maxProfileNameLength else {
+                            showNotice("Profile name must be between 1 and \(Self.maxProfileNameLength) characters.", isError: true)
+                            return
                         }
+
+                        let trimmedPath = newProjectPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmedPath.isEmpty {
+                            guard trimmedPath.count <= Self.maxPathLength else {
+                                showNotice("Project path exceeds maximum allowed length (\(Self.maxPathLength) chars).", isError: true)
+                                return
+                            }
+                            if case .failure(let error) = EnvProfileManager.normalizeAndValidatePath(trimmedPath) {
+                                showNotice("Invalid project path: \(error.localizedDescription)", isError: true)
+                                return
+                            }
+                        }
+
+                        manager.addProfile(name: trimmedName, projectPath: trimmedPath)
+                        newProfileName = ""
+                        newProjectPath = ""
+                        showAddProfileSheet = false
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(newProfileName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .accessibilityLabel("Create Profile")
+                    .accessibilityHint("Creates profile with specified name and path")
                 }
             }
             .padding(24)
@@ -300,26 +377,45 @@ struct envprofilemanagerview: View {
                 VStack(spacing: 16) {
                     Text("Edit Project Path")
                         .font(.headline)
+                        .accessibilityAddTraits(.isHeader)
 
                     HStack {
                         TextField("Project Path", text: $editProjectPath)
                             .textFieldStyle(.roundedBorder)
+                            .accessibilityLabel("Project Path")
                         Button("Browse...") {
                             selectDirectory { path in
                                 editProjectPath = path
                             }
                         }
+                        .accessibilityLabel("Browse Directory")
+                        .accessibilityHint("Opens folder picker to select project path")
                     }
                     .frame(width: 360)
 
                     HStack {
                         Button("Cancel") { showEditPathSheet = false }
+                            .accessibilityLabel("Cancel editing project path")
+
                         Button("Save") {
-                            profile.projectPath = editProjectPath
+                            let trimmedPath = editProjectPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                            if !trimmedPath.isEmpty {
+                                guard trimmedPath.count <= Self.maxPathLength else {
+                                    showNotice("Project path exceeds maximum allowed length (\(Self.maxPathLength) chars).", isError: true)
+                                    return
+                                }
+                                if case .failure(let error) = EnvProfileManager.normalizeAndValidatePath(trimmedPath) {
+                                    showNotice("Invalid project path: \(error.localizedDescription)", isError: true)
+                                    return
+                                }
+                            }
+                            profile.projectPath = trimmedPath
                             manager.updateProfile(profile)
                             showEditPathSheet = false
                         }
                         .buttonStyle(.borderedProminent)
+                        .accessibilityLabel("Save Project Path")
+                        .accessibilityHint("Saves updated project path to current profile")
                     }
                 }
                 .padding(24)
@@ -330,7 +426,8 @@ struct envprofilemanagerview: View {
     private func showNotice(_ msg: String, isError: Bool) {
         noticeMessage = msg
         isNoticeError = isError
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
             if noticeMessage == msg {
                 noticeMessage = ""
             }
@@ -343,7 +440,12 @@ struct envprofilemanagerview: View {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         if panel.runModal() == .OK, let url = panel.url {
-            completion(url.path)
+            let path = url.path
+            if path.count <= Self.maxPathLength, case .success = EnvProfileManager.normalizeAndValidatePath(path) {
+                completion(path)
+            } else {
+                showNotice("Selected directory path is invalid or too long.", isError: true)
+            }
         }
     }
 
@@ -354,8 +456,13 @@ struct envprofilemanagerview: View {
         panel.allowsMultipleSelection = false
         panel.showsHiddenFiles = true
         if panel.runModal() == .OK, let url = panel.url {
+            let path = url.path
+            guard path.count <= Self.maxPathLength else {
+                showNotice("Import failed: file path exceeds maximum length.", isError: true)
+                return
+            }
             do {
-                let imported = try manager.importProfileFromEnvFile(at: url.path)
+                let imported = try manager.importProfileFromEnvFile(at: path)
                 showNotice("Imported profile '\(imported.name)' safely!", isError: false)
             } catch {
                 showNotice("Import failed: \(error.localizedDescription)", isError: true)
@@ -366,12 +473,17 @@ struct envprofilemanagerview: View {
     private func exportToEnvFileModal(for profile: EnvProfile) {
         var targetFilePath = ""
         if !profile.projectPath.isEmpty {
-            let expanded = (profile.projectPath as NSString).expandingTildeInPath
-            var isDir: ObjCBool = false
-            if FileManager.default.fileExists(atPath: expanded, isDirectory: &isDir) && isDir.boolValue {
-                targetFilePath = (expanded as NSString).appendingPathComponent(".env")
-            } else {
-                targetFilePath = expanded
+            switch EnvProfileManager.normalizeAndValidatePath(profile.projectPath) {
+            case .success(let url):
+                var isDir: ObjCBool = false
+                if FileManager.default.fileExists(atPath: url.path, isDirectory: &isDir) && isDir.boolValue {
+                    targetFilePath = (url.path as NSString).appendingPathComponent(".env")
+                } else {
+                    targetFilePath = url.path
+                }
+            case .failure(let error):
+                showNotice("Export failed: invalid project path - \(error.localizedDescription)", isError: true)
+                return
             }
         }
 
@@ -384,6 +496,11 @@ struct envprofilemanagerview: View {
             } else {
                 return
             }
+        }
+
+        guard targetFilePath.count <= Self.maxPathLength else {
+            showNotice("Export failed: target path exceeds maximum allowed length.", isError: true)
+            return
         }
 
         do {
