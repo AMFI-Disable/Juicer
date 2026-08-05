@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 
+/// Developer Accounts & OAuth Vault View enforcing @MainActor UI safety, account credential list bounds, and VoiceOver accessibility labels.
 @MainActor
 struct developeraccountsview: View {
     @StateObject private var manager = KeychainAccountManager()
