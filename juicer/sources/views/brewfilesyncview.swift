@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct brewfilesyncview: View {
     @StateObject private var manager = BrewManager.shared
     @State private var importConsoleLog = ""
@@ -15,6 +16,7 @@ struct brewfilesyncview: View {
                     Text("Brewfile Backup & Restore")
                         .font(.title2)
                         .bold()
+                        .accessibilityAddTraits(.isHeader)
                     Text("Share your package configuration lists or restore your developer setup on a new Mac.")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -33,6 +35,7 @@ struct brewfilesyncview: View {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 40))
                         .foregroundColor(.blue)
+                        .accessibilityHidden(true)
                     Text("Export Setup (Backup)")
                         .font(.headline)
                         .bold()
@@ -48,6 +51,8 @@ struct brewfilesyncview: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isProcessing)
+                    .accessibilityLabel("Export Brewfile")
+                    .accessibilityHint("Opens a save panel to export your current Homebrew setup into a Brewfile backup.")
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -60,6 +65,7 @@ struct brewfilesyncview: View {
                     Image(systemName: "square.and.arrow.down")
                         .font(.system(size: 40))
                         .foregroundColor(.green)
+                        .accessibilityHidden(true)
                     Text("Import Setup (Restore)")
                         .font(.headline)
                         .bold()
@@ -75,6 +81,8 @@ struct brewfilesyncview: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .disabled(isProcessing)
+                    .accessibilityLabel("Import Brewfile")
+                    .accessibilityHint("Opens a file panel to choose a Brewfile and restore packages.")
                 }
                 .padding()
                 .frame(maxWidth: .infinity)
@@ -92,6 +100,7 @@ struct brewfilesyncview: View {
                     .font(.caption)
                     .bold()
                     .foregroundColor(.secondary)
+                    .accessibilityAddTraits(.isHeader)
 
                 ScrollView {
                     Text(importConsoleLog.isEmpty ? "System idle. Ready to restore..." : importConsoleLog)
@@ -103,6 +112,8 @@ struct brewfilesyncview: View {
                 .background(Color.black.opacity(0.08))
                 .cornerRadius(6)
                 .frame(maxHeight: .infinity)
+                .accessibilityLabel("Restore Logs Console")
+                .accessibilityValue(importConsoleLog.isEmpty ? "System idle. Ready to restore..." : importConsoleLog)
             }
             .padding()
         }
@@ -121,18 +132,28 @@ struct brewfilesyncview: View {
         savePanel.title = "Save Brewfile Backup"
 
         savePanel.begin { response in
-            if response == .OK, let url = savePanel.url {
+            Task { @MainActor in
+                guard response == .OK, let rawURL = savePanel.url else { return }
+                guard self.validateExportURL(rawURL) else {
+                    self.statusMessage = "Export failed: Invalid or restricted destination path."
+                    self.showStatusAlert = true
+                    return
+                }
+
+                let safeURL = rawURL.standardizedFileURL
                 self.isProcessing = true
                 NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
 
-                self.manager.exportBrewfile(to: url) { success in
-                    self.isProcessing = false
-                    if success {
-                        self.statusMessage = "Brewfile successfully exported!"
-                    } else {
-                        self.statusMessage = "Failed to export Brewfile. Check log console."
+                self.manager.exportBrewfile(to: safeURL) { success in
+                    Task { @MainActor in
+                        self.isProcessing = false
+                        if success {
+                            self.statusMessage = "Brewfile successfully exported!"
+                        } else {
+                            self.statusMessage = "Failed to export Brewfile. Check log console."
+                        }
+                        self.showStatusAlert = true
                     }
-                    self.showStatusAlert = true
                 }
             }
         }
@@ -148,22 +169,81 @@ struct brewfilesyncview: View {
         openPanel.title = "Choose Brewfile to Import"
 
         openPanel.begin { response in
-            if response == .OK, let url = openPanel.url {
+            Task { @MainActor in
+                guard response == .OK, let rawURL = openPanel.url else { return }
+                guard self.validateImportURL(rawURL) else {
+                    self.statusMessage = "Import failed: Invalid, unreadable, or restricted file path."
+                    self.showStatusAlert = true
+                    return
+                }
+
+                let safeURL = rawURL.standardizedFileURL
                 self.isProcessing = true
-                self.importConsoleLog = "Beginning bundle restore from \(url.lastPathComponent)...\n"
+                self.importConsoleLog = "Beginning bundle restore from \(safeURL.lastPathComponent)...\n"
                 NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .drawCompleted)
 
-                self.manager.importBrewfile(from: url) { success, log in
-                    self.isProcessing = false
-                    self.importConsoleLog += log
-                    if success {
-                        self.statusMessage = "Brewfile successfully imported and restored!"
-                    } else {
-                        self.statusMessage = "Import execution encountered errors. View console logs."
+                self.manager.importBrewfile(from: safeURL) { success, log in
+                    Task { @MainActor in
+                        self.isProcessing = false
+                        self.importConsoleLog += log
+                        if success {
+                            self.statusMessage = "Brewfile successfully imported and restored!"
+                        } else {
+                            self.statusMessage = "Import execution encountered errors. View console logs."
+                        }
+                        self.showStatusAlert = true
                     }
-                    self.showStatusAlert = true
                 }
             }
         }
     }
+
+    // MARK: - Path Bounds & Safety Validation
+
+    private func validateExportURL(_ url: URL) -> Bool {
+        guard url.isFileURL else { return false }
+        let safeURL = url.standardizedFileURL
+        let path = safeURL.path
+
+        guard !path.isEmpty && path != "/" else { return false }
+
+        let forbiddenPrefixes = ["/System", "/bin", "/sbin", "/usr", "/etc", "/var", "/private"]
+        for prefix in forbiddenPrefixes {
+            if path.hasPrefix(prefix) {
+                return false
+            }
+        }
+
+        let parentDir = safeURL.deletingLastPathComponent().path
+        guard FileManager.default.fileExists(atPath: parentDir) && FileManager.default.isWritableFile(atPath: parentDir) else {
+            return false
+        }
+
+        return true
+    }
+
+    private func validateImportURL(_ url: URL) -> Bool {
+        guard url.isFileURL else { return false }
+        let safeURL = url.standardizedFileURL
+        let path = safeURL.path
+
+        guard !path.isEmpty && path != "/" else { return false }
+
+        let forbiddenPrefixes = ["/System", "/bin", "/sbin", "/usr", "/etc", "/var", "/private"]
+        for prefix in forbiddenPrefixes {
+            if path.hasPrefix(prefix) {
+                return false
+            }
+        }
+
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory),
+              !isDirectory.boolValue,
+              FileManager.default.isReadableFile(atPath: path) else {
+            return false
+        }
+
+        return true
+    }
 }
+
