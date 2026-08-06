@@ -18,6 +18,7 @@ struct storeview: View {
     }
 
     @StateObject private var manager = StoreManager()
+    @StateObject private var analyticsManager = StoreAnalyticsManager()
     @State private var searchText = ""
     @State private var selectedCategory: AppCategory?
     @State private var selectedPricing: StoreApp.PricingTag?
@@ -48,11 +49,14 @@ struct storeview: View {
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 24) {
-                        // 1. Featured Section (Only for "All" view on Page 1)
+                        // Top Charts & Analytics Shelf
                         if filterType == .all && searchText.isEmpty && selectedCategory == nil && selectedPricing == nil && currentPage == 1 {
-                            featuredHeroSection()
+                            topChartsShelf()
                                 .padding(.horizontal)
                                 .padding(.top)
+
+                            featuredHeroSection()
+                                .padding(.horizontal)
                         }
 
                         // 2. Apps List / Grid
@@ -74,6 +78,7 @@ struct storeview: View {
         .onAppear {
             manager.loadStore()
             manager.diagnoseHomebrewLocks()
+            analyticsManager.fetchAnalytics()
         }
     }
 
@@ -213,6 +218,61 @@ struct storeview: View {
                 .cornerRadius(12)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Top Charts & Analytics Shelf
+    @ViewBuilder
+    private func topChartsShelf() -> some View {
+        if !analyticsManager.topCharts.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Top Charts")
+                        .font(.title2).bold()
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    Picker("", selection: Binding(
+                        get: { analyticsManager.selectedHorizon },
+                        set: { newHorizon in
+                            analyticsManager.fetchAnalytics(horizon: newHorizon)
+                        }
+                    )) {
+                        ForEach(AnalyticsTimeHorizon.allCases) { horizon in
+                            Text(horizon.label).tag(horizon)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 220)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(Array(analyticsManager.topCharts.prefix(12).enumerated()), id: \.element.cask) { idx, entry in
+                            HStack(spacing: 10) {
+                                Text("#\(idx + 1)")
+                                    .font(.headline.bold())
+                                    .foregroundStyle(idx < 3 ? Color.orange : Color.secondary)
+                                    .frame(width: 28)
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(entry.cask)
+                                        .font(.body.bold())
+                                        .lineLimit(1)
+                                    Text("\(entry.installCount.formatted()) installs")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                            .padding(10)
+                            .background(Color(NSColor.controlBackgroundColor).opacity(0.4))
+                            .cornerRadius(10)
+                            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.1), lineWidth: 1))
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Featured App Hero Banner
@@ -360,12 +420,27 @@ struct storeview: View {
                         .foregroundColor(app.pricing == .free ? .green : (app.pricing == .freemium ? .orange : .blue))
                         .cornerRadius(4)
 
-                    Text(app.status == .notInstalled ? "Get" : (app.status == .installedViaHomebrew ? "Installed" : "External"))
+                    let (statusText, statusBg, statusFg): (String, Color, Color) = {
+                        switch app.status {
+                        case .notInstalled:
+                            return ("Get", Color.accentColor, .white)
+                        case .installedViaHomebrew:
+                            return ("Installed", Color.green.opacity(0.18), .green)
+                        case .installedExternally:
+                            return ("External", Color.purple.opacity(0.18), .purple)
+                        case .installedViaMAS:
+                            return ("App Store", Color.blue.opacity(0.18), .blue)
+                        case .zombieReceipt:
+                            return ("Zombie", Color.red.opacity(0.18), .red)
+                        }
+                    }()
+
+                    Text(statusText)
                         .font(.system(size: 9)).bold()
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(app.status == .notInstalled ? Color.accentColor : Color.secondary.opacity(0.2))
-                        .foregroundColor(app.status == .notInstalled ? .white : .primary)
+                        .background(statusBg)
+                        .foregroundColor(statusFg)
                         .cornerRadius(4)
                 }
             }
@@ -526,40 +601,103 @@ struct storeview: View {
                         .cornerRadius(8)
                     }
 
+                    // Zombie Cask Banner
+                    if app.status == .zombieReceipt {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.red)
+                                Text("Zombie Receipt Detected")
+                                    .font(.headline)
+                            }
+                            Text("This application is recorded in Homebrew receipts, but its bundle on disk has been deleted. You can purge the orphaned receipt or reinstall the application.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(10)
+                        .background(Color.red.opacity(0.12))
+                        .cornerRadius(8)
+                    }
+
+                    // MAS Notice Banner
+                    if app.status == .installedViaMAS {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Image(systemName: "apple.logo")
+                                    .foregroundStyle(.blue)
+                                Text("Managed by Mac App Store")
+                                    .font(.headline)
+                            }
+                            Text("This application is installed via the Mac App Store. To prevent data corruption, Homebrew modifications are disabled. Please manage or uninstall this application via Finder or Launchpad.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(10)
+                        .background(Color.blue.opacity(0.12))
+                        .cornerRadius(8)
+                    }
+
                     // Action triggers
                     HStack(spacing: 12) {
-                        if app.status == .installedExternally && app.isCask && !app.id.hasPrefix("ext-") {
+                        if app.status == .zombieReceipt {
                             Button(action: {
                                 JuicerHaptic.performClick()
-                                manager.migrateToHomebrewCask(app: app)
-                                showLogs = true
-                            }) {
-                                Label("1-Click Migrate to Homebrew Cask", systemImage: "arrow.triangle.2.circlepath.circle.fill")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.purple)
-                            .disabled(manager.isRunningAction)
-                        }
-
-                        if app.status == .notInstalled {
-                            Button(action: {
-                                manager.runAction(action: "install", app: app)
-                                showLogs = true
-                            }) {
-                                Label("Install Application", systemImage: "square.and.arrow.down")
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(manager.isRunningAction)
-                        } else {
-                            Button(action: {
                                 manager.runAction(action: "uninstall", app: app)
                                 showLogs = true
                             }) {
-                                Label("Uninstall Application", systemImage: "trash")
+                                Label("Purge Orphaned Receipt", systemImage: "trash.slash.fill")
                             }
-                            .buttonStyle(.bordered)
+                            .buttonStyle(.borderedProminent)
                             .tint(.red)
                             .disabled(manager.isRunningAction)
+
+                            Button(action: {
+                                JuicerHaptic.performClick()
+                                manager.runAction(action: "reinstall", app: app)
+                                showLogs = true
+                            }) {
+                                Label("Reinstall App", systemImage: "arrow.clockwise.circle.fill")
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(manager.isRunningAction)
+                        } else if app.status == .installedViaMAS {
+                            Button("Managed by App Store") {}
+                                .buttonStyle(.bordered)
+                                .disabled(true)
+                        } else {
+                            if app.status == .installedExternally && app.isCask && !app.id.hasPrefix("ext-") {
+                                Button(action: {
+                                    JuicerHaptic.performClick()
+                                    manager.migrateToHomebrewCask(app: app)
+                                    showLogs = true
+                                }) {
+                                    Label("1-Click Migrate to Homebrew Cask", systemImage: "arrow.triangle.2.circlepath.circle.fill")
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(.purple)
+                                .disabled(manager.isRunningAction)
+                            }
+
+                            if app.status == .notInstalled {
+                                Button(action: {
+                                    manager.runAction(action: "install", app: app)
+                                    showLogs = true
+                                }) {
+                                    Label("Install Application", systemImage: "square.and.arrow.down")
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(manager.isRunningAction)
+                            } else {
+                                Button(action: {
+                                    manager.runAction(action: "uninstall", app: app)
+                                    showLogs = true
+                                }) {
+                                    Label("Uninstall Application", systemImage: "trash")
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(.red)
+                                .disabled(manager.isRunningAction)
+                            }
                         }
 
                         // Updates tab upgrade

@@ -66,6 +66,8 @@ struct StoreApp: Identifiable, Codable, Hashable {
         case notInstalled = "Not Installed"
         case installedViaHomebrew = "Installed via Homebrew"
         case installedExternally = "Installed Externally"
+        case installedViaMAS = "Installed via Mac App Store"
+        case zombieReceipt = "Zombie Receipt (App Deleted)"
     }
 }
 
@@ -617,17 +619,29 @@ class StoreManager: ObservableObject {
 
             if app.isCask {
                 if caskroomInstalled.contains(lowerId) {
-                    updated[i].status = .installedViaHomebrew
-                    for appName in app.appNames { matchedAppNameSet.insert(appName) }
+                    let hasDiskApp = app.appNames.contains { installedAppsSet.contains($0) }
+                    if !app.appNames.isEmpty && !hasDiskApp {
+                        updated[i].status = .zombieReceipt
+                    } else {
+                        updated[i].status = .installedViaHomebrew
+                        for appName in app.appNames { matchedAppNameSet.insert(appName) }
+                    }
                 } else {
+                    var foundMAS = false
                     let existsInApps = app.appNames.contains { appName in
                         if installedAppsSet.contains(appName) {
                             matchedAppNameSet.insert(appName)
+                            if let appPath = installedAppsDict[appName],
+                               fm.fileExists(atPath: "\(appPath)/Contents/_MASReceipt") {
+                                foundMAS = true
+                            }
                             return true
                         }
                         return false
                     }
-                    if existsInApps {
+                    if foundMAS {
+                        updated[i].status = .installedViaMAS
+                    } else if existsInApps {
                         updated[i].status = .installedExternally
                     } else {
                         updated[i].status = .notInstalled
@@ -689,9 +703,15 @@ class StoreManager: ObservableObject {
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self else { return }
-
             let proc = Process()
             proc.executableURL = URL(fileURLWithPath: "/bin/sh")
+
+            let askpassURL = AskpassScriptManager.create(token: token)
+            var env = ProcessInfo.processInfo.environment
+            if let askpassURL {
+                env["SUDO_ASKPASS"] = askpassURL.path
+            }
+            proc.environment = env
 
             let args: [String]
             if isCask {
