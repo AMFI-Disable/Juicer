@@ -36,3 +36,7 @@ galleries/
 .vercel
 .env*
 .aider*
+
+# extracted products are maintained as independent repositories
+brewstore/
+juicerkit/
