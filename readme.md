@@ -17,6 +17,8 @@
 
 Juicer is the ultimate open-source companion utility for **macOS developers and power users**. It is a 100% free, local-first suite that consolidates package managers, disk analyzers, app uninstallers, launchd editors, developer cache pruners, hosts file editors, and system tweaks into a high-performance native SwiftUI app.
 
+> Prefer a focused Homebrew experience? BrewStore is being extracted as an independent Juicer family app for casks, formulae, services, taps, updates, and preview-first removal of Homebrew-installed apps. The all-in-one Juicer Suite remains available for advanced users.
+
 ---
 
 ## 🧭 Bundled Workspace Companion Suite (V1.1.0)
