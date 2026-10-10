@@ -60,6 +60,7 @@ Juicer organizes its extensive feature set across **16 specialized companion wor
 ## 🍺 Installation
 
 ### Method A: Install via Homebrew Tap (Recommended)
+
 Install Juicer using our official Homebrew Tap:
 
 ```bash
@@ -70,7 +71,30 @@ brew tap AMFI-Disable/juicer
 brew install --cask juicer
 ```
 
-### Method B: Build from Source
+### Method B: Manual DMG Package (GitHub Releases)
+
+Download the verified `.dmg` package from [GitHub Releases](https://github.com/AMFI-Disable/Juicer/releases). Verify the SHA-256 checksum after download:
+
+```bash
+shasum -a 256 juicer-1.1.3.dmg
+```
+
+#### macOS Gatekeeper Clearance (Unnotarized Open-Source Build)
+
+Because Juicer is an open-source build provided without a paid Apple Developer ID certificate ($99/year), macOS Gatekeeper quarantines downloaded application bundles on first launch.
+
+To clear the quarantine flag via Terminal:
+
+```bash
+sudo xattr -r -c /Applications/Juicer.app
+```
+
+Alternatively, open **System Settings > Privacy & Security**, scroll down to the Security section, and click **Open Anyway** (or hold `Control` while clicking the app in Finder and select **Open**).
+
+---
+
+### Method C: Build from Source
+
 Juicer can be compiled locally from source:
 
 ```bash
@@ -94,6 +118,7 @@ xcodebuild build -project juicer.xcodeproj -scheme juicer -configuration Release
 - **Project Generator**: Uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to build `juicer.xcodeproj` from `project.yml`.
 
 To build locally:
+
 ```bash
 brew install xcodegen
 xcodegen generate
