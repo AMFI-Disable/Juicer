@@ -64,7 +64,7 @@ Install Juicer using our official Homebrew Tap:
 
 ```bash
 # Tap the repository
-brew tap amfi-disable/juicer
+brew tap AMFI-Disable/juicer
 
 # Install Juicer Cask
 brew install --cask juicer

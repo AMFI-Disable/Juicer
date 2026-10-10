@@ -205,13 +205,13 @@ struct juicerapp: App {
                 .keyboardShortcut("?", modifiers: [.command])
 
                 Button("Submit Feedback...") {
-                    if let url = URL(string: "https://github.com/amfi-disable/Juicer/issues") {
+                    if let url = URL(string: "https://github.com/AMFI-Disable/Juicer/issues") {
                         NSWorkspace.shared.open(url)
                     }
                 }
 
                 Button("View Online Documentation") {
-                    if let url = URL(string: "https://github.com/amfi-disable/Juicer") {
+                    if let url = URL(string: "https://github.com/AMFI-Disable/Juicer") {
                         NSWorkspace.shared.open(url)
                     }
                 }

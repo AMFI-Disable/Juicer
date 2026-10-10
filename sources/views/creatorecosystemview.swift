@@ -37,7 +37,7 @@ struct creatorecosystemview: View {
         // Apps
         CreatorRepoItem(
             name: "Juicer",
-            repository: "amfi-disable/Juicer",
+            repository: "AMFI-Disable/Juicer",
             category: "Apps",
             description: "The ultimate 15-studio macOS developer workbench, system cleaner, and companion suite.",
             iconName: "shippingbox.fill",
@@ -48,8 +48,20 @@ struct creatorecosystemview: View {
             brewCommand: "brew install --cask juicer"
         ),
         CreatorRepoItem(
+            name: "BrewStore",
+            repository: "AMFI-Disable/BrewStore",
+            category: "Apps",
+            description: "Modern graphical App Store and repository manager for Homebrew formulas and casks.",
+            iconName: "cart.fill",
+            themeColor: .indigo,
+            tag: "FLAGSHIP",
+            language: "Swift / SwiftUI",
+            starsCount: "v1.0.0",
+            brewCommand: "brew install --cask brewstore"
+        ),
+        CreatorRepoItem(
             name: "Brew-Ghost",
-            repository: "amfi-disable/Brew-Ghost",
+            repository: "AMFI-Disable/Brew-Ghost",
             category: "Apps",
             description: "Automated ghost package finder, orphan formula scanner, and Homebrew cellar cleaner.",
             iconName: "ghost.fill",
@@ -61,7 +73,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "OmniSuite",
-            repository: "amfi-disable/OmniSuite",
+            repository: "AMFI-Disable/OmniSuite",
             category: "Apps",
             description: "Modular system productivity & developer workbench for high-efficiency macOS workflows.",
             iconName: "square.stack.3d.up.fill",
@@ -73,7 +85,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "PathDeck",
-            repository: "amfi-disable/PathDeck",
+            repository: "AMFI-Disable/PathDeck",
             category: "Apps",
             description: "Streamlined workspace path launcher, hotkey trigger, and directory navigator.",
             iconName: "square.grid.3x3.topleft.filled",
@@ -87,7 +99,7 @@ struct creatorecosystemview: View {
         // Extensions
         CreatorRepoItem(
             name: "FMG_Free-MapGenie",
-            repository: "amfi-disable/FMG_Free-MapGenie",
+            repository: "AMFI-Disable/FMG_Free-MapGenie",
             category: "Extensions",
             description: "Chromium & Firefox extension unlocking all premium interactive maps on MapGenie.",
             iconName: "puzzlepiece.extension.fill",
@@ -100,8 +112,8 @@ struct creatorecosystemview: View {
 
         // Meta
         CreatorRepoItem(
-            name: "amfi-disable Profile",
-            repository: "amfi-disable/amfi-disable",
+            name: "AMFI-Disable Profile",
+            repository: "AMFI-Disable/AMFI-Disable",
             category: "Meta",
             description: "GitHub organization profile, README showcase, and community highlights.",
             iconName: "person.crop.circle.fill",
@@ -115,7 +127,7 @@ struct creatorecosystemview: View {
         // Tooling
         CreatorRepoItem(
             name: "homebrew-juicer",
-            repository: "amfi-disable/homebrew-juicer",
+            repository: "AMFI-Disable/homebrew-juicer",
             category: "Tooling",
             description: "Official Homebrew Cask tap repository for installing and updating Juicer via brew.",
             iconName: "mug.fill",
@@ -123,11 +135,11 @@ struct creatorecosystemview: View {
             tag: "CASK TAP",
             language: "Ruby",
             starsCount: "Tap",
-            brewCommand: "brew tap amfi-disable/juicer"
+            brewCommand: "brew tap AMFI-Disable/juicer"
         ),
         CreatorRepoItem(
             name: "Homebrew-Tap",
-            repository: "amfi-disable/Homebrew-Tap",
+            repository: "AMFI-Disable/Homebrew-Tap",
             category: "Tooling",
             description: "Community Homebrew formula tap containing custom CLI tools and developer binaries.",
             iconName: "terminal.fill",
@@ -135,13 +147,13 @@ struct creatorecosystemview: View {
             tag: "FORMULA TAP",
             language: "Ruby",
             starsCount: "Tap",
-            brewCommand: "brew tap amfi-disable/tap"
+            brewCommand: "brew tap AMFI-Disable/tap"
         ),
 
         // Scripts
         CreatorRepoItem(
             name: "GeoFS-V3.9_Core-Library",
-            repository: "amfi-disable/GeoFS-V3.9_Core-Library",
+            repository: "AMFI-Disable/GeoFS-V3.9_Core-Library",
             category: "Scripts",
             description: "Foundation API for the GeoFS module framework, initializing standard telemetry.",
             iconName: "airplane",
@@ -153,7 +165,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Realism-Pack",
-            repository: "amfi-disable/GeoFS-V3.9_Realism-Pack",
+            repository: "AMFI-Disable/GeoFS-V3.9_Realism-Pack",
             category: "Scripts",
             description: "Advanced simulator physics, camera shake, visual effects, and environmental feedback.",
             iconName: "airplane",
@@ -165,7 +177,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Autothrottle",
-            repository: "amfi-disable/GeoFS-V3.9_Autothrottle",
+            repository: "AMFI-Disable/GeoFS-V3.9_Autothrottle",
             category: "Scripts",
             description: "Precision PID-based autothrottle panel with auto-retard landing mode.",
             iconName: "airplane",
@@ -177,7 +189,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Failure-Simulator",
-            repository: "amfi-disable/GeoFS-V3.9_Failure-Simulator",
+            repository: "AMFI-Disable/GeoFS-V3.9_Failure-Simulator",
             category: "Scripts",
             description: "Randomized emergency systems failures engine for flight training scenarios.",
             iconName: "airplane",
@@ -189,7 +201,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Information-Display",
-            repository: "amfi-disable/GeoFS-V3.9_Information-Display",
+            repository: "AMFI-Disable/GeoFS-V3.9_Information-Display",
             category: "Scripts",
             description: "Glassmorphic telemetry instrumentation HUD displaying real-time aero data.",
             iconName: "airplane",
@@ -201,7 +213,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Landing-Statistics",
-            repository: "amfi-disable/GeoFS-V3.9_Landing-Statistics",
+            repository: "AMFI-Disable/GeoFS-V3.9_Landing-Statistics",
             category: "Scripts",
             description: "Touchdown analyzer tracking vertical speed, G-force impact, and runway roll.",
             iconName: "airplane",
@@ -213,7 +225,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Checklist-System",
-            repository: "amfi-disable/GeoFS-V3.9_Checklist-System",
+            repository: "AMFI-Disable/GeoFS-V3.9_Checklist-System",
             category: "Scripts",
             description: "Interactive pre-flight, takeoff, cruise, and landing checklists for aircraft.",
             iconName: "airplane",
@@ -225,7 +237,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Fuel-Simulator",
-            repository: "amfi-disable/GeoFS-V3.9_Fuel-Simulator",
+            repository: "AMFI-Disable/GeoFS-V3.9_Fuel-Simulator",
             category: "Scripts",
             description: "Simulated fuel burn engine modifying aircraft weight and center of gravity.",
             iconName: "airplane",
@@ -237,7 +249,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Flight-Path-Vector",
-            repository: "amfi-disable/GeoFS-V3.9_Flight-Path-Vector",
+            repository: "AMFI-Disable/GeoFS-V3.9_Flight-Path-Vector",
             category: "Scripts",
             description: "Head-up display vector showing actual flight path velocity direction.",
             iconName: "airplane",
@@ -249,7 +261,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Overpowered-Engines",
-            repository: "amfi-disable/GeoFS-V3.9_Overpowered-Engines",
+            repository: "AMFI-Disable/GeoFS-V3.9_Overpowered-Engines",
             category: "Scripts",
             description: "Bypass typical thrust coefficient limits with simulated booster scaling.",
             iconName: "airplane",
@@ -261,7 +273,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Addon-Pack",
-            repository: "amfi-disable/GeoFS-V3.9_Addon-Pack",
+            repository: "AMFI-Disable/GeoFS-V3.9_Addon-Pack",
             category: "Scripts",
             description: "Aggregated flight scripts bundled with standard autopilot configuration.",
             iconName: "airplane",
@@ -273,7 +285,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Design-System",
-            repository: "amfi-disable/GeoFS-V3.9_Design-System",
+            repository: "AMFI-Disable/GeoFS-V3.9_Design-System",
             category: "Scripts",
             description: "Standard orange and dark theme UI layout components and telemetry panels.",
             iconName: "airplane",
@@ -285,7 +297,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "GeoFS-V3.9_Assets",
-            repository: "amfi-disable/GeoFS-V3.9_Assets",
+            repository: "AMFI-Disable/GeoFS-V3.9_Assets",
             category: "Scripts",
             description: "Asset storage server for sounds, layout templates, and custom avionics.",
             iconName: "airplane",
@@ -297,7 +309,7 @@ struct creatorecosystemview: View {
         ),
         CreatorRepoItem(
             name: "Gimkit-Seller",
-            repository: "amfi-disable/Gimkit-Seller",
+            repository: "AMFI-Disable/Gimkit-Seller",
             category: "Scripts",
             description: "Browser automation script facilitating batch cosmetic transactions on Gimkit.",
             iconName: "cart.fill",
@@ -354,7 +366,7 @@ struct creatorecosystemview: View {
                             .foregroundColor(.orange)
                     }
 
-                    Text("Explore, clone, install Homebrew taps, and manage open-source software by amfi-disable")
+                    Text("Explore, clone, install Homebrew taps, and manage open-source software by AMFI-Disable")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -364,8 +376,8 @@ struct creatorecosystemview: View {
                 HStack(spacing: 10) {
                     Button(action: {
                         NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString("brew tap amfi-disable/juicer", forType: .string)
-                        cloneStatusMessage = "Copied 'brew tap amfi-disable/juicer' to clipboard!"
+                        NSPasteboard.general.setString("brew tap AMFI-Disable/juicer", forType: .string)
+                        cloneStatusMessage = "Copied 'brew tap AMFI-Disable/juicer' to clipboard!"
                         cloneStatusColor = .cyan
                     }) {
                         HStack(spacing: 5) {
@@ -376,7 +388,7 @@ struct creatorecosystemview: View {
                     .buttonStyle(.bordered)
 
                     Button(action: {
-                        if let url = URL(string: "https://github.com/amfi-disable") {
+                        if let url = URL(string: "https://github.com/AMFI-Disable") {
                             NSWorkspace.shared.open(url)
                         }
                     }) {

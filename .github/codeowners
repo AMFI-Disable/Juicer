@@ -1,14 +1,14 @@
 # Code Owners for Juicer
 
 # Default owners for everything in the repository
-*       @amfi-disable
+*       @AMFI-Disable
 
 # Swift app source code
-/sources/ @amfi-disable
-/tests/ @amfi-disable
+/sources/ @AMFI-Disable
+/tests/ @AMFI-Disable
 
 # Build configuration and project definition
-/project.yml @amfi-disable
+/project.yml @AMFI-Disable
 
 # GitHub Workflows and Actions
-/.github/workflows/ @amfi-disable
+/.github/workflows/ @AMFI-Disable

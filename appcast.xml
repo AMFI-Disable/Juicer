@@ -2,7 +2,7 @@
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
     <channel>
         <title>Juicer updates</title>
-        <link>https://raw.githubusercontent.com/amfi-disable/Juicer/main/appcast.xml</link>
+        <link>https://raw.githubusercontent.com/AMFI-Disable/Juicer/main/appcast.xml</link>
         <description>Juicer update feed</description>
     </channel>
 </rss>

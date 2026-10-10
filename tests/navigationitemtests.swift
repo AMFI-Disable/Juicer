@@ -5,7 +5,7 @@ final class navigationitemtests: XCTestCase {
     func testWorkspaceMetadataIsStable() {
         XCTAssertEqual(JuicerWorkspace.hub.id, "Juicer Hub Studio")
         XCTAssertEqual(JuicerWorkspace.containers.title, "Juicer Docker Studio")
-        XCTAssertEqual(JuicerWorkspace.creator.description, "Explore open-source software, clone repositories, and copy brew formulas by amfi-disable.")
+        XCTAssertEqual(JuicerWorkspace.creator.description, "Explore open-source software, clone repositories, and copy brew formulas by AMFI-Disable.")
 
         for workspace in JuicerWorkspace.allCases {
             XCTAssertFalse(workspace.id.isEmpty)

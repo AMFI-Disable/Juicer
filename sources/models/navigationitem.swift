@@ -60,7 +60,7 @@ enum JuicerWorkspace: String, CaseIterable, Identifiable {
         case .converter: return "Offline converter for documents, images, code schemas, archives, and media."
         case .configs: return "App uninstaller, launch daemons, and system tweaks."
         case .utilities: return "Window tiler, clipboard manager, hot corners, and desktop tools."
-        case .creator: return "Explore open-source software, clone repositories, and copy brew formulas by amfi-disable."
+        case .creator: return "Explore open-source software, clone repositories, and copy brew formulas by AMFI-Disable."
         }
     }
 

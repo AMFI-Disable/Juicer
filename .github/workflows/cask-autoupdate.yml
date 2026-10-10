@@ -20,22 +20,22 @@ jobs:
           TAG_NAME="${{ github.event.release.tag_name }}"
           # Clean version (strip V/v prefix if present)
           VERSION=$(echo "${TAG_NAME}" | sed 's/[Vv]//')
-          DOWNLOAD_URL="https://github.com/amfi-disable/Juicer/releases/download/${TAG_NAME}/juicer.zip"
-          
+          DOWNLOAD_URL="https://github.com/AMFI-Disable/Juicer/releases/download/${TAG_NAME}/juicer.zip"
+
           echo "Downloading juicer.zip from ${DOWNLOAD_URL}..."
           curl -L -o juicer.zip "${DOWNLOAD_URL}"
-          
+
           SHA256=$(sha256sum juicer.zip | awk '{print $1}')
           echo "Calculated SHA256: ${SHA256}"
-          
+
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
           echo "download_url=${DOWNLOAD_URL}" >> $GITHUB_OUTPUT
 
-      - name: Checkout homebrew-juicer Tap
+      - name: Checkout Homebrew-Juicer Tap
         uses: actions/checkout@v6
         with:
-          repository: amfi-disable/homebrew-juicer
+          repository: AMFI-Disable/Homebrew-Juicer
           token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
           path: homebrew-juicer
 
@@ -44,19 +44,19 @@ jobs:
           cd homebrew-juicer
           VERSION="${{ steps.calc_hash.outputs.version }}"
           SHA256="${{ steps.calc_hash.outputs.sha256 }}"
-          
+
           # Replace version and sha256 in casks/juicer.rb
           sed -i "s|version \".*\"|version \"${VERSION}\"|g" casks/juicer.rb
           sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|g" casks/juicer.rb
-          
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add casks/juicer.rb
-          
+
           # Commit and push changes if updated
           if git diff --staged --quiet; then
             echo "No changes to Cask definition."
           else
-            git commit -m "chore: bump juicer cask to version ${VERSION}"
+            git commit -m "chore: bump juicer cask"
             git push origin main
           fi

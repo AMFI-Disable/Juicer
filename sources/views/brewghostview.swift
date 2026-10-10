@@ -60,21 +60,21 @@ struct brewghostview: View {
                             .foregroundStyle(.secondary)
 
                         Button(action: {
-                            if let url = URL(string: "https://github.com/amfi-disable/Brew-Ghost") {
+                            if let url = URL(string: "https://github.com/AMFI-Disable/Brew-Ghost") {
                                 NSWorkspace.shared.open(url)
                             }
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "arrow.up.right.square.fill")
                                     .accessibilityHidden(true)
-                                Text("amfi-disable/Brew-Ghost")
+                                Text("AMFI-Disable/Brew-Ghost")
                             }
                             .font(.caption.bold())
                             .foregroundColor(.purple)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("Open amfi-disable Brew-Ghost repository on GitHub")
-                        .accessibilityHint("Opens github.com/amfi-disable/Brew-Ghost in default browser")
+                        .accessibilityLabel("Open AMFI-Disable Brew-Ghost repository on GitHub")
+                        .accessibilityHint("Opens github.com/AMFI-Disable/Brew-Ghost in default browser")
                     }
                 }
 

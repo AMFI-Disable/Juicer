@@ -34,7 +34,7 @@
 	<key>NSLocationUsageDescription</key>
 	<string>Juicer uses location access only for location and network auditing.</string>
 	<key>SUFeedURL</key>
-	<string>https://raw.githubusercontent.com/amfi-disable/Juicer/main/appcast.xml</string>
+	<string>https://raw.githubusercontent.com/AMFI-Disable/Juicer/main/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>w4hP3XF7C+oZgD6a/L24qY21Jp/x6WjCskfNf/10+4k=</string>
 </dict>

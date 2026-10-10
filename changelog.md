@@ -1,17 +1,25 @@
-# changelog
+# Changelog
+
+## V1.1.4 — 2026-10-10
+
+### Added
+
+- Added `BrewStore` flagship repository to Creator Ecosystem view.
+- Aligned organization ownership, tap endpoints, and repository links to `AMFI-Disable`.
+- Restored `StoreManager` model and validated unit test suite (71 tests passing).
 
 ## V1.1.3 — 2026-08-06
 
-### added
+### Added
 
 - **Complete CaskHub Integration Suite**: Native GUI sudo dialog (`SUDO_ASKPASS`), 30d/90d/365d analytics top charts shelf, zombie cask repair, MAS receipt safeguards, and HTTP HEAD download size resolver.
-- **Homebrew Cask Upgrade**: Official release V1.1.3 published to `amfi-disable/homebrew-juicer`.
+- **Homebrew Cask Upgrade**: Official release V1.1.3 published to `AMFI-Disable/Homebrew-Juicer`.
 
 ---
 
 ## V1.1.2 — 2026-08-06
 
-### added
+### Added
 
 - **Native Password Authorization (`SUDO_ASKPASS`)**: Native macOS Security prompt for privileged `.pkg` cask installations.
 - **Top Charts & Popularity Shelf**: Live 30-day, 90-day, and 1-year Homebrew cask popularity rankings.
@@ -22,7 +30,7 @@
 
 ## V1.1.1 — 2026-08-06
 
-### added
+### Added
 
 - **Juicer Store Studio Package Adoption**: `--adopt` preflight checks and `--force` replace fallbacks.
 - **Homebrew Locks Auto-Fixer**: Automatic detection and 1-click purging of stale lock files.
@@ -32,7 +40,7 @@
 
 ## V1.1.0 — 2026-07-25
 
-### added
+### Added
 
 - **Global Command Palette (`Cmd+Shift+K`)**: Instant search overlay across 40+ Juicer tools.
 - **SDK Version Manager**: Manage Node.js, Python, Ruby, Rust, and Homebrew versions.
@@ -42,7 +50,7 @@
 
 ## V1.0.3 — 2026-07-22
 
-### added
+### Added
 
 - **Environment Variable Profiles & Secret Masker**: Manage `.env` profiles and mask credentials.
 - **Per-Process Real-Time Network Bandwidth Monitor**: Live download/upload tracking per process.
@@ -54,7 +62,7 @@
 
 ## V1.0.1 — 2026-07-20
 
-### fixed
+### Fixed
 
 - Concurrency safety and type-safe Accessibility API error bounds.
 - Embedded high-res `AppIcon.icns` asset and Homebrew cask auto-updates.
@@ -63,6 +71,6 @@
 
 ## V1.0.0 — 2026-07-15
 
-### added
+### Added
 
 - **Initial Launch**: Developer Cache Pruner, Storage Analyzer, Deep Uninstaller, System Tweaks, Network Monitor, and System Menu Bar Extras.
