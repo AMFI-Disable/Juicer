@@ -24,5 +24,5 @@ These rules apply to all AI coding agents (GitHub Copilot Agent, Claude Code, An
 
 ## 5. File Directory & Path Stability (CodeRabbit Enforcement)
 - **DO NOT modify, move, or rename existing file directories or path structures without explicit user approval.**
-- CodeRabbit and custom pre-merge checks monitor path patterns (`juicer/sources/views/**`, `juicer/sources/models/**`, `project.yml`).
+- CodeRabbit and custom pre-merge checks monitor path patterns (`sources/views/**`, `sources/models/**`, `project.yml`).
 - Arbitrary file directory changes or renaming existing folders will break CodeRabbit path rules and trigger automated pre-merge check rejections.

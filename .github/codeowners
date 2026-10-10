@@ -4,13 +4,11 @@
 *       @amfi-disable
 
 # Swift app source code
-/juicer/ @amfi-disable
+/sources/ @amfi-disable
+/tests/ @amfi-disable
 
 # Build configuration and project definition
 /project.yml @amfi-disable
 
 # GitHub Workflows and Actions
 /.github/workflows/ @amfi-disable
-
-# Python subpackage
-/my_clean_crew/ @amfi-disable

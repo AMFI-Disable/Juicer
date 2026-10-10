@@ -6,7 +6,7 @@ Run these commands from the repository root:
 
 ```bash
 xcodegen generate
-swiftc -parse $(find juicer/sources -name '*.swift' -print)
+swiftc -parse $(find sources -name '*.swift' -print)
 xcodebuild build -project juicer.xcodeproj -scheme juicer -configuration Release -sdk macosx -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' CODE_SIGNING_REQUIRED=NO
 git diff --check
 ```

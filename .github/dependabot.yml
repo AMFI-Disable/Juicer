@@ -8,12 +8,3 @@ updates:
     labels:
       - "dependencies"
       - "actions"
-
-  # Maintain Python dependencies in my_clean_crew
-  - package-ecosystem: "pip"
-    directory: "/my_clean_crew"
-    schedule:
-      interval: "weekly"
-    labels:
-      - "dependencies"
-      - "python"

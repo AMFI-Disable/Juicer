@@ -1,51 +1,74 @@
 # repository layout
 
-Juicer uses a small public root and separates product documentation from implementation.
+Juicer keeps the public root small, groups implementation by role, and keeps
+machine-specific work under an ignored `.local/` directory.
 
 ## public and tracked
 
 ```text
-juicer/
-  sources/
-    models/
-    views/
-    resources/
+sources/
+  models/
+  services/
+  views/
+  resources/
+tests/
 project.yml
 readme.md
 license
 security.md
 contributing.md
 code_of_conduct.md
+changelog.md
+appcast.xml
 docs/
+  releases/
+  capability-matrix.md
   feature-opportunities.md
   open-source-feature-audit.md
+  release-checklist.md
   ui-improvements.md
+web/
 ```
 
-The public surface should contain source code, reproducible project generation, product documentation, legal policy, security guidance, and screenshots that are intentionally part of the project presentation.
+The public surface contains source code, reproducible project generation,
+product documentation, release notes, legal policy, security guidance, and
+the download website.
 
 ## local-only
 
 ```text
-build/
-juicer.xcodeproj/
-DerivedData/
-*.xcuserstate
-*.zip
-.claude/
-codex.md
-opencode.json
-my_clean_crew/
-galleries/
+.local/
+  assets/galleries/
+  artifacts/
+  build/
+  metadata/
+  reports/
+  tools/my_clean_crew/
 ```
 
-These are generated outputs, machine-specific settings, local agent instructions, unrelated workspace material, or distribution artifacts. They should not be used as the source of truth or committed accidentally.
+`.local/` is ignored by `.gitignore` and is the home for generated builds,
+archives, internal reports, screenshots that are not part of the public
+website, and the auxiliary local agent project. The generated
+`juicer.xcodeproj/` remains at the root for Xcode convenience but is also
+ignored and must always be regenerated from `project.yml`.
+
+Root-level agent settings and deployment metadata remain in their conventional
+locations when tools require those paths; `.gitignore` keeps them out of the
+public repository.
 
 ## organization rules
 
-- Keep Swift files grouped by role under `juicer/sources/models`, `juicer/sources/views`, and `juicer/sources/resources`.
-- Keep roadmap, audits, and UI planning under `docs/`.
-- Keep root files limited to project entry points, legal policy, and contributor-facing documentation.
-- Generate `juicer.xcodeproj` from `project.yml` instead of committing the generated project.
-- Store release archives in GitHub Releases or a package registry, not in Git history.
+- Keep Swift implementation under `sources/models`, `sources/services`, and
+  `sources/views`; keep app resources under `sources/resources`.
+- Keep XCTest files under `tests/`.
+- Keep roadmap, audits, release notes, and UI planning under `docs/`.
+- Keep release notes under `docs/releases/`; keep `changelog.md` at the root
+  for repository hosting conventions.
+- Keep generated projects and build products local and ignored.
+- Make changes to project structure in `project.yml`, then run `xcodegen
+  generate`.
 - Use lowercase names for every new file and folder.
+
+`.gitignore` controls future visibility of untracked files. It cannot remove a
+file that has already been committed from repository history; that would
+require a separate, explicitly authorized Git operation.

@@ -1,38 +1,44 @@
-# macos and editor noise
+# macOS and editor noise
 .DS_Store
 .AppleDouble
 .LSOverride
 *.swp
 *.swo
 
-# xcode generated projects and build output
-build/
-DerivedData/
+# Xcode-generated projects, user metadata, and build output
 *.xcodeproj/
 *.xcworkspace/
 *.xcuserstate
 *.xcscmblueprint
+/build/
+/DerivedData/
 
-# local-only app data and archives
-userdata/
-*.zip
+# Local workspace material
+/.local/
+/report.md
+/task.md
+/plan.md
+/juicer.zip
 *.dmg
 *.pkg
 *.app
 
-# local agent, automation, and editor configuration
-.claude/
-.codex/
-codex.md
-opencode.json
+# Local agent, automation, and deployment configuration
+/.aider*
+/.claude/
+/.codex/
+/.env
+/.env.local
+/.env.*.local
+/.hermes.json
+/antigravity.json
+/codex.md
+/opencode.json
+/.vercel/
+web/.vercel/
 
-# private or unrelated workspace material
-my-clean-crew/
-my_clean_crew/
-galleries/
-
-# keep public documentation under docs/
-# keep project.yml, source files, legal files, and readme.md tracked
-.vercel
-.env*
-.aider*
+# Legacy paths now consolidated under .local/
+/galleries/
+/my_clean_crew/
+/my-clean-crew/
+/.nodeterm/

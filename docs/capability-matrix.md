@@ -21,12 +21,12 @@ No workspace currently meets the repository's own definition of `production`. Wo
 | --- | ---: | --- |
 | Top-level workspaces | 16 | Counted enum cases in `JuicerWorkspace`. |
 | Navigation items | 169 | Expanded every comma-separated case in `NavigationItem`; this excludes the separate Store sub-navigation and catalog actions. |
-| Model files | 73 | Counted Swift files under `juicer/sources/models`. |
-| Service files | 5 | Counted Swift files under `juicer/sources/services`. |
-| View files | 163 | Counted Swift files under `juicer/sources/views`. |
-| Source files instantiating `Process` | 29 | `rg -l '\bProcess\s*\(' juicer/sources --glob '*.swift'`; 28 are outside `commandexecutor.swift`. This is a file count, not an invocation count. |
+| Model files | 73 | Counted Swift files under `sources/models`. |
+| Service files | 5 | Counted Swift files under `sources/services`. |
+| View files | 163 | Counted Swift files under `sources/views`. |
+| Source files instantiating `Process` | 29 | `rg -l '\bProcess\s*\(' sources --glob '*.swift'`; 28 are outside `commandexecutor.swift`. This is a file count, not an invocation count. |
 | XCTest targets | 1 | `juicerTests` in `project.yml`, attached to the `juicer` scheme. |
-| XCTest classes / methods | 2 / 10 | Two `XCTestCase` subclasses; ten `func test…()` methods under `juicer/tests`. |
+| XCTest classes / methods | 2 / 10 | Two `XCTestCase` subclasses; ten `func test…()` methods under `tests/`. |
 | Directly tested ownership areas | 2 | Navigation metadata (3 tests) and `CommandExecutor` behavior (4 tests). |
 
 The baseline is reproducible from source and intentionally does not quote a build duration: no clean, representative build timing was recorded during this documentation-only subtask. A timing from a dirty incremental build or a simulator failure would not be a useful baseline.
@@ -79,4 +79,4 @@ This policy matches `docs/repository-layout.md`. The current generated project w
 
 ## Reproduction notes
 
-The inventory was produced by reading `plan.md`, `project.yml`, `readme.md`, `docs/repository-layout.md`, `docs/open-source-feature-audit.md`, `docs/feature-opportunities.md`, `navigationitem.swift`, `sidebarminiapp.swift`, `mainsidebarview.swift`, app configuration, service owners, and tests. Counts use `rg --files`, declaration searches, and a local expansion of comma-separated Swift enum cases. Maturity was assigned from visible implementation evidence, explicit simulated/fallback behavior, permissions, mutation scope, direct process use, and focused test presence. No runtime capability was assumed merely from a title or view file.
+The inventory was produced by reading `project.yml`, `readme.md`, `docs/repository-layout.md`, `docs/open-source-feature-audit.md`, `docs/feature-opportunities.md`, `navigationitem.swift`, `sidebarminiapp.swift`, `mainsidebarview.swift`, app configuration, service owners, and tests. Counts use `rg --files`, declaration searches, and a local expansion of comma-separated Swift enum cases. Maturity was assigned from visible implementation evidence, explicit simulated/fallback behavior, permissions, mutation scope, direct process use, and focused test presence. No runtime capability was assumed merely from a title or view file.
