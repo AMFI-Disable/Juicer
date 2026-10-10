@@ -1,7 +1,7 @@
 # Juicer
 
 <p align="center">
-  <img src="juicer/sources/resources/assets.xcassets/appicon.appiconset/icon_128x128.png" width="128" height="128" alt="Juicer App Icon" />
+  <img src="sources/resources/assets.xcassets/appicon.appiconset/icon_128x128.png" width="128" height="128" alt="Juicer App Icon" />
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/amfi-disable/Juicer/releases/tag/V1.1.0"><img src="https://img.shields.io/badge/Version-V1.1.0-blue" alt="Version" /></a>
+  <img src="https://img.shields.io/badge/Version-V1.1.0-blue" alt="Version" />
   <a href="license"><img src="https://img.shields.io/badge/License-MIT-green" alt="License" /></a>
   <a href="https://developer.apple.com/macos"><img src="https://img.shields.io/badge/Platform-macOS%2014.0%2B-lightgrey?logo=apple" alt="Platform" /></a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0-orange?logo=swift" alt="Swift" /></a>
@@ -70,14 +70,19 @@ brew tap amfi-disable/juicer
 brew install --cask juicer
 ```
 
-### Method B: Direct Release Download 📦
-1. Download `juicer.zip` from our latest [V1.1.0 GitHub Release](https://github.com/amfi-disable/Juicer/releases/tag/V1.1.0).
-2. Extract the archive and move `Juicer.app` to `/Applications`.
-3. If macOS Gatekeeper flags un-notarized ad-hoc binaries, run:
-   ```bash
-   xattr -cr /Applications/Juicer.app
-   ```
-4. Launch Juicer!
+### Method B: Build from Source
+Juicer can be compiled locally from source:
+
+```bash
+# Install XcodeGen
+brew install xcodegen
+
+# Generate Xcode Project
+xcodegen generate
+
+# Build Debug or Release target
+xcodebuild build -project juicer.xcodeproj -scheme juicer -configuration Release
+```
 
 ---
 
