@@ -116,7 +116,7 @@ Alternatively, open **System Settings > Privacy & Security**, scroll down to the
 
 ---
 
-### Method C: Build from Source
+### Method C: Build From Source
 
 Juicer can be compiled locally from source:
 

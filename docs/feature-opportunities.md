@@ -1,8 +1,8 @@
-# feature opportunities
+# Feature Opportunities
 
 These are 100 differentiated opportunities for Juicer. They prioritize local-first behavior, transparent permissions, reversible actions, and workflows that are usually split across several macOS utilities.
 
-## intelligence and automation
+## Intelligence And Automation
 
 1. Explain every scan result in plain language.
 2. Detect recurring problems from action history.
@@ -15,7 +15,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 9. Trigger checks when the battery reaches a threshold.
 10. Trigger checks when a specific network joins.
 
-## privacy and security
+## Privacy And Security
 
 11. Show a permission dependency graph.
 12. Explain why each permission is requested.
@@ -28,7 +28,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 19. Compare privacy baselines over time.
 20. Produce a redacted support report automatically.
 
-## disk and files
+## Disk And Files
 
 21. Show storage growth by folder over time.
 22. Predict which folders will fill the disk next.
@@ -41,7 +41,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 29. Find files with broken aliases or bookmarks.
 30. Offer a reversible quarantine bin for cleanup candidates.
 
-## application lifecycle
+## Application Lifecycle
 
 31. Show an app’s complete ownership and support graph.
 32. Preview all files affected by an uninstall.
@@ -54,7 +54,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 39. Detect apps with expired signing certificates.
 40. Provide a local app health card with launch time and crashes.
 
-## developer workflows
+## Developer Workflows
 
 41. Detect stale Xcode simulators by project usage.
 42. Compare Swift toolchains installed on the Mac.
@@ -67,7 +67,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 49. Preview a project cleanup without deleting anything.
 50. Generate a reproducible developer-machine manifest.
 
-## network and connectivity
+## Network And Connectivity
 
 51. Explain the active route to a destination.
 52. Compare DNS answers across configured resolvers.
@@ -80,7 +80,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 59. Create a redacted connectivity report.
 60. Explain VPN and proxy precedence.
 
-## menu bar and window experience
+## Menu Bar And Window Experience
 
 61. Provide a searchable menu-bar command center.
 62. Let users pin only high-value menu-bar actions.
@@ -93,7 +93,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 69. Offer a distraction-free focus workspace.
 70. Move long-running output into detachable panels.
 
-## accessibility and ergonomics
+## Accessibility And Ergonomics
 
 71. Add complete keyboard navigation to every list.
 72. Provide VoiceOver summaries for scan results.
@@ -106,7 +106,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 79. Offer a compact status-only dashboard.
 80. Let users hide explanatory text globally.
 
-## backup and recovery
+## Backup And Recovery
 
 81. Snapshot Juicer settings with version labels.
 82. Diff two settings snapshots before restoring.
@@ -119,7 +119,7 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 89. Store encrypted local report archives.
 90. Add a one-click support bundle with redaction.
 
-## integrations and extensibility
+## Integrations And Extensibility
 
 91. Expose read-only diagnostics through Shortcuts.
 92. Add URL actions for safe navigation and reports.
@@ -132,6 +132,6 @@ These are 100 differentiated opportunities for Juicer. They prioritize local-fir
 99. Publish a feature capability matrix in-app.
 100. Let users compose saved recipes into named playbooks.
 
-## layout principles
+## Layout Principles
 
 The catalog should remain useful as it grows: search first, category second, favorites third, and the full inventory last. Long output belongs in a detachable or expandable detail surface; the main window should show only the state, the next action, and the smallest useful summary.

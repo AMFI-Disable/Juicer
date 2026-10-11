@@ -1,9 +1,9 @@
-# repository layout
+# Repository Layout
 
 Juicer keeps the public root small, groups implementation by role, and keeps
 machine-specific work under an ignored `.local/` directory.
 
-## public and tracked
+## Public And Tracked
 
 ```text
 sources/
@@ -34,7 +34,7 @@ The public surface contains source code, reproducible project generation,
 product documentation, release notes, legal policy, security guidance, and
 the download website.
 
-## local-only
+## Local-Only
 
 ```text
 .local/
@@ -56,7 +56,7 @@ Root-level agent settings and deployment metadata remain in their conventional
 locations when tools require those paths; `.gitignore` keeps them out of the
 public repository.
 
-## organization rules
+## Organization Rules
 
 - Keep Swift implementation under `sources/models`, `sources/services`, and
   `sources/views`; keep app resources under `sources/resources`.

@@ -1,6 +1,6 @@
-# open source feature audit
+# Open Source Feature Audit
 
-## current juicer inventory
+## Current Juicer Inventory
 
 Juicer currently defines 16 workspaces and 169 primary navigation capabilities, plus catalog actions. The current ownership and maturity source of truth is `docs/capability-matrix.md`; the bullets below preserve this audit's earlier grouped view for benchmarking context.
 
@@ -10,7 +10,7 @@ Juicer currently defines 16 workspaces and 169 primary navigation capabilities, 
 - Configs: service manager, system tweaks/optimizer, quarantine stripper, DNS editor, file associations, app lipo, SDK switcher, permissions, extended attributes, metadata, privacy scanner, password audit, quarantined files, sandbox inspector, anti-keylogger scanner, and secure notes.
 - Utilities: clipboard/snippet tools, menu-bar and desktop controls, hot corners, keyboard/text tools, QR/color/screen tools, battery saver, printer/PDF/Markdown/code tools, local web/network tools, VPN/DNS/hosts/blocklist tools, app/FileVault locks, Kana/emoji/Unicode tools, screenshot annotation, window tiling, display/night-shift/keyboard/trackpad tools, shortcut runner, system/software inventory, update/log/service tools, disk prediction, backups, network limiting, disk images, sound mixer, plus the 100 additional Settings/Finder/clipboard shortcuts in the catalog.
 
-## benchmark repositories
+## Benchmark Repositories
 
 | capability | repository / clone link | useful patterns | license caution |
 | --- | --- | --- | --- |
@@ -22,9 +22,9 @@ Juicer currently defines 16 workspaces and 169 primary navigation capabilities, 
 | menu-bar layout | https://github.com/jordanbaird/Ice.git | Carbon hotkey registry, global/local event monitors, permission UI, navigation state, menu-bar sections | GPL-3.0; do not copy code into a differently licensed product |
 | window snapping | https://github.com/rxhanson/Rectangle.git | screen detection, visible-frame correction, halves/quarters/thirds/sixths, drag snap, cooperative resizing, tests | MIT; port behavior with an independent implementation |
 
-## gaps found in juicer
+## Gaps Found In Juicer
 
-### high priority
+### High Priority
 
 1. Clipboard Manager is text-only, session-only, capped at 25 items, and has no pins, ignore rules, rich pasteboard types, persistence, or paste-without-formatting.
 2. BetterCmdTab shows application icons rather than individual windows and does not capture window thumbnails or distinguish Spaces/screens.
@@ -34,14 +34,14 @@ Juicer currently defines 16 workspaces and 169 primary navigation capabilities, 
 6. Utilities do not have a plugin folder, directory observer, plugin scheduling, stream output, or per-plugin error/debug surface.
 7. Disk Visualizer has strong treemap/sunburst foundations but should add saved scans, color-by-extension/date/parent, filters, export, and richer Quick Look workflows.
 
-## implementation decisions
+## Implementation Decisions
 
 - Adopt MIT-compatible ideas from Maccy, Stats, SwiftBar, and Rectangle through independent Juicer code.
 - Do not copy Pearcleaner or Ice source because their license terms are not compatible with an unreviewed direct import.
 - Keep security boundaries explicit: destructive file work stays behind confirmation/Trash, and privileged work should use a separately reviewed helper target.
 - Prefer modular adapters so Stats-like sensors and SwiftBar-like plugins do not increase the core app’s startup cost.
 
-## second benchmark pass
+## Second Benchmark Pass
 
 The following repositories were temporarily cloned to a disposable directory while implementing the Workflow Center. Their behavior informed the design; no source was copied.
 
@@ -66,10 +66,10 @@ The following repositories were temporarily cloned to a disposable directory whi
 - [KnockKnock](https://github.com/objective-see/KnockKnock.git) — audit reports and persistence-aware scans (GPL; concepts only).
 - [Snapzy](https://github.com/duongductrong/Snapzy.git) — preview-first capture workflows and permission onboarding (license reviewed before reuse).
 
-## second benchmark implementation
+## Second Benchmark Implementation
 
 The Workflow Center adds a native, read-only implementation of the compatible patterns: queued diagnostics, sequential execution, pause/resume, cancellation, retry, persistent run history, bounded history retention, dry-run previews, completion notifications, custom path scope, stable presets, copyable output, plain-text report export, Finder reveal, error state visibility, status timestamps, keyboard-friendly buttons, and safe cleanup of finished tasks.
 
-## 100-recipe feature pack
+## 100-Recipe Feature Pack
 
 The second expansion adds exactly 100 runnable recipes across ten groups: System, Processes, Disk, Network, Security, Developer, Logs, Files, Power, and Applications. Every recipe is local, read-only, searchable, category-filterable, favorite-able, queueable, previewable, and included in the existing report history.

@@ -1,8 +1,8 @@
-# ui improvement checklist
+# UI Improvement Checklist
 
 This is the product-wide UI checklist for Juicer. Shared improvements are implemented in reusable components where possible.
 
-## navigation and shell
+## Navigation And Shell
 
 1. Add a real floating background to BetterCmdTab.
 2. Keep BetterCmdTab above other apps and across Spaces.
@@ -25,7 +25,7 @@ This is the product-wide UI checklist for Juicer. Shared improvements are implem
 19. Add a quick switcher for workspaces.
 20. Preserve the last selected tool on relaunch.
 
-## headers and cards
+## Headers And Cards
 
 21. Give every feature header a consistent icon badge.
 22. Make header subtitles wrap instead of truncate.
@@ -48,7 +48,7 @@ This is the product-wide UI checklist for Juicer. Shared improvements are implem
 39. Add copy affordances for technical values.
 40. Add selection affordances to list rows.
 
-## feedback and state
+## Feedback And State
 
 41. Replace silent failures with inline error banners.
 42. Add success confirmation styling.
@@ -71,7 +71,7 @@ This is the product-wide UI checklist for Juicer. Shared improvements are implem
 59. Show affected item counts before deletion.
 60. Add undo where the operation supports it.
 
-## forms and controls
+## Forms And Controls
 
 61. Validate paths before enabling actions.
 62. Validate ports as the user types.
@@ -94,7 +94,7 @@ This is the product-wide UI checklist for Juicer. Shared improvements are implem
 79. Add disabled-state explanations.
 80. Make toggles describe their enabled behavior.
 
-## utilities and overlays
+## Utilities And Overlays
 
 81. Show BetterCmdTab application icons at a predictable size.
 82. Show BetterCmdTab app names without truncating too aggressively.

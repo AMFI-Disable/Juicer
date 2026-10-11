@@ -1,8 +1,8 @@
-# Juicer capability and ownership matrix
+# Juicer Capability And Ownership Matrix
 
 This document is the Phase 0 source of truth for the capability surface visible through `JuicerWorkspace` and `NavigationItem`. It is a conservative inventory, not a release claim. It describes the repository as inspected on 2026-08-01, including the current uncommitted Task 1–3 work. A source file or routed view proves that a surface exists; it does not by itself prove production readiness.
 
-## Status rubric
+## Status Rubric
 
 | Status | Meaning in this inventory |
 | --- | --- |
@@ -31,7 +31,7 @@ No workspace currently meets the repository's own definition of `production`. Wo
 
 The baseline is reproducible from source and intentionally does not quote a build duration: no clean, representative build timing was recorded during this documentation-only subtask. A timing from a dirty incremental build or a simulator failure would not be a useful baseline.
 
-## Workspace ownership
+## Workspace Ownership
 
 “Primary” identifies the clearest owning files and is not an exhaustive list of every helper used by a workspace. Permissions are requirements for some capabilities in the row, not blanket requirements for opening the workspace.
 
@@ -54,7 +54,7 @@ The baseline is reproducible from source and intentionally does not quote a buil
 | Juicer Utilities Studio (`utilities`) | Window/clipboard/text tools, desktop/display controls, capture helpers, PDF/Markdown, shortcuts, inventories and snapshots | `utilitiesmanager.swift`, `sidebarminiapp.swift`, `navigationpreferences.swift`, `diagnosticsnapshot.swift`, `notificationmanager.swift`, `updatemanager.swift` | `utilitiesview.swift`, `sidebarminiappview.swift`, `clipboardmanagerview.swift`, `windowsnappingview.swift`, `menubarcustomizerview.swift`, `screenshotannotationview.swift`, `pdftoolboxview.swift`, `snapshotsview.swift`, `softwareinventoryview.swift` plus focused utility views | Accessibility, Screen Recording, Automation, notifications, pasteboard, Finder/System Settings, Sparkle/network; desktop preference mutations | high | Navigation metadata only | `partial` — the collection mixes working helpers with thin settings launchers and narrowly implemented controls; feature-level tests are absent. |
 | Creator Studio (`creator`) | Repository discovery, clone/open/copy-formula workflows and ecosystem links | `gitrepositorymanager.swift`, `brewmanager.swift` | `creatorecosystemview.swift` | Git, Homebrew, GitHub/network, Finder/browser; repository and formula file writes | high | None | `partial` — discovery and local operations exist, but external availability, licensing guidance, and mutation paths are not fixture-tested. |
 
-## Cross-cutting ownership and constraints
+## Cross-Cutting Ownership And Constraints
 
 - Application composition is owned by `juicerapp.swift`; workspace taxonomy and item-to-workspace assignment are owned by `navigationitem.swift`; workspace grouping is owned by `sidebarminiapp.swift`; routing is primarily owned by `mainsidebarview.swift`.
 - Command execution should be owned by `commandexecutor.swift`. The current 28 other files that instantiate `Process` are migration debt, not approved exceptions.
@@ -63,7 +63,7 @@ The baseline is reproducible from source and intentionally does not quote a buil
 - `info.plist` declares camera, microphone, and location usage descriptions plus Sparkle feed/public-key configuration. Full Disk Access, Accessibility, Screen Recording, Automation, notifications, and Keychain behavior are feature/runtime concerns; they are not all represented by entitlements.
 - The current onboarding gates the main interface on a Full Disk Access probe even though many read-only utilities do not inherently require that permission. This is an ownership/UX issue to resolve in a later implementation phase.
 
-## Test status and known truth gaps
+## Test Status And Known Truth Gaps
 
 - `navigationitemtests.swift` verifies workspace metadata, stable item identity/title, and selected workspace mappings. It does not prove every item routes to a usable view.
 - `commandexecutortests.swift` verifies stdout/stderr capture, non-zero status, launch failure, absolute-path enforcement, timeout/cancellation termination, output truncation, and the default command category. It does not cover redaction or manager integration.
@@ -71,12 +71,12 @@ The baseline is reproducible from source and intentionally does not quote a buil
 - No workspace is marked `production`; the broadest defensible labels are `beta`. AI remains `partial` until local-engine failure and credential paths receive focused tests.
 - Workspace counts in `readme.md` and `docs/open-source-feature-audit.md` have been reconciled to the 16-workspace source enum.
 
-## Generated-project policy
+## Generated-Project Policy
 
 `project.yml` is the tracked source of truth for targets, settings, package dependencies, and schemes. `juicer.xcodeproj/` is generated deterministically with XcodeGen, is local-only, and must not be treated as authoritative or committed. Changes to project structure must be made in `project.yml`, followed by `xcodegen generate`; CI should validate that generation and then build/test the generated project. User-specific Xcode metadata, DerivedData, and build products remain untracked.
 
 This policy matches `docs/repository-layout.md`. The current generated project was not edited or regenerated during this documentation-only inventory.
 
-## Reproduction notes
+## Reproduction Notes
 
 The inventory was produced by reading `project.yml`, `readme.md`, `docs/repository-layout.md`, `docs/open-source-feature-audit.md`, `docs/feature-opportunities.md`, `navigationitem.swift`, `sidebarminiapp.swift`, `mainsidebarview.swift`, app configuration, service owners, and tests. Counts use `rg --files`, declaration searches, and a local expansion of comma-separated Swift enum cases. Maturity was assigned from visible implementation evidence, explicit simulated/fallback behavior, permissions, mutation scope, direct process use, and focused test presence. No runtime capability was assumed merely from a title or view file.

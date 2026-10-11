@@ -1,6 +1,6 @@
 ## Release V1.0.1 Checklist
 
-## automated checks
+## Automated Checks
 
 Run these commands from the repository root:
 
@@ -13,13 +13,13 @@ git diff --check
 
 The GitHub workflows run the source parser and a strict Release build. Generated Xcode projects and build products remain local and ignored.
 
-## release artifact
+## Release Artifact
 
 The tag must be `V1.0.1`. The release workflow generates `juicer.zip` containing `Juicer.app`, computes its SHA-256 checksum, and attaches it to the GitHub release.
 
 Before publishing a public download, the maintainer should sign and notarize the app with the production Developer ID credentials, then verify the downloaded archive on a clean macOS 14 or newer system.
 
-## post-publish checks
+## Post-Publish Checks
 
 - Confirm the release asset is named `juicer.zip`.
 - Confirm the Homebrew cask automation can download the asset and calculate its checksum.
