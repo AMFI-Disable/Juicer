@@ -17,6 +17,10 @@
 
 </div>
 
+> [!NOTE]
+> **Project Archived & Sunset Notice**
+> Juicer has reached end-of-life and is officially archived. The final stable release is [v1.1.3](https://github.com/AMFI-Disable/Juicer/releases/tag/v1.1.3). The repository remains available in read-only mode for historical reference and pre-built binaries. No further updates, issues, or pull requests will be accepted.
+
 ---
 
 ## 🧭 Table Of Contents
