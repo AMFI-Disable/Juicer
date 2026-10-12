@@ -9,6 +9,7 @@
 
 [![Platform: macOS Sonoma+](https://img.shields.io/badge/Platform-macOS%2014%2B%20(Sonoma%20%2F%20Sequoia)-blue.svg?style=flat-square&logo=apple)](https://apple.com)
 [![Swift: 5.10+](https://img.shields.io/badge/Swift-5.10%2B-orange.svg?style=flat-square&logo=swift)](https://swift.org)
+[![Status: Archived](https://img.shields.io/badge/Status-Archived%20%2F%20Read--Only-inactive.svg?style=flat-square)](https://github.com/AMFI-Disable/Juicer)
 [![Release: v1.1.3](https://img.shields.io/badge/Release-v1.1.3-blue.svg?style=flat-square&logo=github)](https://github.com/AMFI-Disable/Juicer/releases)
 [![Tests: 71 / 71 Passed](https://img.shields.io/badge/Tests-71%20%2F%2071%20Passed%20(100%25)-success.svg?style=flat-square&logo=checkmarx)](#automated-tests-and-quality-assurance)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)](license)
@@ -82,7 +83,7 @@ Juicer organizes its extensive feature set across **16 specialized companion wor
 
 ## 🍺 Installation <a id="installation-guide"></a>
 
-### Method A: Install via Homebrew Tap (Recommended)
+### Method A: Install Via Homebrew Tap (Recommended)
 
 Install Juicer using our official Homebrew Tap:
 
