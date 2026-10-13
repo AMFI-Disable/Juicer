@@ -9,7 +9,7 @@ Only the latest release of Juicer receives security updates.
 | 1.0.x   | :white_check_mark: |
 | < 1.0   | :x:                |
 
-## Reporting a Vulnerability
+## Reporting A Vulnerability
 
 If you discover a security vulnerability within Juicer, please do **not** open a public issue. Instead, follow these steps:
 
