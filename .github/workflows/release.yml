@@ -3,6 +3,7 @@ name: "Release: Package & Publish GitHub Release"
 on:
   push:
     tags:
+      - 'v*.*.*'
       - 'V*.*.*'
 
 permissions:
