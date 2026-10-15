@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Enhanced release CI workflow to support lowercase tags.
+
+---
+
 ## V1.1.4 — 2026-10-10
 
 ### Added
