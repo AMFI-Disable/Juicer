@@ -49,8 +49,8 @@ jobs:
           sed -i "s|version \".*\"|version \"${VERSION}\"|g" casks/juicer.rb
           sed -i "s|sha256 \".*\"|sha256 \"${SHA256}\"|g" casks/juicer.rb
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "AMFI-Disable"
+          git config user.email "evengao6688@gmail.com"
           git add casks/juicer.rb
 
           # Commit and push changes if updated
