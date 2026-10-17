@@ -2,19 +2,17 @@
 
 ## Supported Versions
 
-Only the latest release of Juicer receives security updates.
+This repository has concluded its development lifecycle and is officially archived in read-only mode. No further feature updates or active maintenance are scheduled.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version | Supported |
+| :--- | :--- |
+| All Releases (Archived) | :x: |
 
 ## Reporting A Vulnerability
 
-If you discover a security vulnerability within Juicer, please do **not** open a public issue. Instead, follow these steps:
+Although this codebase is archived and read-only, critical security vulnerabilities impacting users may still be reported privately:
 
-1. Send an email to the repository maintainers or use GitHub's private vulnerability reporting feature under the **Security** tab.
-2. Provide a detailed summary of the vulnerability, steps to reproduce, and any proof-of-concept code.
-3. Allow up to 48 hours for an initial response before following up.
+1. Open a confidential draft via GitHub **Security** > **Report a vulnerability**.
+2. Or email the maintainer directly at [evengao6688@gmail.com](mailto:evengao6688@gmail.com).
 
-We appreciate your responsible disclosure and will acknowledge your contribution once the issue is resolved!
+Please allow up to 48 hours for an initial response.

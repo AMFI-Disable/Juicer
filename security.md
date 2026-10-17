@@ -2,8 +2,17 @@
 
 ## Supported Versions
 
-We support security updates for the latest minor and major releases of the application.
+This repository has concluded its development lifecycle and is officially archived in read-only mode. No further feature updates or active maintenance are scheduled.
+
+| Version | Supported |
+| :--- | :--- |
+| All Releases (Archived) | :x: |
 
 ## Reporting A Vulnerability
 
-If you identify a security issue, please do not open a public issue. Instead, report security vulnerabilities by creating a confidential draft security advisory on GitHub, or email the maintainers directly.
+Although this codebase is archived and read-only, critical security vulnerabilities impacting users may still be reported privately:
+
+1. Open a confidential draft via GitHub **Security** > **Report a vulnerability**.
+2. Or email the maintainer directly at [evengao6688@gmail.com](mailto:evengao6688@gmail.com).
+
+Please allow up to 48 hours for an initial response.
