@@ -19,7 +19,7 @@ jobs:
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
           # Clean version (strip V/v prefix if present)
-          VERSION=$(echo "${TAG_NAME}" | sed 's/[Vv]//')
+          VERSION="${TAG_NAME#[Vv]}"
           DOWNLOAD_URL="https://github.com/AMFI-Disable/Juicer/releases/download/${TAG_NAME}/juicer.zip"
 
           echo "Downloading juicer.zip from ${DOWNLOAD_URL}..."
@@ -28,12 +28,14 @@ jobs:
           SHA256=$(sha256sum juicer.zip | awk '{print $1}')
           echo "Calculated SHA256: ${SHA256}"
 
-          echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
-          echo "download_url=${DOWNLOAD_URL}" >> $GITHUB_OUTPUT
+          {
+            echo "version=${VERSION}"
+            echo "sha256=${SHA256}"
+            echo "download_url=${DOWNLOAD_URL}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout Homebrew-Juicer Tap
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: AMFI-Disable/Homebrew-Juicer
           token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
