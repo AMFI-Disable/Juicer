@@ -18,7 +18,7 @@ These rules apply to all AI coding agents (GitHub Copilot Agent, Claude Code, An
 
 ## 3. GitHub Automation & Templates
 
-- All workflow files use Node.js 24 (`actions/setup-node@v4` with `node-version: '24'`).
+- All workflow files use Node.js 24 (`actions/setup-node@v7` with `node-version: '24'`).
 - Issue templates are configured in `.github/issue_template/` (`bug_report.yml`, `feature_request.yml`).
 - PRs must follow `.github/pull_request_template.md`.
 - Code owners are defined in `.github/codeowners`.
