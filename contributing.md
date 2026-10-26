@@ -29,7 +29,7 @@ To build and run the Juicer project locally:
 ## Guidelines
 
 - **File/Folder Naming**: All files and folders in the repository should be strictly named in **lowercase**.
-- **Commits Guideline**: FollowConventional Commits standard prefixes (e.g. `feat: add ...`, `fix: resolve ...`, `style: format ...`).
+- **Commit Messages**: Strictly adhere to the canonical commit structure `xxx: xxx xxx xxx` (prefix + exactly three lowercase words, e.g. `feat: add menu item`, `fix: resolve timing warning`, `refactor: extract modular view`).
 - **Tests**: Verify your changes build cleanly and run unit tests (`Cmd + U` in Xcode) before opening a Pull Request.
 
-Please make sure to read and follow our [Code of Conduct](code_of_conduct.md) before submitting contributions.
+Please make sure to read and follow our [Code Of Conduct](code_of_conduct.md) before submitting contributions.
