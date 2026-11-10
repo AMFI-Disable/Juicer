@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Restored active project maintenance status and badges in `readme.md`, removing repository sunset notice.
+- Reinstated active security policy guidelines and private vulnerability reporting workflows in `security.md`.
 - Enhanced release CI workflow to support lowercase tags.
 
 ---
