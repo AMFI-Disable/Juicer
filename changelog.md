@@ -4,6 +4,7 @@
 
 ### Changed
 
+- Updated Homebrew tap installation instructions in `readme.md` from `AMFI-Disable/juicer` to the central `AMFI-Disable/tap` repository.
 - Restored active project maintenance status and badges in `readme.md`, removing repository sunset notice.
 - Reinstated active security policy guidelines and private vulnerability reporting workflows in `security.md`.
 - Enhanced release CI workflow to support lowercase tags.

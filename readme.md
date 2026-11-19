@@ -16,6 +16,8 @@
 [![Pricing: Free & Open-Source](https://img.shields.io/badge/Pricing-100%25%20Free%20%26%20Open%20Source-success.svg?style=flat-square)](#key-capabilities)
 [![Privacy: Zero Telemetry](https://img.shields.io/badge/Privacy-Zero%20Telemetry%20%2F%20100%25%20Local-purple.svg?style=flat-square)](#privacy-and-security-first)
 
+[Changelog](changelog.md) · [Security Policy](security.md) · [MIT License](license)
+
 </div>
 
 ## Table Of Contents
@@ -33,7 +35,7 @@
 
 ## Overview And Core Value <a id="overview-and-core-value"></a>
 
-Juicer is the ultimate open-source companion utility for**macOS developers and power users**. It is a 100% free, local-first suite that consolidates package managers, disk analyzers, app uninstallers, launchd editors, developer cache pruners, hosts file editors, and system tweaks into a high-performance native SwiftUI app.
+Juicer is the ultimate open-source companion utility for **macOS developers and power users**. It is a 100% free, local-first suite that consolidates package managers, disk analyzers, app uninstallers, launchd editors, developer cache pruners, hosts file editors, and system tweaks into a high-performance native SwiftUI app.
 
 > Prefer a focused Homebrew experience? BrewStore is being extracted as an independent Juicer family app for casks, formulae, services, taps, updates, and preview-first removal of Homebrew-installed apps. The all-in-one Juicer Suite remains available for advanced users.
 
@@ -41,37 +43,37 @@ Juicer is the ultimate open-source companion utility for**macOS developers and p
 
 ## Bundled Workspace Companion Suite <a id="bundled-workspaces"></a>
 
-Juicer organizes its extensive feature set across**16 specialized companion workspaces**:
+Juicer organizes its extensive feature set across **16 specialized companion workspaces**:
 
--**Juicer Hub**: Central launcher and interactive launchpad canvas supporting Pan & Zoom gestures, edge-to-edge full screen modes, and launch bypass options.
--**Juicer Store**: Modern Homebrew Cask (GUI) & Formula (CLI) package manager with background metadata resolution, tap manager, service controller, and Brewfile sync.
--**System & Hardware**: Real-time CPU/GPU gauges, memory pressure, battery health, power schedules, and thermal/fan sensors.
--**Network & Ports**: Wi-Fi survey tools, speed tester, open port listener, DNS diagnostics, active VPN profiles, and firewall rules.
--**Security & Privacy**: TCC permission audit, privacy cabinet, FileVault inspector, quarantine stripper, anti-keylogger scanner, and app locker.
--**Disk & Storage**: Space Lens disk visualizer (Treemaps & Sunburst charts), developer cache cleaner, large file locator, duplicate finder, and storage snapshot manager.
--**Developer Suite**: SDK runtime switcher, trusted script plugins runner, local web server, code snippet expander, and environment profiles.
--**Git Studio**: Repository workbench, commit history, branch operations, effort analytics, and developer account helpers.
--**Docker Studio**: Container inventory, lifecycle actions, logs, Compose stacks, and disk-usage cleanup.
--**AI Studio**: Local Ollama and LM Studio discovery, prompt tools, model benchmarks, and local chat when an engine is available.
--**Database Studio**: Local database daemon checks, SQLite inspection, Redis browsing, and backup helpers.
--**API Studio**: REST requests, cURL import, authentication headers, history, benchmarks, and load tests.
--**Converter Studio**: Offline document, image, schema, archive, and media conversion tools.
--**System Configs**: App uninstaller, orphan finder, launch daemon editor, hidden macOS tweaks, log rotator, and system optimizer.
--**Utilities & Desktop**: Window tiler, clipboard manager, hot corners, color loupe, screen ruler, PDF toolbox, and desktop helper widgets.
--**Creator Studio**: Open-source project discovery, repository cloning, and ecosystem shortcuts.
+- **Juicer Hub**: Central launcher and interactive launchpad canvas supporting Pan & Zoom gestures, edge-to-edge full screen modes, and launch bypass options.
+- **Juicer Store**: Modern Homebrew Cask (GUI) & Formula (CLI) package manager with background metadata resolution, tap manager, service controller, and Brewfile sync.
+- **System & Hardware**: Real-time CPU/GPU gauges, memory pressure, battery health, power schedules, and thermal/fan sensors.
+- **Network & Ports**: Wi-Fi survey tools, speed tester, open port listener, DNS diagnostics, active VPN profiles, and firewall rules.
+- **Security & Privacy**: TCC permission audit, privacy cabinet, FileVault inspector, quarantine stripper, anti-keylogger scanner, and app locker.
+- **Disk & Storage**: Space Lens disk visualizer (Treemaps & Sunburst charts), developer cache cleaner, large file locator, duplicate finder, and storage snapshot manager.
+- **Developer Suite**: SDK runtime switcher, trusted script plugins runner, local web server, code snippet expander, and environment profiles.
+- **Git Studio**: Repository workbench, commit history, branch operations, effort analytics, and developer account helpers.
+- **Docker Studio**: Container inventory, lifecycle actions, logs, Compose stacks, and disk-usage cleanup.
+- **AI Studio**: Local Ollama and LM Studio discovery, prompt tools, model benchmarks, and local chat when an engine is available.
+- **Database Studio**: Local database daemon checks, SQLite inspection, Redis browsing, and backup helpers.
+- **API Studio**: REST requests, cURL import, authentication headers, history, benchmarks, and load tests.
+- **Converter Studio**: Offline document, image, schema, archive, and media conversion tools.
+- **System Configs**: App uninstaller, orphan finder, launch daemon editor, hidden macOS tweaks, log rotator, and system optimizer.
+- **Utilities & Desktop**: Window tiler, clipboard manager, hot corners, color loupe, screen ruler, PDF toolbox, and desktop helper widgets.
+- **Creator Studio**: Open-source project discovery, repository cloning, and ecosystem shortcuts.
 
 ---
 
 ## Key Capabilities <a id="key-capabilities"></a>
 
--**App Store Software Center**: Easily manage Homebrew Casks (GUI) and Formulae (CLI) in a modern layout with category and pricing classification.
--**Space Lens (Disk Visualizer)**: Proportional squarified Treemaps and Canvas-drawn Sunburst charts with path copying and staged batch discard.
--**Deep App Uninstaller**: Drag and drop any `.app` to remove caches, app support, plists, containers, `ByHost Preferences`, and helper tools.
--**Orphan Directory Sweeper**: Locate and clean up orphaned files left behind by deleted applications.
--**Clipboard History Manager**: Local-first text clipboard cache with pinned items, search filtering, formatting stripping, and hotkeys.
--**Status Menu Bar Monitor**: Live system disk and physical memory utilization widget embedded directly in the macOS menu bar.
--**Trusted Script Plugins**: Execute custom shell scripts (`.sh`, `.command`, `.zsh`) securely with real-time log output.
--**DNS Profile Manager & Ad-Blocker**: Switch local DNS profiles and apply StevenBlack's hosts filter to `/etc/hosts`.
+- **App Store Software Center**: Easily manage Homebrew Casks (GUI) and Formulae (CLI) in a modern layout with category and pricing classification.
+- **Space Lens (Disk Visualizer)**: Proportional squarified Treemaps and Canvas-drawn Sunburst charts with path copying and staged batch discard.
+- **Deep App Uninstaller**: Drag and drop any `.app` to remove caches, app support, plists, containers, `ByHost Preferences`, and helper tools.
+- **Orphan Directory Sweeper**: Locate and clean up orphaned files left behind by deleted applications.
+- **Clipboard History Manager**: Local-first text clipboard cache with pinned items, search filtering, formatting stripping, and hotkeys.
+- **Status Menu Bar Monitor**: Live system disk and physical memory utilization widget embedded directly in the macOS menu bar.
+- **Trusted Script Plugins**: Execute custom shell scripts (`.sh`, `.command`, `.zsh`) securely with real-time log output.
+- **DNS Profile Manager & Ad-Blocker**: Switch local DNS profiles and apply StevenBlack's hosts filter to `/etc/hosts`.
 
 ---
 
@@ -107,7 +109,7 @@ To clear the quarantine flag via Terminal:
 sudo xattr -r -c /Applications/Juicer.app
 ```
 
-Alternatively, open**System Settings > Privacy & Security**, scroll down to the Security section, and click**Open Anyway** (or hold `Control` while clicking the app in Finder and select**Open**).
+Alternatively, open **System Settings > Privacy & Security**, scroll down to the Security section, and click **Open Anyway** (or hold `Control` while clicking the app in Finder and select **Open**).
 
 ---
 
@@ -130,10 +132,10 @@ xcodebuild build -project juicer.xcodeproj -scheme juicer -configuration Release
 
 ## Technical Architecture & Build Setup <a id="technical-architecture"></a>
 
--**Platform**: macOS 14.0+
--**Language**: Swift / SwiftUI (currently compiled in Swift 5 language mode)
--**Code Signing**: Deep ad-hoc signed (`CODE_SIGN_IDENTITY: "-"`) with Sparkle framework re-signing to eliminate dyld Team ID launch errors.
--**Project Generator**: Uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to build `juicer.xcodeproj` from `project.yml`.
+- **Platform**: macOS 14.0+
+- **Language**: Swift / SwiftUI (currently compiled in Swift 5 language mode)
+- **Code Signing**: Deep ad-hoc signed (`CODE_SIGN_IDENTITY: "-"`) with Sparkle framework re-signing to eliminate dyld Team ID launch errors.
+- **Project Generator**: Uses [XcodeGen](https://github.com/yonaskolb/XcodeGen) to build `juicer.xcodeproj` from `project.yml`.
 
 To build locally:
 
@@ -163,9 +165,9 @@ xcodebuild test \
 
 ## Privacy And Security First <a id="privacy-and-security-first"></a>
 
--**Zero Telemetry**: No third-party network pings, tracking cookies, or diagnostic phoning home.
--**Local-First Execution**: All diagnostics, disk indexing, and clipboard history remain completely on device.
--**Trash Deletion Safe Guards**: File deletions and package removals route safely through native macOS Trash.
+- **Zero Telemetry**: No third-party network pings, tracking cookies, or diagnostic phoning home.
+- **Local-First Execution**: All diagnostics, disk indexing, and clipboard history remain completely on device.
+- **Trash Deletion Safe Guards**: File deletions and package removals route safely through native macOS Trash.
 
 ---
 
@@ -173,10 +175,10 @@ xcodebuild test \
 
 Juicer is continuously audited, linted, and reviewed by automated AI agents and workflow bots:
 
--**[CodeRabbit](https://coderabbit.ai)**(`@coderabbitai`) - Context-aware AI PR reviewer & security auditor.
--**[CodeQL](https://codeql.github.com)**(`github-advanced-security`) - Continuous static application security testing (SAST).
--**[Dependabot](https://github.com/dependabot)**(`@dependabot[bot]`) - Automated dependency updates.
--**[Stale Bot](https://github.com/actions/stale)**(`@actions/stale[bot]`) - Issue triage & PR maintenance.
+- **[CodeRabbit](https://coderabbit.ai)** (`@coderabbitai`) - Context-aware AI PR reviewer & security auditor.
+- **[CodeQL](https://codeql.github.com)** (`github-advanced-security`) - Continuous static application security testing (SAST).
+- **[Dependabot](https://github.com/dependabot)** (`@dependabot[bot]`) - Automated dependency updates.
+- **[Stale Bot](https://github.com/actions/stale)** (`@actions/stale[bot]`) - Issue triage & PR maintenance.
 
 ---
 
