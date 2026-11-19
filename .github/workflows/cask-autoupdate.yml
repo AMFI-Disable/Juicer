@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   update-cask:
-    name: Update Cask in homebrew-juicer
+    name: Update Cask in Homebrew-Tap
     if: ${{ !github.event.release.prerelease }}
     runs-on: ubuntu-latest
 
@@ -23,7 +23,7 @@ jobs:
           DOWNLOAD_URL="https://github.com/AMFI-Disable/Juicer/releases/download/${TAG_NAME}/juicer.zip"
 
           echo "Downloading juicer.zip from ${DOWNLOAD_URL}..."
-          curl -L -o juicer.zip "${DOWNLOAD_URL}"
+          curl -fsSL -o juicer.zip "${DOWNLOAD_URL}"
 
           SHA256=$(sha256sum juicer.zip | awk '{print $1}')
           echo "Calculated SHA256: ${SHA256}"
@@ -34,16 +34,16 @@ jobs:
             echo "download_url=${DOWNLOAD_URL}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Checkout Homebrew-Juicer Tap
+      - name: Checkout Homebrew-Tap Repository
         uses: actions/checkout@v7
         with:
-          repository: AMFI-Disable/Homebrew-Juicer
+          repository: AMFI-Disable/Homebrew-Tap
           token: ${{ secrets.HOMEBREW_TAP_TOKEN || secrets.GITHUB_TOKEN }}
-          path: homebrew-juicer
+          path: homebrew-tap
 
       - name: Update Cask Definition
         run: |
-          cd homebrew-juicer
+          cd homebrew-tap
           VERSION="${{ steps.calc_hash.outputs.version }}"
           SHA256="${{ steps.calc_hash.outputs.sha256 }}"
 
