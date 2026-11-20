@@ -1,4 +1,4 @@
-name: "✨ Feature Request"
+name: "Feature Request"
 description: "Suggest an idea or new developer feature for Juicer"
 title: "feat: "
 labels: ["enhancement"]
