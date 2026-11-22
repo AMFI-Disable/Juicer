@@ -67,5 +67,24 @@ export const siteConfig = {
     "macOS 14.0+ (Sonoma / Sequoia)",
     "Apple Silicon or Intel Mac",
     "71 / 71 automated tests passing"
+  ],
+  "hubName": "AMFI Studio",
+  "hubHash": "studio",
+  "previewTabs": [
+    {
+      "tab": "App Uninstaller",
+      "title": "Orphan-Free Removal",
+      "body": "Scans /Applications, ~/Library/Application Support, Caches, Preferences, and LaunchAgents before moving leftovers to Trash."
+    },
+    {
+      "tab": "Dev Cache Pruner",
+      "title": "Reclaim Xcode & Brew Space",
+      "body": "Safely previews DerivedData, CocoaPods, Simulator runtimes, and Homebrew download caches with exact byte totals."
+    },
+    {
+      "tab": "Launchd & DNS",
+      "title": "System Service Control",
+      "body": "Inspect user/system plists, toggle background daemons, and switch local DNS profiles with zero terminal guesswork."
+    }
   ]
 } as const;
