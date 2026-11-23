@@ -21,6 +21,20 @@
 
 </div>
 
+---
+
+## Star History
+
+<a href="https://www.star-history.com/?type=date&repos=amfi-disable%2Fjuicer">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=amfi-disable%2Fjuicer&type=date&theme=dark&legend=top-left" />
+    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=amfi-disable%2Fjuicer&type=date&legend=top-left" />
+    <img alt="AMFI-Disable/Juicer Star History Chart" src="https://api.star-history.com/chart?repos=amfi-disable%2Fjuicer&type=date&legend=top-left" />
+  </picture>
+</a>
+
+---
+
 ## Table Of Contents
 
 - [Overview & Core Value](#overview-and-core-value)
@@ -187,15 +201,3 @@ Juicer is continuously audited, linted, and reviewed by automated AI agents and 
 
 Licensed under the [MIT License](license). Copyright (c) 2026 AMFI-Disable.
 All contributors are expected to adhere to the [Code of Conduct](code_of_conduct.md).
-
----
-
-## Star History
-
-<a href="https://www.star-history.com/#AMFI-Disable/Juicer&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=AMFI-Disable/Juicer&type=Date&theme=dark" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=AMFI-Disable/Juicer&type=Date" />
-    <img alt="AMFI-Disable/Juicer Star History Chart" src="https://api.star-history.com/svg?repos=AMFI-Disable/Juicer&type=Date" />
-  </picture>
-</a>
