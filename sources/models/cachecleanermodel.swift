@@ -142,11 +142,6 @@ class CacheCleanerManager: ObservableObject {
                         description: "Application crash reports and diagnostic log archives.",
                         category: .system,
                         riskLevel: .safe),
-            InsightItem(name: "System Temporary Files",
-                        path: "/tmp",
-                        description: "Temporary files shared by macOS and running processes.",
-                        category: .system,
-                        riskLevel: .caution),
             InsightItem(name: "User Caches",
                         path: "\(home)/Library/Caches",
                         description: "Per-user application caches that can be rebuilt after cleanup.",
@@ -213,11 +208,6 @@ class CacheCleanerManager: ObservableObject {
                         description: "Email attachments opened from Apple Mail.",
                         category: .media,
                         riskLevel: .safe),
-            InsightItem(name: "Photos Library Originals Backup",
-                        path: "\(home)/Pictures/Photos Library.photoslibrary/Masters",
-                        description: "Original unprocessed photos stored in the Photos library.",
-                        category: .media,
-                        riskLevel: .risky),
             // Developer
             InsightItem(name: "Xcode DerivedData",
                         path: "\(home)/Library/Developer/Xcode/DerivedData",
@@ -583,6 +573,32 @@ class CacheCleanerManager: ObservableObject {
             for item in toClean {
                 let url = URL(fileURLWithPath: item.path)
                 let backupDestURL = self.backupsDir.appendingPathComponent("\(item.name)_\(Int(timestamp.timeIntervalSince1970))")
+
+                // Never move ~/Downloads itself; only trash individual files older than 90 days.
+                if item.name == "Old Downloads (90d+)" {
+                    let cutoff = Date().addingTimeInterval(-90 * 24 * 3600)
+                    if let children = try? self.fm.contentsOfDirectory(
+                        at: url,
+                        includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey],
+                        options: [.skipsHiddenFiles]
+                    ) {
+                        var agedBytes: Int64 = 0
+                        for child in children {
+                            let vals = try? child.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey])
+                            if let mod = vals?.contentModificationDate, mod < cutoff {
+                                let childSize = Int64(vals?.fileSize ?? 0)
+                                if (try? self.fm.trashItem(at: child, resultingItemURL: nil)) != nil {
+                                    agedBytes += max(0, childSize)
+                                }
+                            }
+                        }
+                        if agedBytes > 0 {
+                            cleaned += 1
+                            freed += agedBytes
+                        }
+                    }
+                    continue
+                }
 
                 var backedUp = false
                 do {

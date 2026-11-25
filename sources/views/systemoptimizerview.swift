@@ -371,7 +371,7 @@ struct SystemOptimizerView: View {
                         }
                         .padding()
                     }
-                    .onChange(of: manager.runLog.count) { _ in
+                    .onChange(of: manager.runLog.count) { _, _ in
                         if let last = manager.runLog.indices.last {
                             withAnimation { proxy.scrollTo(last, anchor: .bottom) }
                         }

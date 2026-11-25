@@ -119,7 +119,8 @@ class SystemOptimizerManager: ObservableObject {
                 description: "Reset the accessibility database to resolve TCC/permissions UI issues.",
                 category: .system,
                 command: "/usr/bin/tccutil",
-                arguments: ["reset", "Accessibility"]
+                arguments: ["reset", "Accessibility"],
+                isSelected: false
             ),
             OptimizationTask(
                 name: "Flush System Log Archive",
@@ -150,11 +151,12 @@ class SystemOptimizerManager: ObservableObject {
                 arguments: ["update"]
             ),
             OptimizationTask(
-                name: "Remove Temporary Files",
-                description: "Delete user temporary files from /tmp and /var/folders.",
+                name: "Remove Stale Juicer Temp Files",
+                description: "Delete temporary scratch files older than 1 day inside Juicer's temp directory.",
                 category: .storage,
-                command: "/bin/rm",
-                arguments: ["-rf", NSTemporaryDirectory()]
+                command: "/usr/bin/find",
+                arguments: [NSTemporaryDirectory(), "-mindepth", "1", "-mtime", "+1", "-delete"],
+                isSelected: false
             ),
             OptimizationTask(
                 name: "Clear QuickLook Thumbnails Cache",
@@ -227,8 +229,9 @@ class SystemOptimizerManager: ObservableObject {
             let processCount = self.getProcessCount()
             metrics.append(SystemHealthMetric(name: "Running Processes", value: processCount, icon: "gearshape.2", category: "System"))
 
+            let capturedMetrics = metrics
             await MainActor.run {
-                self.healthMetrics = metrics
+                self.healthMetrics = capturedMetrics
                 self.isLoadingMetrics = false
             }
         }

@@ -2,9 +2,13 @@ import Foundation
 import Combine
 
 struct VPNProfile: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     var connected: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case name, connected
+    }
 }
 
 final class VPNProfileManager: ObservableObject {

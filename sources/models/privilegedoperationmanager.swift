@@ -272,14 +272,18 @@ public final class PrivilegedOperationManager: ObservableObject {
     public func executePurgeSystemCache(targetPath: String) async -> (Bool, String) {
         let trimmedPath = targetPath.trimmingCharacters(in: .whitespacesAndNewlines)
         let fm = FileManager.default
-        guard fm.fileExists(atPath: trimmedPath) else {
+        let canonicalPath = URL(fileURLWithPath: trimmedPath)
+            .resolvingSymlinksInPath()
+            .standardizedFileURL
+            .path
+
+        guard fm.fileExists(atPath: canonicalPath) else {
             return (false, "Target cache path does not exist: \(trimmedPath)")
         }
 
-        let allowed = trimmedPath.contains("/Caches/") ||
-                      trimmedPath.contains("/Cache/") ||
-                      trimmedPath.contains("/tmp/") ||
-                      trimmedPath.hasPrefix("/private/tmp/")
+        let allowed = canonicalPath.contains("/Caches/") ||
+                      canonicalPath.contains("/Cache/") ||
+                      canonicalPath.hasPrefix("/private/tmp/")
 
         guard allowed else {
             return (false, "Path '\(trimmedPath)' is outside safe cache purge scope.")

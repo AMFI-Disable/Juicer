@@ -249,7 +249,7 @@ struct utilitiesview: View {
                 HStack(spacing: 15) {
                     ForEach(apps, id: \.self) { app in
                         Button(action: {
-                            app.activate(options: [.activateIgnoringOtherApps])
+                            app.activate()
                             showCmdTabSheet = false
                         }) {
                             VStack(spacing: 10) {

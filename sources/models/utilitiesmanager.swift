@@ -116,7 +116,7 @@ class UtilitiesManager: ObservableObject {
         }
         let panel = betterCmdTabPanel!
         panel.contentView = NSHostingView(rootView: bettercmdtaboverlayview(windows: windows, select: { [weak self] app in
-            app.activate(options: [.activateIgnoringOtherApps])
+            app.activate()
             self?.hideBetterCmdTabPanel()
         }, dismiss: { [weak self] in self?.hideBetterCmdTabPanel() }))
         if let screen = NSScreen.main ?? NSScreen.screens.first {
@@ -124,7 +124,7 @@ class UtilitiesManager: ObservableObject {
             panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.midX - frame.width / 2, y: screen.visibleFrame.midY - frame.height / 2))
         }
         panel.orderFrontRegardless()
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
     }
 
     func hideBetterCmdTabPanel() {
@@ -141,10 +141,7 @@ class UtilitiesManager: ObservableObject {
                 return owner == app.processIdentifier && layer == 0
             }
             guard let matching, let number = matching[kCGWindowNumber as String] as? CGWindowID else { return nil }
-            let image = CGWindowListCreateImage(.null, .optionIncludingWindow, number, [.boundsIgnoreFraming, .bestResolution]).map { cgImage in
-                NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
-            }
-            return bettercmdtabwindow(id: number, app: app, image: image)
+            return bettercmdtabwindow(id: number, app: app, image: app.icon)
         }
     }
 

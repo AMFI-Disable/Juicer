@@ -2,7 +2,7 @@ import Foundation
 import AppKit
 
 struct SoftwareUpdateItem: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let currentVersion: String
     let latestVersion: String
@@ -66,12 +66,6 @@ class AppUpdateManager: ObservableObject {
                 found.append(contentsOf: parsedMas)
             }
             await MainActor.run { self.checkProgress = min(1.0, max(0.0, 0.90)) }
-
-            if found.isEmpty {
-                found.append(SoftwareUpdateItem(name: "Figma", currentVersion: "116.15.4", latestVersion: "116.16.2", type: .sparkle))
-                found.append(SoftwareUpdateItem(name: "Slack", currentVersion: "4.36.140", latestVersion: "4.37.101", type: .sparkle))
-                found.append(SoftwareUpdateItem(name: "Visual Studio Code", currentVersion: "1.89.0", latestVersion: "1.90.1", type: .sparkle))
-            }
 
             await MainActor.run {
                 self.updates = found
@@ -154,8 +148,9 @@ class AppUpdateManager: ObservableObject {
     }
 
     nonisolated private func findBrewPath() -> String {
+        let fileManager = FileManager.default
         for path in ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"] {
-            if fm.fileExists(atPath: path) {
+            if fileManager.fileExists(atPath: path) {
                 return path
             }
         }
@@ -163,8 +158,9 @@ class AppUpdateManager: ObservableObject {
     }
 
     nonisolated private func findMasPath() -> String {
+        let fileManager = FileManager.default
         for path in ["/opt/homebrew/bin/mas", "/usr/local/bin/mas", "/usr/bin/mas"] {
-            if fm.fileExists(atPath: path) {
+            if fileManager.fileExists(atPath: path) {
                 return path
             }
         }

@@ -38,7 +38,7 @@ struct diskexplorerview: View {
                 Image(systemName: manager.scanState == .completed ? "checkmark.circle" : "externaldrive")
                 Text(scanSummary)
                 Spacer()
-                if let metadata = manager.scanMetadata { Text("Visited (metadata.entriesVisited) entries • source (metadata.sourcePath)").font(.caption2).foregroundStyle(.secondary) }
+                if let metadata = manager.scanMetadata { Text("Visited \(metadata.entriesVisited) entries • source \(metadata.sourcePath)").font(.caption2).foregroundStyle(.secondary) }
             }
             .font(.caption)
             .padding(.horizontal)
@@ -74,10 +74,10 @@ struct diskexplorerview: View {
     private var scanSummary: String {
         switch manager.scanState {
         case .idle: return "No disk scan has run."
-        case .scanning(let progress): return "Scanning (Int(progress * 100))% — read-only analysis"
-        case .completed: return "Scan complete — (manager.entries.count) entries analyzed."
+        case .scanning(let progress): return "Scanning \(Int(progress * 100))% — read-only analysis"
+        case .completed: return "Scan complete — \(manager.entries.count) entries analyzed."
         case .cancelled: return "Scan cancelled. Retry to refresh results."
-        case .failed(let error): return "Scan failed: (error)"
+        case .failed(let error): return "Scan failed: \(error)"
         case .timedOut: return "Scan timed out. Choose a smaller folder and retry."
         }
     }

@@ -37,7 +37,7 @@ struct portscannerview: View {
                 scanned.append(PortScanResult(port: port, state: state, detail: command.succeeded ? "TCP connection accepted" : command.didTimeOut ? "Timed out" : "No listener detected"))
                 DispatchQueue.main.async { results = scanned }
             }
-            DispatchQueue.main.async { scanning = false; message = "Scan complete. (scanned.filter { $0.state == .open }.count) open port(s); no connection was made beyond the requested checks." }
+            DispatchQueue.main.async { scanning = false; message = "Scan complete. \(scanned.filter { $0.state == .open }.count) open port(s); no connection was made beyond the requested checks." }
         }
     }
 }

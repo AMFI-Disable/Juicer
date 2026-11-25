@@ -61,7 +61,9 @@ class TCCViewerManager: ObservableObject {
                 return
             }
 
-            let query = "SELECT client, service, allowed, last_modified FROM access;"
+            let schemaOutput = self.runSqliteQuery(dbPath: userTCCPath, sql: "PRAGMA table_info(access);")
+            let columnName = schemaOutput.contains("auth_value") ? "auth_value" : "allowed"
+            let query = "SELECT client, service, \(columnName), last_modified FROM access;"
             let output = self.runSqliteQuery(dbPath: userTCCPath, sql: query)
             let parsed = self.parseSqliteOutput(output)
 

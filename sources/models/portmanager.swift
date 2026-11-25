@@ -34,7 +34,7 @@ class PortManager: ObservableObject {
             // Expected format: COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
             for line in lines.dropFirst() {
                 let parts = line.components(separatedBy: .whitespaces).filter { !$0.isEmpty }
-                guard parts.count >= 8 else { continue }
+                guard parts.count >= 9 else { continue }
 
                 let processName = parts[0]
                 guard let pid = Int(parts[1]) else { continue }

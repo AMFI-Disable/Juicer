@@ -398,18 +398,23 @@ class BrewManager: ObservableObject {
 
     // Command runner helper
     private static func runCommand(_ executable: String, arguments: [String]) throws -> String {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable)
-        process.arguments = arguments
-
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-
-        try process.run()
-        process.waitUntilExit()
-
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
-        return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let result = CommandExecutor.shared.run(
+            executablePath: executable,
+            arguments: arguments,
+            timeout: 120
+        )
+        if let err = result.launchError {
+            throw err
+        }
+        let status = result.terminationStatus ?? -1
+        if status != 0 {
+            let msg = result.standardError.trimmingCharacters(in: .whitespacesAndNewlines)
+            throw NSError(
+                domain: "com.even.juicer.brew",
+                code: Int(status),
+                userInfo: [NSLocalizedDescriptionKey: msg.isEmpty ? "Command exited with status \(status)" : msg]
+            )
+        }
+        return result.standardOutput.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
