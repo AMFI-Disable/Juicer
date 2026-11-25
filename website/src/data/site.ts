@@ -60,7 +60,7 @@ export const siteConfig = {
     },
     {
       "label": "Build from Source",
-      "cmd": "git clone https://github.com/AMFI-Disable/Juicer.git && cd Juicer && xcodegen generate && swift build"
+      "cmd": "git clone https://github.com/AMFI-Disable/Juicer.git && cd Juicer && xcodegen generate && xcodebuild -project juicer.xcodeproj -scheme juicer -destination \"platform=macOS\" CODE_SIGNING_ALLOWED=NO build"
     }
   ],
   "requirements": [
