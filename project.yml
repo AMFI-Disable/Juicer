@@ -16,6 +16,10 @@ targets:
     dependencies:
       - package: Sparkle
         codeSignOnCopy: true
+    preBuildScripts:
+      - name: Sync Asset Catalog Contents.json Casing
+        script: |
+          find "${SRCROOT}/sources/resources/assets.xcassets" -name "contents.json" -exec sh -c 'mv "$1" "$(dirname "$1")/Contents.json"' _ {} \;
     settings:
       CODE_SIGN_IDENTITY: "-"
       DEVELOPMENT_TEAM: ""
