@@ -4,6 +4,8 @@
 
 ### Changed
 
+- Move hosted checks off the retired macOS 14 runner.
+
 - Restored the Star History chart section and links in `readme.md` and `website/src/main.ts`.
 - Updated Homebrew tap installation instructions in `readme.md` from `AMFI-Disable/juicer` to the central `AMFI-Disable/tap` repository.
 - Restored active project maintenance status and badges in `readme.md`, removing repository sunset notice.
