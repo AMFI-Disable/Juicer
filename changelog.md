@@ -4,13 +4,18 @@
 
 ### Changed
 
+- Modernized core studio models and views (migrated `BrewManager` command execution to `CommandExecutor`, updated cache cleaner, system optimizer, and VPN profile decoding, and added `tests/modernizationtests.swift`).
+- Updated `sources/resources/appicon.icns` and added pre-build asset catalog `contents.json` casing sync in `project.yml`.
 - Move hosted checks off the retired macOS 14 runner.
-
 - Restored the Star History chart section and links in `readme.md` and `website/src/main.ts`.
 - Updated Homebrew tap installation instructions in `readme.md` from `AMFI-Disable/juicer` to the central `AMFI-Disable/tap` repository.
 - Restored active project maintenance status and badges in `readme.md`, removing repository sunset notice.
 - Reinstated active security policy guidelines and private vulnerability reporting workflows in `security.md`.
 - Enhanced release CI workflow to support lowercase tags.
+
+### Fixed
+
+- Updated the source build command in `website/src/data/site.ts` to build `juicer.xcodeproj` with `xcodebuild`.
 
 ---
 
