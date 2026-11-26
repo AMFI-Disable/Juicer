@@ -17,7 +17,7 @@
 [![Pricing: Free & Open-Source](https://img.shields.io/badge/Pricing-100%25%20Free%20%26%20Open%20Source-success.svg?style=flat-square)](#key-capabilities)
 [![Privacy: Zero Telemetry](https://img.shields.io/badge/Privacy-Zero%20Telemetry%20%2F%20100%25%20Local-purple.svg?style=flat-square)](#privacy-and-security-first)
 
-[Changelog](changelog.md) · [Security Policy](security.md) · [MIT License](license)
+[中文文档](readme.zh-cn.md) · [Changelog](changelog.md) · [Security Policy](security.md) · [MIT License](license)
 
 </div>
 
@@ -106,27 +106,15 @@ brew tap AMFI-Disable/tap
 brew install --cask juicer
 ```
 
-### Method B: Manual DMG Package (GitHub Releases)
+### Method B: Manual Installation From GitHub Releases
 
-Download the verified `.dmg` package from [GitHub Releases](https://github.com/AMFI-Disable/Juicer/releases). Verify the SHA-256 checksum after download:
-
-```bash
-shasum -a 256 juicer-1.1.3.dmg
-```
-
-#### macOS Gatekeeper Clearance (Unnotarized Open-Source Build)
-
-Because Juicer is an open-source build provided without a paid Apple Developer ID certificate ($99/year), macOS Gatekeeper quarantines downloaded application bundles on first launch.
-
-To clear the quarantine flag via Terminal:
+Download `juicer.zip` and its checksum file from [the v1.1.3 release](https://github.com/AMFI-Disable/Juicer/releases/tag/v1.1.3). Compare the following output with the published SHA-256 for that file before extracting Juicer.app into Applications.
 
 ```bash
-sudo xattr -r -c /Applications/Juicer.app
+shasum -a 256 juicer.zip
 ```
 
-Alternatively, open **System Settings > Privacy & Security**, scroll down to the Security section, and click **Open Anyway** (or hold `Control` while clicking the app in Finder and select **Open**).
-
----
+The open-source release is unnotarized. If Gatekeeper prompts on first launch after verification, use **System Settings > Privacy & Security > Open Anyway**.
 
 ### Method C: Build From Source
 

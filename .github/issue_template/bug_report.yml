@@ -1,56 +1,37 @@
-name: "Bug Report"
-description: "Create a report to help us reproduce and fix a bug in Juicer"
-title: "bug: "
+name: Bug Report / 缺陷报告
+description: Report a reproducible problem / 报告可复现的问题
+title: "[BUG] "
 labels: ["bug"]
+assignees: ["AMFI-Disable"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thanks for taking the time to report a bug! Please fill out as much information as possible.
-
   - type: input
     id: version
     attributes:
-      label: "Juicer Version"
-      description: "Which version of Juicer are you using?"
-      placeholder: "e.g. V1.0.1"
+      label: Application Version / 应用版本
+      description: Include the release tag or commit. / 请填写发行版本或提交号。
     validations:
       required: true
-
-  - type: dropdown
-    id: macos_version
+  - type: input
+    id: environment
     attributes:
-      label: "macOS Version"
-      options:
-        - "macOS 15 Sequoia"
-        - "macOS 14 Sonoma"
-        - "Other / Older"
+      label: Environment / 运行环境
+      description: Include macOS version, chip and installation method. / 请填写 macOS 版本、芯片及安装方式。 Include the Homebrew version for package issues. / 软件包问题请注明 Homebrew 版本。
     validations:
       required: true
-
-  - type: textarea
-    id: description
-    attributes:
-      label: "Bug Description"
-      description: "A clear and concise description of what the bug is."
-    validations:
-      required: true
-
   - type: textarea
     id: reproduction
     attributes:
-      label: "Steps to Reproduce"
-      description: "Steps to reproduce the behavior:"
-      placeholder: |
-        1. Go to '...'
-        2. Click on '...'
-        3. See error
+      label: Steps To Reproduce / 复现步骤
     validations:
       required: true
-
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected And Actual Results / 预期与实际结果
+    validations:
+      required: true
   - type: textarea
     id: logs
     attributes:
-      label: "Relevant Logs or Crash Reports"
-      description: "Paste any Terminal logs or macOS crash reports if available."
-      render: shell
+      label: Diagnostic Details / 诊断信息
+      description: Remove credentials, personal paths and identifiers before sharing. / 提交日志前请删除凭据、个人路径及标识信息。

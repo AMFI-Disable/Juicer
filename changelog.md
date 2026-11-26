@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Documentation
+
+- Paired the English and Simplified Chinese setup and contribution guides and added bilingual prompts to bug reports, feature requests and pull requests.
+
 ### Changed
 
 - Modernized core studio models and views (migrated `BrewManager` command execution to `CommandExecutor`, updated cache cleaner, system optimizer, and VPN profile decoding, and added `tests/modernizationtests.swift`).
